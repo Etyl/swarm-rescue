@@ -26,7 +26,7 @@ class ClosedPlayground(Playground):
     """
     def __init__(self, size: Tuple[int, int]):
         background = (220, 220, 220)
-        use_shaders = False
+        use_shaders = True
         if platform.system() == "Darwin":
             use_shaders = False
 
