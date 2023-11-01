@@ -8,7 +8,22 @@ robot_radius = 5
 save_images = True
 output = "./solve.png"
 
-def border_from_map(map, rr):
+
+def border_from_map_np(map):
+    map = np.ones(map.shape).astype(np.float32)-map
+    for _ in range(robot_radius):
+        map = (np.roll(map,(1, 0), axis=(1, 0))+
+               np.roll(map,(0, 1), axis=(1, 0))+
+               np.roll(map,(-1, 0), axis=(1, 0))+
+               np.roll(map,(0, -1), axis=(1, 0))+
+               np.roll(map,(1, 1), axis=(1, 0))+
+               np.roll(map,(-1, -1), axis=(1, 0))+
+               np.roll(map,(1, -1), axis=(1, 0))+
+               np.roll(map,(-1, 1), axis=(1, 0)))
+    return map>0.5
+
+# TODO : optimize with numpy roll
+def border_from_map(map):
     def norm(i,j,x,y):
         return np.sqrt((i-x)**2+(j-y)**2)
 
@@ -40,7 +55,7 @@ def border_from_map(map, rr):
     while len(waiting_list)>0 or len(new_waiting_list)>0:        
         if len(waiting_list)==0:
             count += 1
-            if count>=round(rr):
+            if count>=round(robot_radius):
                 break
             waiting_list = new_waiting_list.copy()
             new_waiting_list = []
@@ -92,10 +107,10 @@ def smooth_path(map, path):
 
 
 
-def pathfinder(map, start, end):   
+def pathfinder(map, start, end):
 
     tb = time.time()
-    map_border = border_from_map(map, robot_radius)
+    map_border = border_from_map_np(map)
     print(f"Border map generated in {time.time()-tb:.6f}s")
 
     grid = np.ones(map.shape).astype(np.float32)
