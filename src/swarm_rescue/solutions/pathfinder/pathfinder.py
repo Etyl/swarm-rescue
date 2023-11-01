@@ -2,33 +2,14 @@ import argparse
 import numpy as np
 import matplotlib.image as mpimg
 import time
-
 import pyastar2d
-
 from os.path import basename, join
 
+robot_radius = 5
+save_images = True
+output = "./solve.png"
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        "An example of using pyastar2d to find the solution to a maze"
-    )
-    parser.add_argument(
-        "--input", type=str, default="mazes/maze_small.png",
-        help="Path to the black-and-white image to be used as input.",
-    )
-    parser.add_argument(
-        "--output", type=str, help="Path to where the output will be written",
-    )
-
-    args = parser.parse_args()
-
-    if args.output is None:
-        args.output = join("solns", basename(args.input))
-
-    return args
-
-def calc_obstacle_map_from_map(map, rr):
-
+def border_from_map(map, rr):
     def norm(i,j,x,y):
         return np.sqrt((i-x)**2+(j-y)**2)
 
@@ -73,19 +54,19 @@ def calc_obstacle_map_from_map(map, rr):
                 dist_map[nx][ny] = min(dist_map[ix][iy]+norm(ix,iy,nx,ny), dist_map[nx][ny])
             
     # obstacle map generation
-    obstacle_map = np.array([[False for _ in range(len(map[0]))]
+    border_map = np.array([[False for _ in range(len(map[0]))]
                             for _ in range(len(map))])
     for ix in range(len(map)):
         for iy in range(len(map[0])):
             if dist_map[ix][iy] > -0.5:
-                obstacle_map[ix][iy] = True
+                border_map[ix][iy] = True
 
-    return obstacle_map
+    return border_map
 
 
-def main(map):   
+def pathfinder(map):   
 
-    map_border = calc_obstacle_map_from_map(map, 6) 
+    map_border = border_from_map(map, robot_radius) 
 
     grid = np.ones(map.shape).astype(np.float32)
     grid[map_border == True] = np.inf
@@ -105,20 +86,20 @@ def main(map):
 
     if path.shape[0] > 0:
         print(f"Found path of length {path.shape[0]} in {dur:.6f}s")
-        map = np.stack((map, map, map), axis=2)
-        map[path[:, 0], path[:, 1]] = (1.0, 0, 0)
-
-        print(f"Plotting path to {output}")
-        mpimg.imsave(output, map.astype(np.float32))
+        
+        if save_images:
+            map = np.stack((map, map, map), axis=2)
+            map[path[:, 0], path[:, 1]] = (1.0, 0, 0)
+            print(f"Plotting path to {output}")
+            mpimg.imsave(output, map.astype(np.float32))
     else:
         print("No path found")
+    
+    return path
 
-    print("Done")
 
 map = mpimg.imread("./map-f.png").astype(np.float32)
 map = map[:, :, 1]
-output = "./solve.png"
-
 
 # input map with 1=free, 0=obstacle
-main(map)
+pathfinder(map)
