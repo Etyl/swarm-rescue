@@ -1,6 +1,6 @@
-import argparse
 import numpy as np
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 import time
 import pyastar2d
 from os.path import basename, join
@@ -63,6 +63,35 @@ def border_from_map(map, rr):
 
     return border_map
 
+def interpolate_path(point1, point2, t):
+    return point1 + (point2-point1)*t
+
+def is_path_free(map, point1, point2):
+    n = np.sum(np.abs(point2-point1))
+    for t in range(n+2):
+        if map[round(interpolate_path(point1, point2, t/(n+1))[0])][round(interpolate_path(point1, point2, t/(n+1))[1])] == True:
+            return False
+    return True
+
+def smooth_path(map, path):
+    i_ref = 0
+    j_ref = 2
+    new_path = [path[0]]
+    while i_ref<len(path):
+        if j_ref<len(path) and is_path_free(map, path[i_ref], path[j_ref]):
+            j_ref += 1
+        elif j_ref>=len(path):
+            new_path.append(path[-1])
+            break
+        else:
+            new_path.append(path[j_ref-1])
+            i_ref = j_ref-1
+            j_ref = i_ref+2
+    if new_path[-1][0]!=path[-1][0] or new_path[-1][1]!=path[-1][1]:
+        new_path.append(path[-1])
+    return new_path
+
+
 
 def pathfinder(map):   
 
@@ -83,15 +112,23 @@ def pathfinder(map):
     # set allow_diagonal=True to enable 8-connectivity
     path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
     dur = time.time() - t0
+    print(f"Found path of length {path.shape[0]} in {dur:.6f}s")
 
-    if path.shape[0] > 0:
-        print(f"Found path of length {path.shape[0]} in {dur:.6f}s")
+    t1 = time.time()
+    path = smooth_path(map_border, path)
+    dur_smooth = time.time() - t1
+    print(f"Smoothed path of length {len(path)} in {dur_smooth:.6f}s")
+
+    if len(path) > 0:
+        print(f"Path found")
         
         if save_images:
             map = np.stack((map, map, map), axis=2)
-            map[path[:, 0], path[:, 1]] = (1.0, 0, 0)
+            path_plot = np.array(path)
+            plt.plot(path_plot[:,1],path_plot[:,0],color="red")
+            plt.imshow(map)
             print(f"Plotting path to {output}")
-            mpimg.imsave(output, map.astype(np.float32))
+            plt.savefig(output)
     else:
         print("No path found")
     
