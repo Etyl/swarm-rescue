@@ -176,7 +176,7 @@ def pathfinder(map, start, end):
             path_plot = np.array(path_refined)
             plt.plot(path_plot[:,1],path_plot[:,0],color="red")
             plt.imshow(map)
-            print(f"Plotting path to {output}, {len(path_smooth)} points)")
+            print(f"Plotting path to {output}, {len(path_refined)} points)")
             plt.savefig(output)
     else:
         print("No path found")
