@@ -23,60 +23,6 @@ def border_from_map_np(map):
                np.roll(map,(-1, 1), axis=(1, 0)))
     return map>0.5
 
-def border_from_map(map):
-    def norm(i,j,x,y):
-        return np.sqrt((i-x)**2+(j-y)**2)
-
-    def getNeighbours(x, y):
-        neighbours = []
-        for i in range(-1, 2):
-            for j in range(-1, 2):
-                if x+i >= 0 and y+j >= 0 and x+i < len(map) and y+j < len(map[0]) and (i != 0 or j != 0):
-                    neighbours.append((x + i, y + j))
-        return neighbours
-
-    dist_map = map*(-1)
-    new_dist_map = dist_map.copy()
-    waiting_list = []
-    for ix in range(len(map)):
-        for iy in range(len(map[0])):
-            if dist_map[ix][iy]>=0:
-                for [nx, ny] in getNeighbours(ix, iy):
-                    if dist_map[nx][ny]<-0.5:
-                        if new_dist_map[nx][ny]<-0.5:
-                            new_dist_map[nx][ny] = dist_map[ix][iy]+norm(ix,iy,nx,ny)
-                            waiting_list.append((nx, ny))
-                        else:
-                            new_dist_map[nx][ny] = min(dist_map[ix][iy]+norm(ix,iy,nx,ny), new_dist_map[nx][ny])
-                        
-    dist_map = new_dist_map.copy()
-    new_waiting_list = []
-    count = 0
-    while len(waiting_list)>0 or len(new_waiting_list)>0:        
-        if len(waiting_list)==0:
-            count += 1
-            if count>=round(robot_radius):
-                break
-            waiting_list = new_waiting_list.copy()
-            new_waiting_list = []
-        ix, iy = waiting_list.pop()
-        for [nx, ny] in getNeighbours(ix, iy):
-            if dist_map[nx][ny]<-0.5:
-                dist_map[nx][ny] = dist_map[ix][iy]+norm(ix,iy,nx,ny)
-                new_waiting_list.append((nx, ny))
-            else:
-                dist_map[nx][ny] = min(dist_map[ix][iy]+norm(ix,iy,nx,ny), dist_map[nx][ny])
-            
-    # obstacle map generation
-    border_map = np.array([[False for _ in range(len(map[0]))]
-                            for _ in range(len(map))])
-    for ix in range(len(map)):
-        for iy in range(len(map[0])):
-            if dist_map[ix][iy] > -0.5:
-                border_map[ix][iy] = True
-
-    return border_map
-
 def interpolate_path(point1, point2, t):
     return point1 + (point2-point1)*t
 
