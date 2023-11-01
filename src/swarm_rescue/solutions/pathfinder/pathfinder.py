@@ -3,7 +3,6 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import time
 import pyastar2d
-from os.path import basename, join
 
 robot_radius = 5
 save_images = True
@@ -93,20 +92,16 @@ def smooth_path(map, path):
 
 
 
-def pathfinder(map):   
+def pathfinder(map, start, end):   
 
-    map_border = border_from_map(map, robot_radius) 
+    tb = time.time()
+    map_border = border_from_map(map, robot_radius)
+    print(f"Border map generated in {time.time()-tb:.6f}s")
 
     grid = np.ones(map.shape).astype(np.float32)
     grid[map_border == True] = np.inf
 
     assert grid.min() == 1, "cost of moving must be at least 1"
-
-    # start is the first white block in the top row
-    start = np.array([30, 50])
-
-    # end is the first white block in the final column
-    end = np.array([600, 800])
 
     t0 = time.time()
     # set allow_diagonal=True to enable 8-connectivity
@@ -137,6 +132,8 @@ def pathfinder(map):
 
 map = mpimg.imread("./map-f.png").astype(np.float32)
 map = map[:, :, 1]
+start = np.array([30, 50])
+end = np.array([600, 800])
 
 # input map with 1=free, 0=obstacle
-pathfinder(map)
+pathfinder(map, start, end)
