@@ -42,7 +42,7 @@ class GuiSR(TopDownView):
             draw_com: bool = False,
             print_rewards: bool = False,
             print_messages: bool = False,
-            use_mouse_measure: bool = False,
+            use_mouse_measure: bool = True,
             enable_visu_noises: bool = False,
             filename_video_capture: str = None
     ) -> None:
