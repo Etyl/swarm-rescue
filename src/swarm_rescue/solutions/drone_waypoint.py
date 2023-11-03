@@ -227,6 +227,7 @@ class DroneWaypoint(DroneAbstract):
         # Controls for the differents states
 
         if self.state is self.Activity.ROAMING:
+            # TODO: implement exploration
             self.onRoute = False
 
         elif self.state is self.Activity.GOING_TO_WONDED:
