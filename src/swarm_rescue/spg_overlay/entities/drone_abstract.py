@@ -298,7 +298,7 @@ class DroneAbstract(Agent):
         """
         odom = self.odometer_values()
         angle = self.compass_values()
-        if odom and angle:
+        if angle is not None and odom is not None:
             speed = odom[0]
             vx = speed * math.cos(angle)
             vy = speed * math.sin(angle)
