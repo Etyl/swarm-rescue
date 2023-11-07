@@ -22,3 +22,6 @@ python-statemachine
 numba
 coverage
 gprof2dot
+
+# pathfinding
+pyastar2d
