@@ -45,13 +45,14 @@ class DroneController(StateMachine):
 
 
     
-    def __init__(self, drone : DroneAbstract):
+    def __init__(self, drone : DroneAbstract, debug_mode: bool = False):
         self.drone = drone
         self.command = {"forward": 0.0,
                         "lateral": 0.0,
                         "rotation": 0.0,
                         "grasper": 0}
-        
+        self.debug_mode = debug_mode
+
         super(DroneController, self).__init__()
 
 
@@ -77,6 +78,11 @@ class DroneController(StateMachine):
     
     
     ## actions
+
+    def before_cycle(self, event: str, source: State, target: State, message: str = ""):
+        if not self.debug_mode: return
+        message = ". " + message if message else ""
+        return f"Running {event} from {source.id} to {target.id}{message}"
 
     @roaming.enter
     def on_enter_initial(self):
