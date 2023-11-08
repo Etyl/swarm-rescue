@@ -6,7 +6,6 @@ import math
 import random
 import numpy as np
 from typing import Optional
-from enum import Enum
 from statemachine import StateMachine, State
 
 
@@ -14,7 +13,6 @@ from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
 from spg_overlay.utils.utils import circular_mean, normalize_angle
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
-
 
 class DroneController(StateMachine):
 
@@ -49,11 +47,9 @@ class DroneController(StateMachine):
         approaching_wounded.to(approaching_wounded) |
         going_to_center.to(going_to_center) |
         approaching_center.to(approaching_center)
-
     )
+ 
 
-
-    
     def __init__(self, drone : DroneAbstract, debug_mode: bool = False):
         self.drone = drone
         self.command = {"forward": 0.0,
@@ -99,7 +95,6 @@ class DroneController(StateMachine):
         self.drone.onRoute = False
 
     def before_going_to_wounded(self):
-        print("GHEHEKHKEHK")
         self.drone.path = self.drone.get_path(self.drone.drone_position, 0)
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
@@ -191,6 +186,7 @@ class DroneWaypoint(DroneAbstract):
             return angle
         return 0
     
+    
     def check_waypoint(self, pos):
         """
         checks if the drone has reached the waypoint
@@ -199,11 +195,13 @@ class DroneWaypoint(DroneAbstract):
         if np.linalg.norm(pos - self.nextWaypoint) < 20:
             return True
         return False
-    
+        
+
     # TODO: implement communication
     def define_message_for_all(self):
         pass
-    
+
+
     # TODO: determine the position in no GPS zone
     def get_position(self):
         """
@@ -280,6 +278,7 @@ class DroneWaypoint(DroneAbstract):
 
         return found_wounded, found_rescue_center, command
 
+
     # TODO: implement pathfinder with map
     def get_path(self, pos, destination):
         """
@@ -289,6 +288,7 @@ class DroneWaypoint(DroneAbstract):
         if destination == 0:
             return [[-320,-180],[-200,150],[20, -200]]
         return [[250,150],[20, -200],[-200,150]]
+
 
     def get_control_from_path(self, pos):
         """
@@ -310,6 +310,7 @@ class DroneWaypoint(DroneAbstract):
                 self.nextWaypoint = None
                 self.onRoute = False
         return command
+
 
     def control(self):
 
