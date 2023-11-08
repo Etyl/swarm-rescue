@@ -7,7 +7,7 @@ import random
 import numpy as np
 from typing import Optional
 from statemachine import StateMachine, State
-
+import arcade
 
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
@@ -143,14 +143,19 @@ class DroneWaypoint(DroneAbstract):
 
         self.onRoute = False # True if the drone is on the route to the waypoint
         self.path = []
+        self.lastWaypoint = np.array([0,0]) # The last waypoint reached
         self.nextWaypoint = np.array([0,0]) # The next waypoint to go to
         self.drone_position = np.array([0,0]) # The position of the drone
         self.found_wounded = False # True if the drone has found a wounded person
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.controller = DroneController(self, debug_mode=False)
-        
 
+
+        ## Debug controls
+
+        self.debug_path = True # True if the path must be displayed
+        
         self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -290,6 +295,7 @@ class DroneWaypoint(DroneAbstract):
         return [[250,150],[20, -200],[-200,150]]
 
 
+    # TODO: implement beziers curves for turning, 45° forward movement
     def get_control_from_path(self, pos):
         """
         returns the control to follow the path
@@ -305,6 +311,7 @@ class DroneWaypoint(DroneAbstract):
         command["lateral"] = math.sin(command["rotation"])
         if self.check_waypoint(pos):
             if len(self.path) > 0:
+                self.lastWaypoint = self.nextWaypoint.copy()
                 self.nextWaypoint = self.path.pop()
             else:
                 self.nextWaypoint = None
@@ -320,3 +327,18 @@ class DroneWaypoint(DroneAbstract):
         self.controller.cycle()            
             
         return self.controller.command
+
+
+    def draw_bottom_layer(self):
+
+        if not self.debug_path: return
+
+        drawn_path = self.path.copy()
+        drawn_path.append(self.nextWaypoint)
+        drawn_path.append(self.lastWaypoint)
+        print(drawn_path)
+
+        for k in range(len(drawn_path)-1):
+            pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
+            pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
+            arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
