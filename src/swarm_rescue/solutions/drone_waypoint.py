@@ -7,11 +7,121 @@ import random
 import numpy as np
 from typing import Optional
 from enum import Enum
+from statemachine import StateMachine, State
+
 
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
 from spg_overlay.utils.utils import circular_mean, normalize_angle
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
+
+
+class DroneController(StateMachine):
+
+    # states  
+    roaming = State('Roaming')
+    going_to_wounded = State('Going to wounded', initial=True)
+    approaching_wounded = State('Approaching wounded')
+    going_to_center = State('Going to center')
+    approaching_center = State('Approaching to center')
+
+    # transitions
+    cycle = (
+        roaming.to(approaching_wounded, cond="found_wounded") |
+        going_to_wounded.to(approaching_wounded, cond="found_wounded") |
+
+        going_to_wounded.to(roaming, cond="lost_route") |
+
+        # if wounded captured by someone else
+        approaching_wounded.to(roaming, cond="no_wounded") |
+
+        approaching_wounded.to(going_to_center, cond="grasped_wounded") |
+
+        going_to_center.to(approaching_center, cond="found_center") |
+
+        approaching_center.to(roaming, cond="lost_wounded") |
+        going_to_center.to(roaming, cond="lost_wounded")
+    )
+
+
+    
+    def __init__(self, drone : DroneAbstract):
+        self.drone = drone
+        self.command = {"forward": 0.0,
+                        "lateral": 0.0,
+                        "rotation": 0.0,
+                        "grasper": 0}
+        
+        super(DroneController, self).__init__()
+
+
+    ## transitions conditions
+
+    def found_wounded(self):
+        return self.drone.found_wounded
+    
+    def lost_route(self):
+        return self.drone.onRoute and self.drone.nextWaypoint is None
+    
+    def no_wounded(self):
+        return not self.drone.found_wounded and not self.drone.base.grasper.grasped_entities
+    
+    def grasped_wounded(self):
+        return len(self.base.grasper.grasped_entities) > 0
+    
+    def found_center(self):
+        return self.drone.found_center
+    
+    def lost_wounded(self):
+        return not self.drone.base.grasper.grasped_entities
+    
+    
+    ## actions
+
+    @roaming.enter
+    def on_enter_initial(self):
+        # TODO: implement exploration
+        self.drone.onRoute = False
+
+    @going_to_wounded.enter
+    def on_enter_going_to_wounded(self):
+        self.drone.path = self.drone.get_path(self.drone.get_position(), 0)
+        self.drone.nextWaypoint = self.drone.path.pop()
+        self.drone.onRoute = True
+
+    @going_to_wounded.to.itself()
+    def loop_going_to_wounded(self):
+        self.command = self.drone.get_control_from_path(self.drone.get_position())
+
+    @approaching_wounded.enter
+    def on_enter_approaching_wounded(self):
+        self.drone.onRoute = False
+    
+    @approaching_wounded.to.itself()
+    def loop_approaching_wounded(self):
+        self.command = self.drone.command_semantic
+        self.command["grasper"] = 1
+
+    @going_to_center.enter
+    def on_enter_going_to_center(self):
+        self.drone.path = self.drone.get_path(self.drone.drone_position, 1)
+        self.drone.nextWaypoint = self.drone.path.pop()
+        self.drone.onRoute = True
+
+    @going_to_center.to.itself()
+    def loop_going_to_center(self):
+        self.command = self.drone.get_control_from_path(self.drone.drone_position)
+        self.command["grasper"] = 1
+
+    @approaching_center.enter
+    def on_enter_approaching_center(self):
+        self.drone.onRoute = False
+    
+    @approaching_center.to.itself()
+    def loop_approaching_center(self):
+        self.command = self.drone.command_semantic
+        self.command["grasper"] = 1
+
 
 class DroneWaypoint(DroneAbstract):
     class Activity(Enum):
@@ -37,6 +147,11 @@ class DroneWaypoint(DroneAbstract):
         self.onRoute = False # True if the drone is on the route to the waypoint
         self.path = []
         self.nextWaypoint = None # The next waypoint to go to
+        self.controller = DroneController(self)
+
+        # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
+        # self.controller._graph().write_png("./graph.png")
+
 
     def adapt_angle_direction(self, pos: list):
         """

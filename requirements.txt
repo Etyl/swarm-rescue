@@ -25,3 +25,6 @@ gprof2dot
 
 # pathfinding
 pyastar2d
+
+# drone controller
+pydot
