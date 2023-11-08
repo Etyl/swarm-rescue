@@ -143,13 +143,13 @@ class DroneWaypoint(DroneAbstract):
 
         self.onRoute = False # True if the drone is on the route to the waypoint
         self.path = []
-        self.lastWaypoint = np.array([0,0]) # The last waypoint reached
+        self.lastWaypoint = None # The last waypoint reached
         self.nextWaypoint = np.array([0,0]) # The next waypoint to go to
         self.drone_position = np.array([0,0]) # The position of the drone
         self.found_wounded = False # True if the drone has found a wounded person
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
-        self.controller = DroneController(self, debug_mode=False)
+        self.controller = DroneController(self, debug_mode=True)
 
 
         ## Debug controls
@@ -214,6 +214,7 @@ class DroneWaypoint(DroneAbstract):
         """
         return self.measured_gps_position()
 
+    # TODO: fix wounded search (sensor can miss wounded person at some frames) and make it more precise
     def process_semantic_sensor(self):
         """
         According to his state in the state machine, the Drone will move towards a wound person or the rescue center
@@ -335,8 +336,7 @@ class DroneWaypoint(DroneAbstract):
 
         drawn_path = self.path.copy()
         drawn_path.append(self.nextWaypoint)
-        drawn_path.append(self.lastWaypoint)
-        print(drawn_path)
+        if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
 
         for k in range(len(drawn_path)-1):
             pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
