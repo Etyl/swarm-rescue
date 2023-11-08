@@ -19,28 +19,37 @@ from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 class DroneController(StateMachine):
 
     # states  
-    roaming = State('Roaming')
-    going_to_wounded = State('Going to wounded', initial=True)
+    roaming = State('Roaming', initial=True)
+    going_to_wounded = State('Going to wounded')
     approaching_wounded = State('Approaching wounded')
     going_to_center = State('Going to center')
     approaching_center = State('Approaching to center')
 
+    force_transition = roaming.to(going_to_wounded, on='before_going_to_wounded')
+
     # transitions
     cycle = (
-        roaming.to(approaching_wounded, cond="found_wounded") |
-        going_to_wounded.to(approaching_wounded, cond="found_wounded") |
+        roaming.to(approaching_wounded, cond="found_wounded", on="before_approaching_wounded") |
+        going_to_wounded.to(approaching_wounded, cond="found_wounded", on="before_approaching_wounded") |
 
         going_to_wounded.to(roaming, cond="lost_route") |
 
         # if wounded captured by someone else
         approaching_wounded.to(roaming, cond="no_wounded") |
 
-        approaching_wounded.to(going_to_center, cond="grasped_wounded") |
+        approaching_wounded.to(going_to_center, cond="grasped_wounded", on="before_going_to_center") |
 
-        going_to_center.to(approaching_center, cond="found_center") |
+        going_to_center.to(approaching_center, cond="found_center", on='before_approaching_center') |
 
         approaching_center.to(roaming, cond="lost_wounded") |
-        going_to_center.to(roaming, cond="lost_wounded")
+        going_to_center.to(roaming, cond="lost_wounded",) |
+
+        roaming.to(roaming) |
+        going_to_wounded.to(going_to_wounded) |
+        approaching_wounded.to(approaching_wounded) |
+        going_to_center.to(going_to_center) |
+        approaching_center.to(approaching_center)
+
     )
 
 
@@ -68,7 +77,7 @@ class DroneController(StateMachine):
         return not self.drone.found_wounded and not self.drone.base.grasper.grasped_entities
     
     def grasped_wounded(self):
-        return len(self.base.grasper.grasped_entities) > 0
+        return len(self.drone.base.grasper.grasped_entities) > 0
     
     def found_center(self):
         return self.drone.found_center
@@ -82,63 +91,51 @@ class DroneController(StateMachine):
     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
         if not self.debug_mode: return
         message = ". " + message if message else ""
-        return f"Running {event} from {source.id} to {target.id}{message}"
+        print(f"Running {event} from {source.id} to {target.id}{message}")
 
     @roaming.enter
-    def on_enter_initial(self):
+    def on_enter_roaming(self):
         # TODO: implement exploration
         self.drone.onRoute = False
 
-    @going_to_wounded.enter
-    def on_enter_going_to_wounded(self):
-        self.drone.path = self.drone.get_path(self.drone.get_position(), 0)
+    def before_going_to_wounded(self):
+        print("GHEHEKHKEHK")
+        self.drone.path = self.drone.get_path(self.drone.drone_position, 0)
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
 
-    @going_to_wounded.to.itself()
-    def loop_going_to_wounded(self):
-        self.command = self.drone.get_control_from_path(self.drone.get_position())
+    @going_to_wounded.enter
+    def on_enter_going_to_wounded(self):
+        self.command = self.drone.get_control_from_path(self.drone.drone_position)
 
-    @approaching_wounded.enter
-    def on_enter_approaching_wounded(self):
+    def before_approaching_wounded(self):
         self.drone.onRoute = False
     
-    @approaching_wounded.to.itself()
-    def loop_approaching_wounded(self):
+    @approaching_wounded.enter
+    def on_enter_approaching_wounded(self):
         self.command = self.drone.command_semantic
         self.command["grasper"] = 1
 
-    @going_to_center.enter
-    def on_enter_going_to_center(self):
+    def before_going_to_center(self):
         self.drone.path = self.drone.get_path(self.drone.drone_position, 1)
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
 
-    @going_to_center.to.itself()
-    def loop_going_to_center(self):
+    @going_to_center.enter
+    def on_enter_going_to_center(self):
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
 
-    @approaching_center.enter
-    def on_enter_approaching_center(self):
+    def before_approaching_center(self):
         self.drone.onRoute = False
     
-    @approaching_center.to.itself()
-    def loop_approaching_center(self):
+    @approaching_center.enter
+    def enter_approaching_center(self):
         self.command = self.drone.command_semantic
         self.command["grasper"] = 1
 
 
 class DroneWaypoint(DroneAbstract):
-    class Activity(Enum):
-        """
-        All the states of the drone as a state machine
-        """
-        ROAMING = 1
-        GOING_TO_WONDED = 2
-        GRASPING_WOUNDED = 3
-        RETURNING_TO_CENTER = 4
-        DROPPING_TO_CENTER = 5
 
     def __init__(self,
                  identifier: Optional[int] = None,
@@ -149,12 +146,17 @@ class DroneWaypoint(DroneAbstract):
                          display_lidar_graph=False,
                          **kwargs)
 
-        self.state = self.Activity.GOING_TO_WONDED
         self.onRoute = False # True if the drone is on the route to the waypoint
         self.path = []
-        self.nextWaypoint = None # The next waypoint to go to
-        self.controller = DroneController(self)
+        self.nextWaypoint = np.array([0,0]) # The next waypoint to go to
+        self.drone_position = np.array([0,0]) # The position of the drone
+        self.found_wounded = False # True if the drone has found a wounded person
+        self.found_center = False # True if the drone has found the rescue center
+        self.command_semantic = None # The command to follow the wounded person or the rescue center
+        self.controller = DroneController(self, debug_mode=False)
+        
 
+        self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
@@ -225,10 +227,11 @@ class DroneWaypoint(DroneAbstract):
         best_angle = 0
 
         found_wounded = False
-        if (self.state is self.Activity.ROAMING
-            or self.state is self.Activity.GRASPING_WOUNDED
-            or self.state is self.Activity.GOING_TO_WONDED) \
-                and detection_semantic is not None:
+        if ((self.controller.current_state == self.controller.going_to_wounded 
+            or self.controller.current_state == self.controller.approaching_wounded
+            or self.controller.current_state == self.controller.going_to_center)
+            and detection_semantic is not None):
+
             scores = []
             for data in detection_semantic:
                 # If the wounded person detected is held by nobody
@@ -248,7 +251,7 @@ class DroneWaypoint(DroneAbstract):
         found_rescue_center = False
         is_near = False
         angles_list = []
-        if (self.state is self.Activity.RETURNING_TO_CENTER and detection_semantic):
+        if (self.controller.current_state == self.controller.going_to_center and detection_semantic):
             for data in detection_semantic:
                 if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER:
                     found_rescue_center = True
@@ -310,69 +313,9 @@ class DroneWaypoint(DroneAbstract):
 
     def control(self):
 
-        found_wounded, found_center, command_semantic = self.process_semantic_sensor()
+        self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
+        self.drone_position = self.get_position()
 
-        print("=====================================")
-        print(self.semantic_values())
-        print(self.state, found_wounded, self.nextWaypoint, self.onRoute, self.base.grasper.grasped_entities, self.base.grasper.can_grasp)
-
-        if self.state is self.Activity.ROAMING or self.Activity.GOING_TO_WONDED and found_wounded:
-            self.state = self.Activity.GRASPING_WOUNDED
-
-        elif self.state is self.Activity.GOING_TO_WONDED and self.onRoute and self.nextWaypoint is None:
-            self.state = self.Activity.ROAMING
-
-        # case if wounded captured by someone else
-        elif self.state is self.Activity.GRASPING_WOUNDED and (not found_wounded and len(self.base.grasper.grasped_entities) == 0):
-            self.state = self.Activity.ROAMING
-
-        elif self.state is self.Activity.GRASPING_WOUNDED and len(self.base.grasper.grasped_entities) > 0:
-            self.state = self.Activity.RETURNING_TO_CENTER
-
-        elif self.state is self.Activity.RETURNING_TO_CENTER and found_center:
-            self.state = self.Activity.DROPPING_TO_CENTER
-
-        elif (self.state is (self.Activity.RETURNING_TO_CENTER or self.Activity.DROPPING_TO_CENTER)) and not self.base.grasper.grasped_entities:
-            self.state = self.Activity.ROAMING
-
-        print(self.state, found_wounded, self.nextWaypoint, self.onRoute, self.base.grasper.grasped_entities, self.base.grasper.can_grasp)
-
-        drone_position = self.get_position()
-
-
-        command = {"forward": 0.0,
-                   "lateral": 0.0,
-                   "rotation": 0.0,
-                   "grasper": 0}
-        
-        # Controls for the differents states
-
-        if self.state is self.Activity.ROAMING:
-            # TODO: implement exploration
-            self.onRoute = False
-
-        elif self.state is self.Activity.GOING_TO_WONDED:
-            if not self.onRoute:
-                self.path = self.get_path(drone_position, 0)
-                self.nextWaypoint = self.path.pop()
-                self.onRoute = True
-            else:
-                command = self.get_control_from_path(drone_position)
+        self.controller.cycle()            
             
-        
-        elif self.state is self.Activity.RETURNING_TO_CENTER:
-            if not self.onRoute:
-                self.path = self.get_path(drone_position, 1)
-                self.nextWaypoint = self.path.pop()
-                self.onRoute = True
-            command = self.get_control_from_path(drone_position)
-            command["grasper"] = 1
-
-        elif self.state is self.Activity.GRASPING_WOUNDED or self.state is self.Activity.DROPPING_TO_CENTER:
-            self.onRoute = False
-            command = command_semantic
-            command["grasper"] = 1
-
-            
-            
-        return command
+        return self.controller.command
