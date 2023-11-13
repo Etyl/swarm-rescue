@@ -8,6 +8,7 @@ import numpy as np
 from typing import Optional
 from statemachine import StateMachine, State
 import arcade
+from collections import deque 
 
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
@@ -146,15 +147,19 @@ class DroneWaypoint(DroneAbstract):
         self.lastWaypoint = None # The last waypoint reached
         self.nextWaypoint = np.array([0,0]) # The next waypoint to go to
         self.drone_position = np.array([0,0]) # The position of the drone
+        self.drone_angle = 0 # The angle of the drone
         self.found_wounded = False # True if the drone has found a wounded person
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.controller = DroneController(self, debug_mode=True)
+        self.last_angles = deque()
 
+        self.wounded_found = []
 
         ## Debug controls
 
         self.debug_path = True # True if the path must be displayed
+        self.debug_wounded = True
         
         self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
@@ -166,7 +171,7 @@ class DroneWaypoint(DroneAbstract):
         gives the angle to turn to in order to go to the next waypoint
         """
 
-        if self.measured_compass_angle() != None:
+        if self.drone_angle != None:
             
             def angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
@@ -177,7 +182,7 @@ class DroneWaypoint(DroneAbstract):
             ref_vect = np.array([1, 0])
 
             
-            drone_angle = normalize_angle(self.measured_compass_angle())
+            drone_angle = normalize_angle(self.drone_angle)
             waypoint_angle = normalize_angle(angle(ref_vect, waypoint_vect))
 
             angle = normalize_angle(waypoint_angle - drone_angle)
@@ -213,12 +218,65 @@ class DroneWaypoint(DroneAbstract):
         returns the position of the drone
         """
         return self.measured_gps_position()
+    
+
+    # TODO: determine the angle with more precision
+    def get_angle(self):
+        """
+        returns the angle of the drone
+        """
+        angle = self.measured_compass_angle()
+        angle2 = self.measured_compass_angle()
+        print(angle, angle2)
+        self.last_angles.append(angle)
+        if len(self.last_angles) > 5:
+            self.last_angles.popleft()
+        return circular_mean(np.array(self.last_angles))
+    
+
+    def add_wounded(self, data_wounded):
+        """
+        compares the wounded persons detected with the ones already detected
+        """
+
+        error_distance = 20
+
+        def get_wounded_position():
+            wounded_pos = self.drone_position.copy()
+            angle = normalize_angle(self.drone_angle + data_wounded.angle)
+            wounded_pos[0] += data_wounded.distance * math.cos(angle)
+            wounded_pos[1] += data_wounded.distance * math.sin(angle)
+            return wounded_pos
+
+        wounded_pos = get_wounded_position()
+    
+        for k in range(len(self.wounded_found)):
+            wounded = self.wounded_found[k]
+            if np.linalg.norm(wounded_pos - wounded["position"]) < error_distance:
+                wounded["count"] += 1
+                n = wounded["count"]
+                wounded["position"] = wounded["position"]*(n/(n-1)) + wounded_pos/n
+                wounded["last_seen"] = 0
+                return
+            
+        self.wounded_found.append({"position": wounded_pos, "count": 1, "last_seen": 0})
+    
+    def clear_wounded_found(self):
+        frame_limit = 10
+
+        for k in range(len(self.wounded_found)-1,-1,-1):
+            self.wounded_found[k]["last_seen"] += 1
+            if np.linalg.norm(self.drone_position - self.wounded_found[k]["position"])<30 and self.wounded_found[k]["last_seen"] > frame_limit:
+                self.wounded_found.pop(k)
 
     # TODO: fix wounded search (sensor can miss wounded person at some frames) and make it more precise
     def process_semantic_sensor(self):
         """
         According to his state in the state machine, the Drone will move towards a wound person or the rescue center
         """
+
+        def angle(v1, v2):
+            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
         command = {"forward": 0.5,
                    "lateral": 0.0,
@@ -230,27 +288,31 @@ class DroneWaypoint(DroneAbstract):
         detection_semantic = self.semantic_values()
         best_angle = 0
 
-        found_wounded = False
-        if ((self.controller.current_state == self.controller.going_to_wounded 
-            or self.controller.current_state == self.controller.approaching_wounded
-            or self.controller.current_state == self.controller.going_to_center)
-            and detection_semantic is not None):
+        self.clear_wounded_found()
 
-            scores = []
+        found_wounded = False
+        if (detection_semantic):
             for data in detection_semantic:
                 # If the wounded person detected is held by nobody
                 if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON and not data.grasped:
-                    found_wounded = True
-                    v = (data.angle * data.angle) + \
-                        (data.distance * data.distance / 10 ** 5)
-                    scores.append((v, data.angle, data.distance))
-
-            # Select the best one among wounded persons detected
-            best_score = 10000
-            for score in scores:
-                if score[0] < best_score:
-                    best_score = score[0]
-                    best_angle = score[1]
+                    self.add_wounded(data)
+            
+            found_wounded = len(self.wounded_found) > 0
+            if (len(self.wounded_found) > 0 and 
+                (self.controller.current_state == self.controller.going_to_wounded 
+                or self.controller.current_state == self.controller.approaching_wounded
+                or self.controller.current_state == self.controller.roaming)):
+            
+                # Select the best one among wounded persons detected
+                min_distance = np.linalg.norm(self.drone_position - self.wounded_found[0]["position"])
+                best_position = self.wounded_found[0]["position"]
+                for wounded in self.wounded_found[1:]:
+                    distance = np.linalg.norm(self.drone_position - wounded["position"])
+                    if distance < min_distance:
+                        min_distance = distance
+                        best_position = wounded["position"]
+                best_angle = normalize_angle(angle(np.array([1,0]), best_position - self.drone_position))
+                best_angle = normalize_angle(best_angle - normalize_angle(self.drone_angle))
 
         found_rescue_center = False
         is_near = False
@@ -296,7 +358,7 @@ class DroneWaypoint(DroneAbstract):
         return [[250,150],[20, -200],[-200,150]]
 
 
-    # TODO: implement beziers curves for turning, 45° forward movement
+    # TODO: implement beziers curves for turning, 45° forward movement, go directly towards waypoint and rotate during movement
     def get_control_from_path(self, pos):
         """
         returns the control to follow the path
@@ -324,21 +386,29 @@ class DroneWaypoint(DroneAbstract):
 
         self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.drone_position = self.get_position()
+        self.drone_angle = self.get_angle()
 
         self.controller.cycle()            
             
         return self.controller.command
 
 
+    def draw_top_layer(self):
+
+        if self.debug_wounded:
+            for wounded in self.wounded_found:
+                pos = np.array(wounded["position"]) + np.array(self.size_area)/2
+                arcade.draw_circle_filled(pos[0], pos[1],10, color=(255, 0, 255))
+        
+    
     def draw_bottom_layer(self):
 
-        if not self.debug_path: return
+        if self.debug_path: 
+            drawn_path = self.path.copy()
+            drawn_path.append(self.nextWaypoint)
+            if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
 
-        drawn_path = self.path.copy()
-        drawn_path.append(self.nextWaypoint)
-        if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
-
-        for k in range(len(drawn_path)-1):
-            pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
-            pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
-            arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
+            for k in range(len(drawn_path)-1):
+                pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
+                pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
+                arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
