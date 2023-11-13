@@ -155,6 +155,7 @@ class DroneWaypoint(DroneAbstract):
         self.last_angles = deque()
 
         self.wounded_found = []
+        self.wounded_distance = 50 # The distance between wounded person to be considered as the same
 
         ## Debug controls
 
@@ -185,15 +186,8 @@ class DroneWaypoint(DroneAbstract):
             drone_angle = normalize_angle(self.drone_angle)
             waypoint_angle = normalize_angle(angle(ref_vect, waypoint_vect))
 
-            angle = normalize_angle(waypoint_angle - drone_angle)
+            return normalize_angle(waypoint_angle - drone_angle)
 
-            if angle > 0.5:
-                return 1.0
-            if angle < -0.5:
-                return -1.0
-            if angle > 0:
-                angle
-            return angle
         return 0
     
     
@@ -227,7 +221,6 @@ class DroneWaypoint(DroneAbstract):
         """
         angle = self.measured_compass_angle()
         angle2 = self.measured_compass_angle()
-        print(angle, angle2)
         self.last_angles.append(angle)
         if len(self.last_angles) > 5:
             self.last_angles.popleft()
@@ -238,8 +231,6 @@ class DroneWaypoint(DroneAbstract):
         """
         compares the wounded persons detected with the ones already detected
         """
-
-        error_distance = 20
 
         def get_wounded_position():
             wounded_pos = self.drone_position.copy()
@@ -252,10 +243,10 @@ class DroneWaypoint(DroneAbstract):
     
         for k in range(len(self.wounded_found)):
             wounded = self.wounded_found[k]
-            if np.linalg.norm(wounded_pos - wounded["position"]) < error_distance:
+            if np.linalg.norm(wounded_pos - wounded["position"]) < self.wounded_distance:
                 wounded["count"] += 1
                 n = wounded["count"]
-                wounded["position"] = wounded["position"]*(n/(n-1)) + wounded_pos/n
+                wounded["position"] = wounded["position"]*((n-1)/n) + wounded_pos/n
                 wounded["last_seen"] = 0
                 return
             
@@ -354,8 +345,8 @@ class DroneWaypoint(DroneAbstract):
         """
 
         if destination == 0:
-            return [[-320,-180],[-200,150],[20, -200]]
-        return [[250,150],[20, -200],[-200,150]]
+            return [[-320,-180],[-260,138],[-200,150], [20, -200]]
+        return [[250,150],[20, -200],[-200,150],[-260,138]]
 
 
     # TODO: implement beziers curves for turning, 45° forward movement, go directly towards waypoint and rotate during movement
@@ -369,9 +360,18 @@ class DroneWaypoint(DroneAbstract):
                    "rotation": 0.0,
                    "grasper": 0}
         
-        command["forward"] = 1.0
-        command["rotation"] = self.adapt_angle_direction(pos)
-        command["lateral"] = math.sin(command["rotation"])
+        angle_from_waypoint = self.adapt_angle_direction(pos)
+
+        if angle_from_waypoint > 0.5:
+            command["rotation"] =  1.0
+        elif angle_from_waypoint < -0.5:
+            command["rotation"] =  -1.0
+        else:
+            command["rotation"] = angle_from_waypoint
+
+        command["forward"] = math.cos(angle_from_waypoint)
+        command["lateral"] = math.sin(angle_from_waypoint)        
+        
         if self.check_waypoint(pos):
             if len(self.path) > 0:
                 self.lastWaypoint = self.nextWaypoint.copy()
@@ -398,9 +398,10 @@ class DroneWaypoint(DroneAbstract):
         if self.debug_wounded:
             for wounded in self.wounded_found:
                 pos = np.array(wounded["position"]) + np.array(self.size_area)/2
-                arcade.draw_circle_filled(pos[0], pos[1],10, color=(255, 0, 255))
-        
-    
+                arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
+                arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
+                
+                    
     def draw_bottom_layer(self):
 
         if self.debug_path: 
