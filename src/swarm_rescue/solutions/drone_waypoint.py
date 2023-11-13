@@ -152,10 +152,10 @@ class DroneWaypoint(DroneAbstract):
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.controller = DroneController(self, debug_mode=True)
-        self.last_angles = deque()
+        self.last_angles = deque() # queue of the last angles
 
         self.wounded_found = []
-        self.wounded_distance = 50 # The distance between wounded person to be considered as the same
+        self.wounded_distance = 60 # The distance between wounded person to be considered as the same
 
         ## Debug controls
 
@@ -257,7 +257,7 @@ class DroneWaypoint(DroneAbstract):
 
         for k in range(len(self.wounded_found)-1,-1,-1):
             self.wounded_found[k]["last_seen"] += 1
-            if np.linalg.norm(self.drone_position - self.wounded_found[k]["position"])<30 and self.wounded_found[k]["last_seen"] > frame_limit:
+            if np.linalg.norm(self.drone_position - self.wounded_found[k]["position"])<80 and self.wounded_found[k]["last_seen"] > frame_limit:
                 self.wounded_found.pop(k)
 
     # TODO: fix wounded search (sensor can miss wounded person at some frames) and make it more precise
@@ -308,7 +308,9 @@ class DroneWaypoint(DroneAbstract):
         found_rescue_center = False
         is_near = False
         angles_list = []
-        if (self.controller.current_state == self.controller.going_to_center and detection_semantic):
+        if (detection_semantic and 
+            (self.controller.current_state == self.controller.going_to_center 
+            or self.controller.current_state == self.controller.approaching_center)):
             for data in detection_semantic:
                 if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER:
                     found_rescue_center = True
@@ -317,6 +319,7 @@ class DroneWaypoint(DroneAbstract):
 
             if found_rescue_center:
                 best_angle = circular_mean(np.array(angles_list))
+
 
         if found_rescue_center or found_wounded:
             # simple P controller
@@ -361,6 +364,7 @@ class DroneWaypoint(DroneAbstract):
                    "grasper": 0}
         
         angle_from_waypoint = self.adapt_angle_direction(pos)
+        angle_from_waypoint = normalize_angle(angle_from_waypoint+math.pi/4)
 
         if angle_from_waypoint > 0.5:
             command["rotation"] =  1.0
@@ -369,8 +373,11 @@ class DroneWaypoint(DroneAbstract):
         else:
             command["rotation"] = angle_from_waypoint
 
-        command["forward"] = math.cos(angle_from_waypoint)
-        command["lateral"] = math.sin(angle_from_waypoint)        
+        command["forward"] = math.cos(angle_from_waypoint-math.pi/4)
+        command["lateral"] = math.sin(angle_from_waypoint-math.pi/4)
+        norm = max(abs(command["forward"]),abs(command["lateral"]))
+        command["forward"] = command["forward"]/norm
+        command["lateral"] = command["lateral"]/norm     
         
         if self.check_waypoint(pos):
             if len(self.path) > 0:
@@ -400,8 +407,8 @@ class DroneWaypoint(DroneAbstract):
                 pos = np.array(wounded["position"]) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
                 arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
-                
-                    
+
+
     def draw_bottom_layer(self):
 
         if self.debug_path: 
