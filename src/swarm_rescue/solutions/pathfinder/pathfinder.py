@@ -6,8 +6,9 @@ import pyastar2d
 
 robot_radius = 10
 sub_segment_size = 20
+path_refinements = 3 # number of times to refine the path
 save_images = True
-output = "./solve.png"
+output = "./solve"
 
 
 def border_from_map_np(map):
@@ -33,6 +34,7 @@ def is_path_free(map, point1, point2):
             return False
     return True
 
+# TODO: C implementation 
 def smooth_path(map, path):
     i_ref = 0
     j_ref = 2
@@ -83,7 +85,6 @@ def segmentize_path(map, path):
 
     return new_path
 
-# TODO: subdviser chaque segment du smooth path est essayer de coller au segment suivant pour CV vers meilleur solution
 def pathfinder(map, start, end):
 
     tb = time.time()
@@ -108,26 +109,43 @@ def pathfinder(map, start, end):
 
     t2 = time.time()
     path_refined = segmentize_path(map_border, path_smooth)
+    path_refined = smooth_path(map_border, path_refined)
+    for _ in range(path_refinements-1):
+        path_refined = segmentize_path(map_border, path_refined)
+        path_refined = smooth_path(map_border, path_refined)
     print(f"Refined path of length {len(path_refined)} in {time.time()-t2:.6f}s")
 
-    if len(path_refined) > 0:
-        print(f"Path found")
-        
+    if len(path_refined) > 0:        
         if save_images:
             plt.imshow(np.stack((map_border, map_border, map_border), axis=2).astype(np.float32))
             plt.savefig("./border.png")
-
-            plt.figure()
             map = np.stack((map, map, map), axis=2)
+
+            current_output = output+"-raw.png"
+            plt.figure()
+            path_plot = np.array(path)
+            plt.plot(path_plot[:,1],path_plot[:,0],color="red")
+            plt.imshow(map)
+            print(f"Plotting path to {current_output}, {len(path)} points)")
+            plt.savefig(current_output)
+
+            current_output = output+"-smooth.png"
+            plt.figure()
+            path_plot = np.array(path_smooth)
+            plt.plot(path_plot[:,1],path_plot[:,0],color="red")
+            plt.imshow(map)
+            print(f"Plotting path to {current_output}, {len(path_smooth)} points)")
+            plt.savefig(current_output)
+
+            current_output = output+"-refined.png"
+            plt.figure()
             path_plot = np.array(path_refined)
             plt.plot(path_plot[:,1],path_plot[:,0],color="red")
             plt.imshow(map)
-            print(f"Plotting path to {output}, {len(path_refined)} points)")
-            plt.savefig(output)
-    else:
-        print("No path found")
-    
-    return path
+            print(f"Plotting path to {current_output}, {len(path_refined)} points)")
+            plt.savefig(current_output)
+
+    return path_refined
 
 
 map = mpimg.imread("./map-f.png").astype(np.float32)
