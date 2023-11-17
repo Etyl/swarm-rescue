@@ -260,7 +260,6 @@ class DroneWaypoint(DroneAbstract):
             if np.linalg.norm(self.drone_position - self.wounded_found[k]["position"])<80 and self.wounded_found[k]["last_seen"] > frame_limit:
                 self.wounded_found.pop(k)
 
-    # TODO: fix wounded search (sensor can miss wounded person at some frames) and make it more precise
     def process_semantic_sensor(self):
         """
         According to his state in the state machine, the Drone will move towards a wound person or the rescue center
@@ -352,7 +351,7 @@ class DroneWaypoint(DroneAbstract):
         return [[250,150],[20, -200],[-200,150],[-260,138]]
 
 
-    # TODO: implement beziers curves for turning, 45° forward movement, go directly towards waypoint and rotate during movement
+    # TODO: improve turning
     def get_control_from_path(self, pos):
         """
         returns the control to follow the path
