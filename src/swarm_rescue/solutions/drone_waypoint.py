@@ -197,9 +197,15 @@ class DroneWaypoint(DroneAbstract):
         checks if the drone has reached the waypoint
         """
 
-        if np.linalg.norm(pos - self.nextWaypoint) < 20:
-            return True
-        return False
+        dist = np.linalg.norm(pos - self.nextWaypoint)
+        if len(self.path) == 0: return dist < 20
+
+        v1 = self.nextWaypoint - pos
+        v2 = np.array(self.path[-1]) - np.array(self.nextWaypoint)
+        turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
+
+        # TODO: tune values
+        return dist < 20 + (1+turning_angle)*20
         
 
     # TODO: implement communication
@@ -351,7 +357,6 @@ class DroneWaypoint(DroneAbstract):
         return [[250,150],[20, -200],[-200,150],[-260,138]]
 
 
-    # TODO: improve turning
     def get_control_from_path(self, pos):
         """
         returns the control to follow the path
