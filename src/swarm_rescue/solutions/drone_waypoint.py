@@ -161,6 +161,7 @@ class DroneWaypoint(DroneAbstract):
 
         self.debug_path = True # True if the path must be displayed
         self.debug_wounded = True
+        self.debug_positions = True
         
         self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
@@ -406,6 +407,15 @@ class DroneWaypoint(DroneAbstract):
                 pos = np.array(wounded["position"]) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
                 arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
+
+        if self.debug_positions:
+            pos = np.array(self.drone_position) + np.array(self.size_area)/2
+            arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.RED)
+
+            direction = np.array([1,0])
+            rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
+            direction = direction@rot
+            arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*200, pos[1]+direction[1]*200, arcade.color.RED)
 
 
     def draw_bottom_layer(self):
