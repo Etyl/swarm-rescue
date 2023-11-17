@@ -221,7 +221,6 @@ class DroneWaypoint(DroneAbstract):
         returns the angle of the drone
         """
         angle = self.measured_compass_angle()
-        angle2 = self.measured_compass_angle()
         self.last_angles.append(angle)
         if len(self.last_angles) > 5:
             self.last_angles.popleft()
