@@ -166,6 +166,7 @@ class MyDroneSemantic(DroneAbstract):
         angular_vel_controller_max = 1.0
 
         detection_semantic = self.semantic_values()
+        print(self.semantic_values())
         best_angle = 0
 
         found_wounded = False

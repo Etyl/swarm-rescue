@@ -58,9 +58,14 @@ class OccupancyGrid(Grid):
         LIDAR_DIST_CLIP = 40.0
         EMPTY_ZONE_VALUE = -0.602
         OBSTACLE_ZONE_VALUE = 2.0
-        FREE_ZONE_VALUE = -4.0
+        FREE_ZONE_VALUE = -16.0
         THRESHOLD_MIN = -40
         THRESHOLD_MAX = 40
+
+
+        self.lock_grid = self.grid == THRESHOLD_MIN
+        self.buffer = self.grid.copy()
+        self.confidence_grid = np.zeros((self.x_max_grid, self.y_max_grid))
 
         lidar_dist = self.lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.lidar.ray_angles[::EVERY_N].copy()
@@ -82,6 +87,7 @@ class OccupancyGrid(Grid):
 
         for pt_x, pt_y in zip(points_x, points_y):
             self.add_value_along_line(pose.position[0], pose.position[1], pt_x, pt_y, EMPTY_ZONE_VALUE)
+            
 
         # For obstacle zones, all values of lidar_dist are < max_range
         select_collision = lidar_dist < max_range
@@ -99,6 +105,18 @@ class OccupancyGrid(Grid):
 
         # threshold values
         self.grid = np.clip(self.grid, THRESHOLD_MIN, THRESHOLD_MAX)
+        self.grid[self.lock_grid] = self.buffer[self.lock_grid]
+
+        # map to binary
+        self.binary_grid = np.where(self.grid > 0, 1, 0)
+
+        # save binary grid to image
+        cv2.imwrite("binary_grid.png", self.binary_grid * 255)
+
+        # erode and dilate
+        # kernel = np.ones((2, 2), np.uint8)
+        # self.binary_grid = self.binary_grid.astype('uint8')
+        # self.binary_grid = cv2.erode(self.binary_grid, kernel, iterations=1)
 
         # compute zoomed grid for displaying
         self.zoomed_grid = self.grid.copy()
@@ -118,7 +136,7 @@ class MyDroneMapping(DroneAbstract):
         self.grid = OccupancyGrid(size_area_world=self.size_area,
                                   resolution=resolution,
                                   lidar=self.lidar())
-
+        print(self.semantic_values())
     def define_message_for_all(self):
         """
         Here, we don't need communication...
@@ -144,6 +162,7 @@ class MyDroneMapping(DroneAbstract):
         if self.iteration % 5 == 0:
             self.grid.display(self.grid.grid, self.estimated_pose, title="occupancy grid")
             self.grid.display(self.grid.zoomed_grid, self.estimated_pose, title="zoomed occupancy grid")
+            self.grid.display(self.grid.binary_grid, self.estimated_pose, title="binary occupancy grid")
             # pass
 
         return command

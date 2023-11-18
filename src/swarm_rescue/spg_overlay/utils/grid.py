@@ -141,7 +141,7 @@ class Grid:
         img = img - img.min()
         img = img / img.max() * 255
         img = np.uint8(img)
-        img_color = cv2.applyColorMap(src=img, colormap=cv2.COLORMAP_JET)
+        img_color = cv2.applyColorMap(src=img, colormap=cv2.COLORMAP_WINTER)
 
         pt2_x = robot_pose.position[0] + np.cos(robot_pose.orientation) * 20
         pt2_y = robot_pose.position[1] + np.sin(robot_pose.orientation) * 20
