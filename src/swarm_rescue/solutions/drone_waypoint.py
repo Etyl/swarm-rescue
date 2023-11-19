@@ -46,10 +46,13 @@ class Map:
         self.wounded_grid = Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON)
         self.explored_grid = Mapper(area_world, resolution, lidar, None)
 
-
+    # TODO: tu peux utiliser la fonction magique __setitem__(self,pos,zone) / x,y = pos pour simplifier
+    # comme ca tu peux peux utiliser map[x,y] = zone
     def set_zone(self, x, y, zone : Zone):
         self.map[x][y] = zone
         
+    # TODO tu peux utiliser la fonction magique __getitem__(self,pos) / x,y = pos pour simplifier
+    # comme ca tu peux peux appeler map[x,y]
     def get_zone(self, x, y) -> Zone:
         return self.map[x][y]
     
@@ -59,6 +62,7 @@ class Map:
         self.wounded_grid.update_grid(pose, semantic_lidar)
         self.explored_grid.update_grid(pose, semantic_lidar)
 
+        # TODO: optimiser: mettre à jour uniquement les points qui ont changés
         # Update map
         for x in range(self.x_max_grid):
             for y in range(self.y_max_grid):
@@ -567,6 +571,7 @@ class DroneWaypoint(DroneAbstract):
         updates the map
         """
         detection_semantic = self.semantic_values()
+        # TODO: utiliser self.drone_position et self.drone_angle (les attributs deja définis)
         self.estimated_pose = Pose(np.asarray(self.measured_gps_position()), self.measured_compass_angle())
         self.map.update_grid(self.estimated_pose, detection_semantic)
         self.map.display_map()
