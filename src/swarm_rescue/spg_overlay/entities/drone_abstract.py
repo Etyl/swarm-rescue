@@ -312,7 +312,7 @@ class DroneAbstract(Agent):
         You must use this value for your calculation in the control() function.
         """
         odometer = self.odometer_values()
-        if odometer:
+        if odometer.any():
             return odometer[2]
         else:
             return None

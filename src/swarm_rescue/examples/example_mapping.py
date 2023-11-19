@@ -136,7 +136,6 @@ class MyDroneMapping(DroneAbstract):
         self.grid = OccupancyGrid(size_area_world=self.size_area,
                                   resolution=resolution,
                                   lidar=self.lidar())
-        print(self.semantic_values())
     def define_message_for_all(self):
         """
         Here, we don't need communication...
