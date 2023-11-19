@@ -173,7 +173,7 @@ class DroneWaypoint(DroneAbstract):
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
-        self.map = Map(self.size_area, 4, self.lidar())
+        self.map = Map(self.size_area, 8, self.lidar())
 
 
     def adapt_angle_direction(self, pos: list):

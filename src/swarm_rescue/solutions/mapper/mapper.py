@@ -23,10 +23,12 @@ class Map:
         
         self.map = np.full((self.x_max_grid, self.y_max_grid), Zone.INEXPLORED)
 
-        self.wall_grid = Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WALL)
-        self.rescue_center_grid = Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.RESCUE_CENTER)
-        self.wounded_grid = Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON)
-        self.explored_grid = Mapper(area_world, resolution, lidar, None)
+        self.mappers = {
+            Zone.OBSTACLE: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WALL),
+            Zone.RESCUE_CENTER: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.RESCUE_CENTER),
+            Zone.WOUNDED: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON),
+            Zone.INEXPLORED: Mapper(area_world, resolution, lidar, None)
+        }
 
     def __setitem__(self, pos, zone):
         x,y = pos
@@ -37,35 +39,48 @@ class Map:
         return self.map[x][y]
     
     def update_grid(self, pose: Pose, semantic_lidar):
-        self.wall_grid.update_grid(pose, semantic_lidar)
-        #self.rescue_center_grid.update_grid(pose, semantic_lidar)
-        #self.wounded_grid.update_grid(pose, semantic_lidar)
-        self.explored_grid.update_grid(pose, semantic_lidar)
+        for mapper in self.mappers.values():
+            mapper.update_grid(pose, semantic_lidar)
 
         # TODO: optimiser: mettre à jour uniquement les points qui ont changés
         # Update map
         for x in range(self.x_max_grid):
             for y in range(self.y_max_grid):
-                if self.wall_grid.binary_grid[x][y] == 1:
-                    self[x,y] = Zone.OBSTACLE
-                elif self.explored_grid.binary_grid[x][y] == 1:
-                    self[x,y] = Zone.EMPTY
+                for zone, mapper in self.mappers.items():
+                    if mapper.binary_grid[x][y] == 1:
+                        self[x, y] = zone
+                        break
                 else:
-                    self[x,y] = Zone.INEXPLORED
+                    self[x, y] = Zone.INEXPLORED
+
+    def map_to_image(self):
+        """
+        returns the map as an image
+        """
+        color_map = {
+            Zone.OBSTACLE: (255, 0, 0),
+            Zone.EMPTY: (0, 255, 0),
+            Zone.WOUNDED: (0, 0, 255),
+            Zone.RESCUE_CENTER: (255, 255, 0),
+            Zone.INEXPLORED: (255, 255, 255)
+        }
+        
+        img = np.zeros((self.x_max_grid, self.y_max_grid, 3), np.uint8)
+        for x in range(self.x_max_grid):
+            for y in range(self.y_max_grid):
+                img[x][y] = color_map[self[x, y]]
+        # zoom image
+        img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
+        return np.transpose(img, (1, 0, 2))
 
     def display_map(self):
         """
         displays the map
         """
-        map = self.map.copy()
-        map = np.where(map == Zone.OBSTACLE, 255, map)
-        map = np.where(map == Zone.WOUNDED, 128, map)
-        map = np.where(map == Zone.RESCUE_CENTER, 64, map)
-        map = np.where(map == Zone.INEXPLORED, 0, map)
-        map = np.where(map == Zone.EMPTY, 128, map)
-        map = map.astype(np.uint8)
-        # save map as png
-        cv2.imwrite("map.png", map.T)
+        
+        img = self.map_to_image()
+        cv2.imshow("map", img)
+        cv2.waitKey(1)
 
 class Mapper(Grid):
 
