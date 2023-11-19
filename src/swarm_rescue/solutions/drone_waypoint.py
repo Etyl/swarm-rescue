@@ -46,14 +46,12 @@ class Map:
         self.wounded_grid = Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON)
         self.explored_grid = Mapper(area_world, resolution, lidar, None)
 
-    # TODO: tu peux utiliser la fonction magique __setitem__(self,pos,zone) / x,y = pos pour simplifier
-    # comme ca tu peux peux utiliser map[x,y] = zone
-    def set_zone(self, x, y, zone : Zone):
+    def __setitem__(self, pos, zone):
+        x,y = pos
         self.map[x][y] = zone
         
-    # TODO tu peux utiliser la fonction magique __getitem__(self,pos) / x,y = pos pour simplifier
-    # comme ca tu peux peux appeler map[x,y]
-    def get_zone(self, x, y) -> Zone:
+    def __getitem__(self, pos):
+        x,y = pos
         return self.map[x][y]
     
     def update_grid(self, pose: Pose, semantic_lidar):
@@ -67,15 +65,15 @@ class Map:
         for x in range(self.x_max_grid):
             for y in range(self.y_max_grid):
                 if self.wall_grid.binary_grid[x][y] == 1:
-                    self.set_zone(x, y, Zone.OBSTACLE)
+                    self[x,y] = Zone.OBSTACLE
                 # elif self.rescue_center_grid.binary_grid[x][y] == 1:
                 #     self.set_zone(x, y, Zone.RESCUE_CENTER)
                 # elif self.wounded_grid.binary_grid[x][y] == 1:
                 #     self.set_zone(x, y, Zone.WOUNDED)
                 elif self.explored_grid.binary_grid[x][y] == 1:
-                    self.set_zone(x, y, Zone.EMPTY)
+                    self[x,y] = Zone.EMPTY
                 else:
-                    self.set_zone(x, y, Zone.INEXPLORED)
+                    self[x,y] = Zone.INEXPLORED
 
     def display_map(self):
         """
@@ -120,61 +118,67 @@ class Mapper(Grid):
         lidar : lidar data
         pose : corrected pose in world coordinates
         """
+        EVERY_N = 1
         LIDAR_DIST_CLIP = 40.0
         EMPTY_ZONE_VALUE = -0.602
         OBSTACLE_ZONE_VALUE = 2.0
-        FREE_ZONE_VALUE = -4.0
+        FREE_ZONE_VALUE = -16.0
         THRESHOLD_MIN = -40
         THRESHOLD_MAX = 40
 
-        self.semantic_lidar = semantic_lidar
 
-        # semantic_lidar_dist = np.array([data.distance for data in self.semantic_lidar if data.entity_type == self.zone_to_detect])
-        # semantic_lidar_angles = np.array([data.angle for data in self.semantic_lidar if data.entity_type == self.zone_to_detect])
-        semantic_lidar_dist = self.lidar.get_sensor_values().copy()
-        semantic_lidar_angles = self.lidar.ray_angles.copy()
+        self.lock_grid = self.grid == THRESHOLD_MIN
+        self.buffer = self.grid.copy()
+        self.confidence_grid = np.zeros((self.x_max_grid, self.y_max_grid))
+
+        lidar_dist = self.lidar.get_sensor_values()[::EVERY_N].copy()
+        lidar_angles = self.lidar.ray_angles[::EVERY_N].copy()
+
         # Compute cos and sin of the absolute angle of the lidar
-        cos_rays = np.cos(semantic_lidar_angles + pose.orientation)
-        sin_rays = np.sin(semantic_lidar_angles + pose.orientation)
+        cos_rays = np.cos(lidar_angles + pose.orientation)
+        sin_rays = np.sin(lidar_angles + pose.orientation)
 
-        max_range = MAX_RANGE_LIDAR_SENSOR * 0.9
+        if self.zone_to_detect:
+            max_range = MAX_RANGE_LIDAR_SENSOR * 0.9
+            # For empty zones
+            # points_x and point_y contains the border of detected empty zone
+            # We use a value a little bit less than LIDAR_DIST_CLIP because of the noise in lidar
+            lidar_dist_empty = np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0)
+            # All values of lidar_dist_empty_clip are now <= max_range
+            lidar_dist_empty_clip = np.minimum(lidar_dist_empty, max_range)
+            points_x = pose.position[0] + np.multiply(lidar_dist_empty_clip, cos_rays)
+            points_y = pose.position[1] + np.multiply(lidar_dist_empty_clip, sin_rays)
 
-        # For empty zones
-        # points_x and point_y contains the border of detected empty zone
-        # We use a value a little bit less than LIDAR_DIST_CLIP because of the noise in lidar
-        lidar_dist_empty = np.maximum(semantic_lidar_dist - LIDAR_DIST_CLIP, 0.0)
-        # All values of lidar_dist_empty_clip are now <= max_range
-        lidar_dist_empty_clip = np.minimum(lidar_dist_empty, max_range)
-        points_x = pose.position[0] + np.multiply(lidar_dist_empty_clip, cos_rays)
-        points_y = pose.position[1] + np.multiply(lidar_dist_empty_clip, sin_rays)
-
-        for pt_x, pt_y in zip(points_x, points_y):
-            if self.zone_to_detect == None:
-                self.add_value_along_line(pose.position[0], pose.position[1], pt_x, pt_y, OBSTACLE_ZONE_VALUE)
-            else:
+            for pt_x, pt_y in zip(points_x, points_y):
                 self.add_value_along_line(pose.position[0], pose.position[1], pt_x, pt_y, EMPTY_ZONE_VALUE)
 
-        # For obstacle zones, all values of lidar_dist are < max_range
-        select_collision = lidar_dist_empty < max_range
+            # For obstacle zones, all values of lidar_dist are < max_range
+            select_collision = lidar_dist < max_range
 
-        points_x = pose.position[0] + np.multiply(lidar_dist_empty, cos_rays)
-        points_y = pose.position[1] + np.multiply(lidar_dist_empty, sin_rays)
+            points_x = pose.position[0] + np.multiply(lidar_dist, cos_rays)
+            points_y = pose.position[1] + np.multiply(lidar_dist, sin_rays)
 
-        points_x = points_x[select_collision]
-        points_y = points_y[select_collision]
+            points_x = points_x[select_collision]
+            points_y = points_y[select_collision]
 
-        self.add_points(points_x, points_y, OBSTACLE_ZONE_VALUE)
+            self.add_points(points_x, points_y, OBSTACLE_ZONE_VALUE)
 
-        # the current position of the drone is free !
-        if self.zone_to_detect == None:
-            self.add_points(pose.position[0], pose.position[1], OBSTACLE_ZONE_VALUE)
-        else:
+            # the current position of the drone is free !
             self.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
+        else:
+            lidar_dist_empty_clip = np.minimum(lidar_dist, MAX_RANGE_LIDAR_SENSOR)
+            points_x = pose.position[0] + np.multiply(lidar_dist_empty_clip, cos_rays)
+            points_y = pose.position[1] + np.multiply(lidar_dist_empty_clip, sin_rays)
+
+            for pt_x, pt_y in zip(points_x, points_y):
+                self.add_value_along_line(pose.position[0], pose.position[1], pt_x, pt_y, THRESHOLD_MAX)
+            
 
         # threshold values
         self.grid = np.clip(self.grid, THRESHOLD_MIN, THRESHOLD_MAX)
+        self.grid[self.lock_grid] = self.buffer[self.lock_grid]
 
-        # map to binary and resize to fit the world
+        # map to binary
         self.binary_grid = np.where(self.grid > 0, 1, 0)
 
 class DroneController(StateMachine):
@@ -332,7 +336,7 @@ class DroneWaypoint(DroneAbstract):
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
-        self.map = Map(self.size_area, 8, self.lidar())
+        self.map = Map(self.size_area, 4, self.lidar())
 
 
     def adapt_angle_direction(self, pos: list):
@@ -589,10 +593,15 @@ class DroneWaypoint(DroneAbstract):
         updates the map
         """
         detection_semantic = self.semantic_values()
-        # TODO: utiliser self.drone_position et self.drone_angle (les attributs deja définis)
-        self.estimated_pose = Pose(np.asarray(self.measured_gps_position()), self.measured_compass_angle())
-        self.map.update_grid(self.estimated_pose, detection_semantic)
+        self.estimated_pose = Pose(self.drone_position, self.drone_angle)
+        #self.estimated_pose = Pose(np.asarray(self.true_position()), self.true_angle())
+        max_vel_angle = 0.08
+
+        # update map if angular velocity is not too high
+        if abs(self.measured_angular_velocity()) < max_vel_angle:
+            self.map.update_grid(self.estimated_pose, detection_semantic)
         self.map.display_map()
+
 
     def draw_top_layer(self):
 
