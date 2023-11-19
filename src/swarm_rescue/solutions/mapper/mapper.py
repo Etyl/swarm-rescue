@@ -25,9 +25,9 @@ class Map:
 
         self.mappers = {
             Zone.OBSTACLE: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WALL),
-            Zone.RESCUE_CENTER: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.RESCUE_CENTER),
-            Zone.WOUNDED: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON),
-            Zone.INEXPLORED: Mapper(area_world, resolution, lidar, None)
+            #Zone.RESCUE_CENTER: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.RESCUE_CENTER),
+            #Zone.WOUNDED: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON),
+            Zone.EMPTY: Mapper(area_world, resolution, lidar, None)
         }
 
     def __setitem__(self, pos, zone):
@@ -58,11 +58,11 @@ class Map:
         returns the map as an image
         """
         color_map = {
-            Zone.OBSTACLE: (255, 0, 0),
-            Zone.EMPTY: (0, 255, 0),
+            Zone.OBSTACLE: (50, 100, 200),
+            Zone.EMPTY: (255, 255, 255),
             Zone.WOUNDED: (0, 0, 255),
             Zone.RESCUE_CENTER: (255, 255, 0),
-            Zone.INEXPLORED: (255, 255, 255)
+            Zone.INEXPLORED: (0, 0, 0)
         }
         
         img = np.zeros((self.x_max_grid, self.y_max_grid, 3), np.uint8)
@@ -77,7 +77,6 @@ class Map:
         """
         displays the map
         """
-        
         img = self.map_to_image()
         cv2.imshow("map", img)
         cv2.waitKey(1)
@@ -174,7 +173,7 @@ class Mapper(Grid):
         self.binary_grid = np.where(self.grid > 0, 1, 0)
         # blur binary grid
         self.binary_grid = cv2.blur(self.binary_grid, (3,3))
-        # threshold binary grid
-        self.binary_grid = np.where(self.binary_grid > 0, 1, 0).astype(np.uint8)
-        # erode and dilate
-        self.binary_grid = cv2.erode(self.binary_grid, np.ones((3, 3), np.uint8), iterations=1)
+        # # threshold binary grid
+        # self.binary_grid = np.where(self.binary_grid > 0, 1, 0).astype(np.uint8)
+        # # erode and dilate
+        # self.binary_grid = cv2.erode(self.binary_grid, np.ones((3, 3), np.uint8), iterations=1)
