@@ -230,7 +230,7 @@ class Mapper(Grid):
         # map to binary
         self.binary_grid = np.where(self.grid > 0, 1, 0)
         # blur binary grid
-        self.binary_grid = cv2.blur(self.binary_grid, (3,3)).astype(np.uint8)
+        # self.binary_grid = cv2.blur(self.binary_grid, (3,3)).astype(np.uint8)
         #print(np.unique(self.binary_grid))
         # # threshold binary grid
         # self.binary_grid = np.where(self.binary_grid > 0, 1, 0).astype(np.uint8)
