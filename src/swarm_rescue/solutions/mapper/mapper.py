@@ -17,9 +17,10 @@ class Zone(Enum):
     INEXPLORED = -1
 
 class Map:
-    def __init__(self, area_world, resolution, lidar):
+    def __init__(self, area_world, resolution, lidar, debug_mode=False):
         
         self.resolution = resolution
+        self.debug_mode = debug_mode
         self.x_max_grid: int = int(area_world[0] / self.resolution + 0.5)
         self.y_max_grid: int = int(area_world[1] / self.resolution + 0.5)
         
@@ -54,6 +55,9 @@ class Map:
                         break
                 else:
                     self[x, y] = Zone.INEXPLORED
+
+        if self.debug_mode:
+            self.display_map()
 
     def map_to_image(self):
         """
@@ -105,21 +109,17 @@ class Map:
         """
         obstacle_grid = self.mappers[Zone.OBSTACLE].binary_grid
         
-        
-
         obstacle_free_grid = 1 - obstacle_grid
-        zoom_factor = 1
-        walls_grid_resized = cv2.resize(obstacle_free_grid, (0, 0), fx=zoom_factor, fy=zoom_factor, interpolation=cv2.INTER_NEAREST)
+        zoom_factor = 3
+
+        if zoom_factor != 1:
+            obstacle_free_grid = cv2.resize(obstacle_free_grid, (0, 0), fx=zoom_factor, fy=zoom_factor, interpolation=cv2.INTER_NEAREST)
 
         adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
         grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]
-        print("Start: ", grid_start)
-        print("End: ", grid_end)
-     
-        plt.imshow(obstacle_grid)
-        plt.savefig("./map3.png")
-        grid_path = pathfinder(walls_grid_resized, grid_start, grid_end)
+       
+        grid_path = pathfinder(obstacle_free_grid, grid_start, grid_end)
 
         path = [self.grid_to_world([pos[0] / zoom_factor, pos[1] / zoom_factor]) for pos in grid_path]
         path.reverse()

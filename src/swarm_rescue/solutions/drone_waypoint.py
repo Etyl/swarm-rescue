@@ -173,7 +173,7 @@ class DroneWaypoint(DroneAbstract):
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
-        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar())
+        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=True)
         self.rescue_center_position = None
 
 
@@ -374,9 +374,7 @@ class DroneWaypoint(DroneAbstract):
         """
         if destination == 0:
             return [[-320,-180],[-260,138],[-200,150], [20, -200]]
-            
-        print("Drone position :", self.drone_position)
-        print("Rescue center position :", self.rescue_center_position)
+        
         path = self.map.shortest_path(self.drone_position, self.rescue_center_position)
         return path
 
@@ -415,23 +413,29 @@ class DroneWaypoint(DroneAbstract):
                 self.nextWaypoint = None
                 self.onRoute = False
         return command
-
+    
+    def compute_rescue_center_position(self):
+        """
+        computes the position of the rescue center
+        """
+        semantic_lidar_dist = [data.distance for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
+        min_dist = min(semantic_lidar_dist) if len(semantic_lidar_dist) > 0 else np.inf
+        
+        if min_dist > 100:
+            self.rescue_center_position = self.drone_position.copy()
 
     def control(self):
 
         self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.drone_position = self.get_position()
         self.drone_angle = self.get_angle()
-        semantic_lidar_dist = [data.distance for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
-        min_dist = min(semantic_lidar_dist) if len(semantic_lidar_dist) > 0 else np.inf
         
-        if self.rescue_center_position is None and min_dist > 100:
-            self.rescue_center_position = self.drone_position.copy()
+        if self.rescue_center_position is None:
+            self.compute_rescue_center_position()
         
         self.controller.cycle()
 
         self.update_mapping()
-        self.map.display_map()
             
         return self.controller.command
     
@@ -441,10 +445,7 @@ class DroneWaypoint(DroneAbstract):
         """
         detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
-        #self.estimated_pose = Pose(np.asarray(self.true_position()), self.true_angle())
         max_vel_angle = 0.08
-
-        # update map if angular velocity is not too high
         if abs(self.measured_angular_velocity()) < max_vel_angle:
             self.map.update_grid(self.estimated_pose, detection_semantic)
 

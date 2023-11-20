@@ -5,7 +5,7 @@ import time
 import pyastar2d
 import cv2
 
-robot_radius = 3
+robot_radius = 6
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
 save_images = True
