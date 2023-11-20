@@ -374,6 +374,7 @@ class DroneWaypoint(DroneAbstract):
         """
         if destination == 0:
             return [[-320,-180],[-260,138],[-200,150], [20, -200]]
+            
         print("Drone position :", self.drone_position)
         print("Rescue center position :", self.rescue_center_position)
         path = self.map.shortest_path(self.drone_position, self.rescue_center_position)
@@ -421,8 +422,10 @@ class DroneWaypoint(DroneAbstract):
         self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.drone_position = self.get_position()
         self.drone_angle = self.get_angle()
-
-        if self.rescue_center_position is None:
+        semantic_lidar_dist = [data.distance for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
+        min_dist = min(semantic_lidar_dist) if len(semantic_lidar_dist) > 0 else np.inf
+        
+        if self.rescue_center_position is None and min_dist > 100:
             self.rescue_center_position = self.drone_position.copy()
         
         self.controller.cycle()
