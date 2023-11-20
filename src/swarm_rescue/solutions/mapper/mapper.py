@@ -215,7 +215,8 @@ class Mapper(Grid):
             # the current position of the drone is free !
             self.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
         else:
-            lidar_dist_empty_clip = np.minimum(lidar_dist, MAX_RANGE_LIDAR_SENSOR)
+            max_range = MAX_RANGE_LIDAR_SENSOR * 0.9
+            lidar_dist_empty_clip = np.minimum(lidar_dist, max_range)
             points_x = pose.position[0] + np.multiply(lidar_dist_empty_clip, cos_rays)
             points_y = pose.position[1] + np.multiply(lidar_dist_empty_clip, sin_rays)
 
