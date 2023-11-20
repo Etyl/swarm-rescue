@@ -7,6 +7,8 @@ from spg_overlay.utils.pose import Pose
 from spg_overlay.utils.grid import Grid
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
 
+from solutions.pathfinder.pathfinder import *
+
 class Zone(Enum):
     EMPTY = 0
     OBSTACLE = 1
@@ -80,6 +82,45 @@ class Map:
         img = self.map_to_image()
         cv2.imshow("map", img)
         cv2.waitKey(1)
+    
+    def world_to_grid(self, pos: Pose):
+        """
+        converts world coordinates to grid coordinates
+        """
+        x =  self.x_max_grid - int(pos[0] / self.resolution + self.x_max_grid / 2)
+        y = int(pos[1] / self.resolution + self.y_max_grid / 2)
+        return np.array([x, y])
+    
+    def grid_to_world(self, pos: Pose):
+        """
+        converts grid coordinates to world coordinates
+        """
+        y = (self.y_max_grid - pos[1]) * self.resolution - self.y_max_grid * self.resolution / 2
+        x = (pos[0] - self.x_max_grid / 2) * self.resolution
+        return [x, y]
+
+    def shortest_path(self, start: Pose, end: Pose):
+        """
+        returns the shortest path between start and end
+        """
+        obstacle_grid = self.mappers[Zone.OBSTACLE].binary_grid
+        cv2.imwrite("map.png", obstacle_grid)
+
+        obstacle_free_grid = 1 - obstacle_grid
+        zoom_factor = 3
+        walls_grid_resized = cv2.resize(obstacle_free_grid, (0, 0), fx=zoom_factor, fy=zoom_factor, interpolation=cv2.INTER_NEAREST)
+
+        adjusted_start = [start[0], start[1] + 30]
+        grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
+        grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]
+
+        grid_path = pathfinder(walls_grid_resized, grid_start, grid_end)
+        
+        path = [self.grid_to_world([pos[0] / zoom_factor, pos[1] / zoom_factor]) for pos in grid_path]
+        return path
+
+
+
 
 class Mapper(Grid):
 
@@ -114,7 +155,7 @@ class Mapper(Grid):
         LIDAR_DIST_CLIP = 40.0
         EMPTY_ZONE_VALUE = -0.602
         OBSTACLE_ZONE_VALUE = 2.0
-        FREE_ZONE_VALUE = -16.0
+        FREE_ZONE_VALUE = -8
         THRESHOLD_MIN = -40
         THRESHOLD_MAX = 40
 
@@ -172,8 +213,9 @@ class Mapper(Grid):
         # map to binary
         self.binary_grid = np.where(self.grid > 0, 1, 0)
         # blur binary grid
-        self.binary_grid = cv2.blur(self.binary_grid, (3,3))
+        #self.binary_grid = cv2.blur(self.binary_grid, (3,3)).astype(np.uint8)
+        #print(np.unique(self.binary_grid))
         # # threshold binary grid
         # self.binary_grid = np.where(self.binary_grid > 0, 1, 0).astype(np.uint8)
-        # # erode and dilate
-        # self.binary_grid = cv2.erode(self.binary_grid, np.ones((3, 3), np.uint8), iterations=1)
+        # # erodwe and dilate
+        #self.binary_grid = cv2.erode(self.binary_grid, np.ones((2, 2), np.uint8), iterations=1)

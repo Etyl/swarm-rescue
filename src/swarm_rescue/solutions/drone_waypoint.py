@@ -154,7 +154,7 @@ class DroneWaypoint(DroneAbstract):
         self.found_wounded = False # True if the drone has found a wounded person
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
-        self.controller = DroneController(self, debug_mode=True)
+        self.controller = DroneController(self, debug_mode=False)
         self.last_angles = deque() # queue of the last angles
         self.last_pos = deque() # queue of the last positions
         self.avg_pos = np.array([0,0]) # The average position of the drone
@@ -173,7 +173,8 @@ class DroneWaypoint(DroneAbstract):
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
-        self.map = Map(self.size_area, 8, self.lidar())
+        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar())
+        self.rescue_center_position = None
 
 
     def adapt_angle_direction(self, pos: list):
@@ -371,10 +372,12 @@ class DroneWaypoint(DroneAbstract):
         """
         returns the path to the destination
         """
-
         if destination == 0:
             return [[-320,-180],[-260,138],[-200,150], [20, -200]]
-        return [[250,150],[20, -200],[-200,150],[-260,138]]
+        print("Drone position :", self.drone_position)
+        print("Rescue center position :", self.rescue_center_position)
+        path = self.map.shortest_path(self.drone_position, self.rescue_center_position)
+        return path
 
 
     def get_control_from_path(self, pos):
@@ -419,9 +422,13 @@ class DroneWaypoint(DroneAbstract):
         self.drone_position = self.get_position()
         self.drone_angle = self.get_angle()
 
+        if self.rescue_center_position is None:
+            self.rescue_center_position = self.drone_position.copy()
+        
         self.controller.cycle()
 
         self.update_mapping()
+        self.map.display_map()
             
         return self.controller.command
     
@@ -437,7 +444,6 @@ class DroneWaypoint(DroneAbstract):
         # update map if angular velocity is not too high
         if abs(self.measured_angular_velocity()) < max_vel_angle:
             self.map.update_grid(self.estimated_pose, detection_semantic)
-        self.map.display_map()
 
 
     def draw_top_layer(self):
