@@ -27,10 +27,10 @@ class Map:
         self.map = np.full((self.x_max_grid, self.y_max_grid), Zone.INEXPLORED)
 
         self.mappers = {
-            Zone.OBSTACLE: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WALL),
+            Zone.EMPTY: Mapper(area_world, resolution, lidar, None),
+            Zone.OBSTACLE: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WALL)
             #Zone.RESCUE_CENTER: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.RESCUE_CENTER),
             #Zone.WOUNDED: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON),
-            Zone.EMPTY: Mapper(area_world, resolution, lidar, None)
         }
 
     def __setitem__(self, pos, zone):
@@ -42,17 +42,12 @@ class Map:
         return self.map[x][y]
     
     def update_grid(self, pose: Pose, semantic_lidar):
-        for mapper in self.mappers.values():
-            mapper.update_grid(pose, semantic_lidar)
 
-        # TODO: optimiser: mettre à jour uniquement les points qui ont changés
-        # Update map
-        for x in range(self.x_max_grid):
-            for y in range(self.y_max_grid):
-                for zone, mapper in self.mappers.items():
-                    if mapper.binary_grid[x][y] == 1:
-                        self[x, y] = zone
-                        break
+        for zone, mapper in self.mappers.items():
+            mapper.update_grid(pose, semantic_lidar)
+            for x, y in zip(*mapper.changed_points):
+                if mapper.binary_grid[x][y] == 1:
+                    self[x, y] = zone
                 else:
                     self[x, y] = Zone.INEXPLORED
 
@@ -149,7 +144,11 @@ class Mapper(Grid):
         self.zone_to_detect = zone_to_detect
 
         self.grid = np.zeros((self.x_max_grid, self.y_max_grid))
+
+        self.previous_binary_grid = np.zeros((self.x_max_grid, self.y_max_grid)).astype(np.uint8)
         self.binary_grid = np.zeros((self.x_max_grid, self.y_max_grid)).astype(np.uint8)
+
+        self.changed_points = np.array([])
 
     def update_grid(self, pose: Pose, semantic_lidar):
         """
@@ -167,12 +166,10 @@ class Mapper(Grid):
 
         self.lock_grid = self.grid == THRESHOLD_MIN
         self.buffer = self.grid.copy()
-        self.confidence_grid = np.zeros((self.x_max_grid, self.y_max_grid))
 
         lidar_dist = self.lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.lidar.ray_angles[::EVERY_N].copy()
 
-        # semantic lidar [Data(distance=87.6665911658776, angle=-0.3695991357164461, entity_type=<TypeEntity.WOUNDED_PERSON: 2>, grasped=False), Data(distance=83.70284765472621, angle=-0.18479956785822305, entity_type=<TypeEntity.WOUNDED_PERSON: 2>, grasped=False)], get the min angle and max angle of WOUNDED_PERSON
         if self.zone_to_detect:
             self.semantic_lidar = semantic_lidar
             semantic_lidar_angles = [data.angle for data in semantic_lidar if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON]
@@ -230,6 +227,7 @@ class Mapper(Grid):
 
         # map to binary
         self.binary_grid = np.where(self.grid > 0, 1, 0)
+        self.changed_points = np.where(self.binary_grid != self.previous_binary_grid)
         # blur binary grid
         # self.binary_grid = cv2.blur(self.binary_grid, (3,3)).astype(np.uint8)
         #print(np.unique(self.binary_grid))

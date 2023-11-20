@@ -173,7 +173,7 @@ class DroneWaypoint(DroneAbstract):
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
-        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=True)
+        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=False)
         self.rescue_center_position = None
 
 
