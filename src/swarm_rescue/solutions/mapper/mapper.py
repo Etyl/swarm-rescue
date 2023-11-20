@@ -87,8 +87,8 @@ class Map:
         """
         converts world coordinates to grid coordinates
         """
-        x =  self.x_max_grid - int(pos[0] / self.resolution + self.x_max_grid / 2)
-        y = int(pos[1] / self.resolution + self.y_max_grid / 2)
+        y =  self.y_max_grid - int(pos[1] / self.resolution + self.y_max_grid / 2)
+        x = int(pos[0] / self.resolution + self.x_max_grid / 2)
         return np.array([x, y])
     
     def grid_to_world(self, pos: Pose):
@@ -104,19 +104,25 @@ class Map:
         returns the shortest path between start and end
         """
         obstacle_grid = self.mappers[Zone.OBSTACLE].binary_grid
-        cv2.imwrite("map.png", obstacle_grid)
+        
+        
 
         obstacle_free_grid = 1 - obstacle_grid
-        zoom_factor = 3
+        zoom_factor = 1
         walls_grid_resized = cv2.resize(obstacle_free_grid, (0, 0), fx=zoom_factor, fy=zoom_factor, interpolation=cv2.INTER_NEAREST)
 
-        adjusted_start = [start[0], start[1] + 30]
+        adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
         grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]
-
+        print("Start: ", grid_start)
+        print("End: ", grid_end)
+     
+        plt.imshow(obstacle_grid)
+        plt.savefig("./map3.png")
         grid_path = pathfinder(walls_grid_resized, grid_start, grid_end)
-        
+
         path = [self.grid_to_world([pos[0] / zoom_factor, pos[1] / zoom_factor]) for pos in grid_path]
+        path.reverse()
         return path
 
 
@@ -166,6 +172,17 @@ class Mapper(Grid):
         lidar_dist = self.lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.lidar.ray_angles[::EVERY_N].copy()
 
+        # semantic lidar [Data(distance=87.6665911658776, angle=-0.3695991357164461, entity_type=<TypeEntity.WOUNDED_PERSON: 2>, grasped=False), Data(distance=83.70284765472621, angle=-0.18479956785822305, entity_type=<TypeEntity.WOUNDED_PERSON: 2>, grasped=False)], get the min angle and max angle of WOUNDED_PERSON
+        if self.zone_to_detect:
+            self.semantic_lidar = semantic_lidar
+            semantic_lidar_angles = [data.angle for data in semantic_lidar if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON]
+            if semantic_lidar_angles:
+                min_angle = min(semantic_lidar_angles)
+                max_angle = max(semantic_lidar_angles)
+                # Enlever tout les points de lidar_dist et lidar_angles qui sont dans l'angle min_angle et max_angle avec epsilon
+                lidar_dist = np.array([lidar_dist[i] for i in range(len(lidar_dist)) if lidar_angles[i] < min_angle - 0.1 or lidar_angles[i] > max_angle + 0.1])
+                lidar_angles = np.array([lidar_angles[i] for i in range(len(lidar_angles)) if lidar_angles[i] < min_angle - 0.1 or lidar_angles[i] > max_angle + 0.1])
+
         # Compute cos and sin of the absolute angle of the lidar
         cos_rays = np.cos(lidar_angles + pose.orientation)
         sin_rays = np.sin(lidar_angles + pose.orientation)
@@ -213,7 +230,7 @@ class Mapper(Grid):
         # map to binary
         self.binary_grid = np.where(self.grid > 0, 1, 0)
         # blur binary grid
-        #self.binary_grid = cv2.blur(self.binary_grid, (3,3)).astype(np.uint8)
+        self.binary_grid = cv2.blur(self.binary_grid, (3,3)).astype(np.uint8)
         #print(np.unique(self.binary_grid))
         # # threshold binary grid
         # self.binary_grid = np.where(self.binary_grid > 0, 1, 0).astype(np.uint8)
