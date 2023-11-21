@@ -156,14 +156,18 @@ class DroneWaypoint(DroneAbstract):
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.controller = DroneController(self, debug_mode=False)
         self.last_angles = deque() # queue of the last angles
+        self.last_pos = deque() # queue of the last positions
+        self.avg_pos = np.array([0,0]) # The average position of the drone
+        self.angle_offset = np.pi/4 # The angle offset to go to the next waypoint
 
         self.wounded_found = []
-        self.wounded_distance = 60 # The distance between wounded person to be considered as the same
+        self.wounded_distance = 80 # The distance between wounded person to be considered as the same
 
         ## Debug controls
 
         self.debug_path = True # True if the path must be displayed
         self.debug_wounded = True
+        self.debug_positions = True
         
         self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
@@ -202,9 +206,15 @@ class DroneWaypoint(DroneAbstract):
         checks if the drone has reached the waypoint
         """
 
-        if np.linalg.norm(pos - self.nextWaypoint) < 20:
-            return True
-        return False
+        dist = np.linalg.norm(pos - self.nextWaypoint)
+        if len(self.path) == 0: return dist < 20
+
+        v1 = self.nextWaypoint - pos
+        v2 = np.array(self.path[-1]) - np.array(self.nextWaypoint)
+        turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
+
+        # TODO: tune values
+        return dist < 20 + (1+turning_angle)*20
         
 
     # TODO: implement communication
@@ -217,7 +227,18 @@ class DroneWaypoint(DroneAbstract):
         """
         returns the position of the drone
         """
-        return self.measured_gps_position()
+
+        pos = self.measured_gps_position()
+        self.last_pos.append(pos)
+        if len(self.last_pos) > 5:
+            self.last_pos.popleft()
+        self.avg_pos = np.mean(np.array(self.last_pos), axis=0)
+        direction = np.array([1,0])
+        angle = self.drone_angle-self.angle_offset
+        rot = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
+        direction = direction@rot
+        self.avg_pos = self.avg_pos + direction*20
+        return pos
     
 
     # TODO: determine the angle with more precision
@@ -226,7 +247,6 @@ class DroneWaypoint(DroneAbstract):
         returns the angle of the drone
         """
         angle = self.measured_compass_angle()
-        angle2 = self.measured_compass_angle()
         self.last_angles.append(angle)
         if len(self.last_angles) > 5:
             self.last_angles.popleft()
@@ -266,7 +286,6 @@ class DroneWaypoint(DroneAbstract):
             if np.linalg.norm(self.drone_position - self.wounded_found[k]["position"])<80 and self.wounded_found[k]["last_seen"] > frame_limit:
                 self.wounded_found.pop(k)
 
-    # TODO: fix wounded search (sensor can miss wounded person at some frames) and make it more precise
     def process_semantic_sensor(self):
         """
         According to his state in the state machine, the Drone will move towards a wound person or the rescue center
@@ -362,7 +381,6 @@ class DroneWaypoint(DroneAbstract):
         return path
 
 
-    # TODO: implement beziers curves for turning, 45° forward movement, go directly towards waypoint and rotate during movement
     def get_control_from_path(self, pos):
         """
         returns the control to follow the path
@@ -438,6 +456,17 @@ class DroneWaypoint(DroneAbstract):
                 pos = np.array(wounded["position"]) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
                 arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
+
+        if self.debug_positions:
+            pos = np.array(self.drone_position) + np.array(self.size_area)/2
+            pos2 = np.array(self.avg_pos) + np.array(self.size_area)/2
+            arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
+            arcade.draw_circle_filled(pos2[0], pos2[1],5, arcade.color.YELLOW)
+
+            direction = np.array([1,0])
+            rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
+            direction = direction@rot
+            arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*200, pos[1]+direction[1]*200, arcade.color.RED)
 
 
     def draw_bottom_layer(self):
