@@ -17,6 +17,7 @@ from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
+from solutions.localizer.localizer import Localizer
 
 class DroneController(StateMachine):
 
@@ -156,8 +157,6 @@ class DroneWaypoint(DroneAbstract):
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.controller = DroneController(self, debug_mode=False)
         self.last_angles = deque() # queue of the last angles
-        self.last_pos = deque() # queue of the last positions
-        self.avg_pos = np.array([0,0]) # The average position of the drone
         self.angle_offset = np.pi/4 # The angle offset to go to the next waypoint
 
         self.wounded_found = []
@@ -175,7 +174,8 @@ class DroneWaypoint(DroneAbstract):
 
         self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar())
         self.rescue_center_position = None
-
+        
+        self.localizer = Localizer()
 
     def adapt_angle_direction(self, pos: list):
         """
@@ -227,18 +227,10 @@ class DroneWaypoint(DroneAbstract):
         """
         returns the position of the drone
         """
-
-        pos = self.measured_gps_position()
-        self.last_pos.append(pos)
-        if len(self.last_pos) > 5:
-            self.last_pos.popleft()
-        self.avg_pos = np.mean(np.array(self.last_pos), axis=0)
-        direction = np.array([1,0])
-        angle = self.drone_angle-self.angle_offset
-        rot = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
-        direction = direction@rot
-        self.avg_pos = self.avg_pos + direction*20
-        return pos
+        
+        xEst = self.localizer.localize(self.measured_gps_position(), self.measured_velocity(), self.measured_compass_angle())
+        
+        return xEst[0:2,0]
     
 
     # TODO: determine the angle with more precision
@@ -459,9 +451,7 @@ class DroneWaypoint(DroneAbstract):
 
         if self.debug_positions:
             pos = np.array(self.drone_position) + np.array(self.size_area)/2
-            pos2 = np.array(self.avg_pos) + np.array(self.size_area)/2
             arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
-            arcade.draw_circle_filled(pos2[0], pos2[1],5, arcade.color.YELLOW)
 
             direction = np.array([1,0])
             rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
