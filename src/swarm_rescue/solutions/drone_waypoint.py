@@ -17,6 +17,7 @@ from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
+from solutions.roamer.roamer import RoamerController
 
 class DroneController(StateMachine):
 
@@ -96,7 +97,8 @@ class DroneController(StateMachine):
     @roaming.enter
     def on_enter_roaming(self):
         # TODO: implement exploration
-        self.drone.onRoute = False
+        # self.drone.onRoute = False
+        self.drone.roaming = True
 
     def before_going_to_wounded(self):
         self.drone.path = self.drone.get_path(self.drone.drone_position, 0)
@@ -112,6 +114,7 @@ class DroneController(StateMachine):
     
     @approaching_wounded.enter
     def on_enter_approaching_wounded(self):
+        self.drone.roaming = False
         self.command = self.drone.command_semantic
         self.command["grasper"] = 1
 
@@ -144,6 +147,8 @@ class DroneWaypoint(DroneAbstract):
                          misc_data=misc_data,
                          display_lidar_graph=False,
                          **kwargs)
+        
+        self.roaming = False
 
         self.onRoute = False # True if the drone is on the route to the waypoint
         self.path = []
@@ -169,12 +174,15 @@ class DroneWaypoint(DroneAbstract):
         self.debug_wounded = True
         self.debug_positions = True
         
-        self.controller.force_transition()
+        # self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
         self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar())
         self.rescue_center_position = None
+
+        self.roamer_controller = RoamerController(self, self.map, debug_mode=True)
+        self.roamer_controller.force_transition()
 
 
     def adapt_angle_direction(self, pos: list):
