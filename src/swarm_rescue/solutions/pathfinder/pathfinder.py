@@ -9,11 +9,7 @@ robot_radius = 3
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
 save_images = True
-<<<<<<< HEAD
 output = r"./solve.png"
-=======
-output = "./solve"
->>>>>>> main
 
 
 def border_from_map_np(map):
@@ -150,17 +146,9 @@ def pathfinder(map, start, end):
             path_plot = np.array(path_refined)
             plt.plot(path_plot[:,1],path_plot[:,0],color="red")
             plt.imshow(map)
-<<<<<<< HEAD
-            print(f"Plotting path to {output}, {len(path_refined)} points)")
-            plt.savefig(output)
-    else:
-        print("No path found")
-    
-=======
             print(f"Plotting path to {current_output}, {len(path_refined)} points)")
             plt.savefig(current_output)
 
->>>>>>> main
     return path_refined
 
 
