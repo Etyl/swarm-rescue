@@ -154,7 +154,7 @@ def pathfinder(map, start, end):
     else:
         print("No path found")
     
-    return path_refined
+    return path_smooth
 
 
 # map = 1-cv2.imread("map.png", cv2.IMREAD_GRAYSCALE)

@@ -173,7 +173,7 @@ class DroneWaypoint(DroneAbstract):
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
-        self.map = Map(area_world=self.size_area, resolution=16, lidar=self.lidar(), debug_mode=True)
+        self.map = Map(area_world=self.size_area, resolution=16, lidar=self.lidar(), debug_mode=False)
         self.rescue_center_position = None
 
 
@@ -182,7 +182,7 @@ class DroneWaypoint(DroneAbstract):
         gives the angle to turn to in order to go to the next waypoint
         """
 
-        if self.drone_angle != None:
+        if self.drone_angle != None and self.nextWaypoint != None:
             
             def angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
@@ -405,13 +405,14 @@ class DroneWaypoint(DroneAbstract):
         command["forward"] = command["forward"]/norm
         command["lateral"] = command["lateral"]/norm     
         
-        if self.check_waypoint(pos):
-            if len(self.path) > 0:
-                self.lastWaypoint = self.nextWaypoint.copy()
-                self.nextWaypoint = self.path.pop()
-            else:
-                self.nextWaypoint = None
-                self.onRoute = False
+        if self.nextWaypoint != None:
+            if self.check_waypoint(pos):
+                if len(self.path) > 0:
+                    self.lastWaypoint = self.nextWaypoint.copy()
+                    self.nextWaypoint = self.path.pop()
+                else:
+                    self.nextWaypoint = None
+                    self.onRoute = False
         return command
     
     def compute_rescue_center_position(self):
@@ -421,7 +422,7 @@ class DroneWaypoint(DroneAbstract):
         semantic_lidar_dist = [data.distance for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
         min_dist = min(semantic_lidar_dist) if len(semantic_lidar_dist) > 0 else np.inf
         
-        if min_dist > 100:
+        if min_dist > 10:
             self.rescue_center_position = self.drone_position.copy()
 
     def control(self):
@@ -474,7 +475,7 @@ class DroneWaypoint(DroneAbstract):
 
         if self.debug_path: 
             drawn_path = self.path.copy()
-            drawn_path.append(self.nextWaypoint)
+            if self.nextWaypoint != None: drawn_path.append(self.nextWaypoint)
             if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
             for k in range(len(drawn_path)-1):
                 pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2

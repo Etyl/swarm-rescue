@@ -134,6 +134,7 @@ class Map:
         grid_path = pathfinder(obstacle_grid, grid_start, grid_end)
 
         path = [self.grid_to_world([pos[0] / zoom_factor, pos[1] / zoom_factor]) for pos in grid_path]
+
         path.reverse()
         return path
 
