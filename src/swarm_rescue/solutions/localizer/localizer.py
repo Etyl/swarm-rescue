@@ -122,14 +122,9 @@ class Localizer():
             self.xEst = np.array([[gps_pos[0]], [gps_pos[1]], [0.0], [0.0]])
             self.isInitialized = True
 
-        def angle(v1, v2):
-            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
-        
         prev_angle = self.xEst[2, 0]
 
-        v_angle = angle(odometer_v/np.linalg.norm(odometer_v), [0,1]) + np.pi/4
-        v = np.linalg.norm(odometer_v)
-        u = np.array([[v], [normalize_angle(v_angle-prev_angle)]])
+        u = np.array([[odometer_v], [normalize_angle(odometer_angle-prev_angle)]])
 
         if gps_pos is None:
             self.xEst = motion_model(self.xEst, u)
@@ -140,8 +135,6 @@ class Localizer():
             self.xEst, self.PEst = ekf_estimation(self.xEst, self.PEst, z, u)
             self.hz.append((self.hz, z))
 
-        print(u)
-        print(self.xEst)
 
         # store data history
         self.hxEst.append((self.hxEst, self.xEst))

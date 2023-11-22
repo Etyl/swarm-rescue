@@ -176,6 +176,11 @@ class DroneWaypoint(DroneAbstract):
         self.rescue_center_position = None
         
         self.localizer = Localizer()
+        self.pos2 = np.array([0,0])
+        self.error1 = 0
+        self.count1 = 0
+        self.error2 = 0
+        self.count2 = 0
 
     def adapt_angle_direction(self, pos: list):
         """
@@ -223,26 +228,35 @@ class DroneWaypoint(DroneAbstract):
 
 
     # TODO: determine the position in no GPS zone
-    def get_position(self):
+    def get_localization(self):
         """
         returns the position of the drone
-        """
-        
-        xEst = self.localizer.localize(self.measured_gps_position(), self.measured_velocity(), self.measured_compass_angle())
-        
-        return xEst[0:2,0]
-    
-
-    # TODO: determine the angle with more precision
-    def get_angle(self):
-        """
-        returns the angle of the drone
         """
         angle = self.measured_compass_angle()
         self.last_angles.append(angle)
         if len(self.last_angles) > 5:
             self.last_angles.popleft()
-        return circular_mean(np.array(self.last_angles))
+        self.drone_angle = circular_mean(np.array(self.last_angles))
+
+
+        odom = self.odometer_values()
+        speed = odom[0]
+
+
+        self.pos2 = self.measured_gps_position() #+ self.measured_velocity()*10 # devant
+        xEst = self.localizer.localize(self.true_position(), speed, self.measured_compass_angle()+self.angle_offset)
+
+        self.drone_position = xEst[0:2,0]
+
+
+        truepos = self.true_position()
+        self.error1 += np.linalg.norm(xEst[0:2,0] - truepos)
+        self.count1 += 1
+        self.error2 += np.linalg.norm(self.pos2 - truepos)
+        self.count2 += 1
+
+        print("Error 1 :", self.error1/self.count1)
+        print("Error 2 :", self.error2/self.count2)
     
 
     def add_wounded(self, data_wounded):
@@ -412,8 +426,7 @@ class DroneWaypoint(DroneAbstract):
     def control(self):
 
         self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
-        self.drone_position = self.get_position()
-        self.drone_angle = self.get_angle()
+        self.get_localization()
         semantic_lidar_dist = [data.distance for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
         min_dist = min(semantic_lidar_dist) if len(semantic_lidar_dist) > 0 else np.inf
         
@@ -452,6 +465,10 @@ class DroneWaypoint(DroneAbstract):
         if self.debug_positions:
             pos = np.array(self.drone_position) + np.array(self.size_area)/2
             arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
+            pos = np.array(self.pos2) + np.array(self.size_area)/2
+            arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.YELLOW)
+            pos = np.array(self.true_position()) + np.array(self.size_area)/2
+            arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
 
             direction = np.array([1,0])
             rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
