@@ -123,6 +123,9 @@ class Map:
 
         if zoom_factor != 1:
             obstacle_grid = cv2.resize(obstacle_grid, (0, 0), fx=zoom_factor, fy=zoom_factor)
+            # erosion
+            kernel = np.ones((2,2),np.uint8)
+            obstacle_grid = 1-cv2.erode(1-obstacle_grid, kernel, iterations=2)
 
         adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
@@ -174,7 +177,8 @@ class Mapper(Grid):
         """
 
         # Extract data from LIDAR
-        self.lock_grid = self.grid == THRESHOLD_MIN
+        self.lock_grid = np.logical_or(self.grid == THRESHOLD_MIN, self.grid == THRESHOLD_MAX)
+
         self.buffer = self.grid.copy()
 
         lidar_dist = self.lidar.get_sensor_values()[::EVERY_N].copy()

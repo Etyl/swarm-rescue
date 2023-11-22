@@ -476,7 +476,6 @@ class DroneWaypoint(DroneAbstract):
             drawn_path = self.path.copy()
             drawn_path.append(self.nextWaypoint)
             if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
-
             for k in range(len(drawn_path)-1):
                 pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
                 pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
