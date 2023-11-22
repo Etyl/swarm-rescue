@@ -7,6 +7,7 @@ import random
 import numpy as np
 from typing import Optional
 from statemachine import StateMachine, State
+from statemachine import exceptions
 import arcade
 from collections import deque 
 
@@ -182,7 +183,7 @@ class DroneWaypoint(DroneAbstract):
         self.rescue_center_position = None
 
         self.roamer_controller = RoamerController(self, self.map, debug_mode=True)
-        self.roamer_controller.force_transition()
+        # self.roamer_controller.force_transition()
 
 
     def adapt_angle_direction(self, pos: list):
@@ -440,8 +441,17 @@ class DroneWaypoint(DroneAbstract):
 
         self.update_mapping()
         self.map.display_map()
-            
-        return self.controller.command
+
+
+        try:
+            self.roamer_controller.cycle()
+        except exceptions.TransitionNotAllowed:
+            pass
+
+        if self.roaming:
+           return self.roamer_controller.command
+        else:
+            return self.controller.command
     
     def update_mapping(self):
         """

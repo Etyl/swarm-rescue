@@ -9,7 +9,8 @@ import time
 import threading
 import os
 import cv2
-
+import asyncio
+import math
 
 class RoamerController(StateMachine):
     start_roaming = State('Start Roaming', initial=True)
@@ -17,11 +18,13 @@ class RoamerController(StateMachine):
     going_to_target = State('Going to target')
 
     force_transition = start_roaming.to(searching_for_target, on='before_searching_for_target')
+    force_transition2 = searching_for_target.to(going_to_target, on='before_going_to_target')
 
     cycle = (
-        start_roaming.to(searching_for_target) |
+        start_roaming.to(searching_for_target, cond="drone_position_valid") |
         searching_for_target.to(going_to_target) |
-        going_to_target.to(searching_for_target, cond="target_discorvered") 
+        # going_to_target.to(searching_for_target, cond="target_discorvered") 
+        going_to_target.to(searching_for_target, cond="check_target_reached") 
     )
 
     def __init__(self, drone: DroneAbstract, map: Map, debug_mode: bool = False):
@@ -35,6 +38,22 @@ class RoamerController(StateMachine):
         self.roamer = Roamer(drone, map)
 
         super(RoamerController, self).__init__()
+    
+    def check_target_reached(self):
+        """
+        checks if the drone has reached the waypoint
+        """
+
+        dist = np.linalg.norm(self.drone.get_position() - self.target)
+
+        v1 = self.target- self.drone.get_position()
+        v2 = np.array(self.drone.path[-1]) - np.array(self.map.grid_to_world(self.target))
+        turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
+
+        return dist < 20 + (1+turning_angle)*20
+
+    def drone_position_valid(self):
+        return self.drone.get_position() is not None and not np.isnan(self.drone.get_position()).any()
 
     def target_discorvered(self):
         return self.map[self.target] != Zone.INEXPLORED
@@ -50,25 +69,29 @@ class RoamerController(StateMachine):
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
     
-    def search_for_target(self):
-        # waiting 1 sec for the sensors to acquire data
-        time.sleep(1) 
-        print("Searching for target")
-        self.drone.path = self.roamer.find_path()
+    async def search_for_target(self):
+        await asyncio.sleep(1)
+        self.drone.path, self.target = self.roamer.find_path()
+        self.force_transition2()
 
     def before_searching_for_target(self):
         print("Searching for target")
 
         # Compute path to target
-        search_thread = threading.Thread(target=self.search_for_target)
-        search_thread.start()
+        # search_thread = threading.Thread(target=self.search_for_target)
+        # search_thread.start()
+
+        # asyncio.run(self.search_for_target())
+
 
     @going_to_target.enter
-    def on_enter_going_to_wounded(self):
-        self.command = self.drone.get_control_from_path(self.drone.drone_position)
+    def on_enter_going_to_target(self):
+        print("Entering going to target state")
+        self.command = self.drone.get_control_from_path(self.drone.get_position())
 
     def on_enter_searching_for_target(self):
         print("Entering searching for target state")
+        asyncio.run(self.search_for_target())
 
     def on_enter_start_roaming(self):
         print("Entering start roaming state")
@@ -97,8 +120,8 @@ class Roamer:
         """
         print("[Roamer] Finding next unexplored target")
         rows, cols = self.map_matrix.shape
-        print("[Roamer] Map shape : ", rows, cols)
-        current_row, current_col = self.map.world_to_grid(self.drone.drone_position)
+        print("[Roamer] Drone position : ", self.drone.get_position())
+        current_row, current_col = self.map.world_to_grid(self.drone.get_position())
         print("[Roamer] Current position : ", current_row, current_col)
 
         map_matrix_copy = self.map_matrix.copy()
@@ -150,7 +173,6 @@ class Roamer:
 
     def map_to_image(self, map):
         x_max_grid, y_max_grid = self.map_matrix.shape
-        print("[Roamer] Map shape : ", x_max_grid, y_max_grid)
         
         color_map = {
             Zone.OBSTACLE: (50, 100, 200),
@@ -196,12 +218,15 @@ class Roamer:
         target = self.find_next_unexeplored_target()
 
         matrix_astar = self.convert_matrix_for_astar(self.map_matrix)
-        path = pyastar2d.astar_path(matrix_astar, tuple(self.drone.drone_position), tuple(target), allow_diagonal=True)
+        drone_position_grid = self.map.world_to_grid(self.drone.get_position())
+
+        path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
         path_sampled = path[::sampling_rate]
 
         # convert path to world coordinates
         path_sampled = np.array([self.map.grid_to_world(pos) for pos in path_sampled])
-        return path_sampled
+        print("[Roamer] Path found : ", path_sampled)
+        return path_sampled.tolist(), target
     
 
 
