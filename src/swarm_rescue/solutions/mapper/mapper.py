@@ -164,37 +164,37 @@ class Mapper(Grid):
 
     def update_grid(self, pose: Pose, semantic_lidar):
         """
-        Bayesian map update with new observation
-        lidar : lidar data
-        pose : corrected pose in world coordinates
+        Updates the Bayesian map with new observations from LIDAR and semantic LIDAR.
+        
+        Args:
+        - pose: Corrected pose in world coordinates
+        - semantic_lidar: Semantic LIDAR data
         """
-    
+
+        # Extract data from LIDAR
         self.lock_grid = self.grid == THRESHOLD_MIN
         self.buffer = self.grid.copy()
 
         lidar_dist = self.lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.lidar.ray_angles[::EVERY_N].copy()
 
-        self.semantic_lidar = semantic_lidar
+        # Extract relevant angles from semantic LIDAR for wounded persons
         semantic_lidar_angles = [data.angle for data in semantic_lidar if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON]
 
+        # Filter LIDAR data based on semantic LIDAR angles
         if semantic_lidar_angles:
             min_angle = min(semantic_lidar_angles)
             max_angle = max(semantic_lidar_angles)
-            # Enlever tout les points de lidar_dist et lidar_angles qui sont dans l'angle min_angle et max_angle avec epsilon
             lidar_dist = np.array([lidar_dist[i] for i in range(len(lidar_dist)) if lidar_angles[i] < min_angle - 0.1 or lidar_angles[i] > max_angle + 0.1])
             lidar_angles = np.array([lidar_angles[i] for i in range(len(lidar_angles)) if lidar_angles[i] < min_angle - 0.1 or lidar_angles[i] > max_angle + 0.1])
 
-        # Compute cos and sin of the absolute angle of the lidar
+        # Compute cos and sin of lidar angles
         cos_rays = np.cos(lidar_angles + pose.orientation)
         sin_rays = np.sin(lidar_angles + pose.orientation)
 
+        # Define max range and process empty zones
         max_range = MAX_RANGE_LIDAR_SENSOR * 0.9
-        # For empty zones
-        # points_x and point_y contains the border of detected empty zone
-        # We use a value a little bit less than LIDAR_DIST_CLIP because of the noise in lidar
         lidar_dist_empty = np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0)
-        # All values of lidar_dist_empty_clip are now <= max_range
         lidar_dist_empty_clip = np.minimum(lidar_dist_empty, max_range)
         points_x = pose.position[0] + np.multiply(lidar_dist_empty_clip, cos_rays)
         points_y = pose.position[1] + np.multiply(lidar_dist_empty_clip, sin_rays)
@@ -202,32 +202,23 @@ class Mapper(Grid):
         for pt_x, pt_y in zip(points_x, points_y):
             self.add_value_along_line(pose.position[0], pose.position[1], pt_x, pt_y, EMPTY_ZONE_VALUE)
 
-        # For obstacle zones, all values of lidar_dist are < max_range
+        # Process obstacle zones
         select_collision = lidar_dist < max_range
-
         points_x = pose.position[0] + np.multiply(lidar_dist, cos_rays)
         points_y = pose.position[1] + np.multiply(lidar_dist, sin_rays)
-
         points_x = points_x[select_collision]
         points_y = points_y[select_collision]
 
         self.add_points(points_x, points_y, OBSTACLE_ZONE_VALUE)
 
-        # the current position of the drone is free !
+        # Mark the current position of the drone as free
         self.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
         
-        # threshold values
+        # Apply threshold values and update the grid
         self.grid = np.clip(self.grid, THRESHOLD_MIN, THRESHOLD_MAX)
         self.grid[self.lock_grid] = self.buffer[self.lock_grid]
 
-        # convert into grid with if grid = 0 then 0 if grid > 0 then 1 if grid < 0 then -1
+        # Convert grid values into binary representations
         self.binary_grid = np.where(self.grid > 0, 1, self.grid)
         self.binary_grid = np.where(self.grid < 0, -1, self.binary_grid)
         self.changed_points = np.where(self.binary_grid != self.previous_binary_grid)
-        # blur binary grid
-        # self.binary_grid = cv2.blur(self.binary_grid, (3,3)).astype(np.uint8)
-        #print(np.unique(self.binary_grid))
-        # # threshold binary grid
-        # self.binary_grid = np.where(self.binary_grid > 0, 1, 0).astype(np.uint8)
-        # # erodwe and dilate
-        #self.binary_grid = cv2.erode(self.binary_grid, np.ones((2, 2), np.uint8), iterations=1)
