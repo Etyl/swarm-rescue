@@ -114,19 +114,21 @@ class Map:
         """
         returns the shortest path between start and end
         """
-        obstacle_grid = self.mappers[Zone.OBSTACLE].binary_grid
+        obstacle_grid = (self.mappers[Zone.OBSTACLE].binary_grid < 0.5).astype(np.uint8)
+
+        plt.imshow(obstacle_grid)
+        plt.savefig("./map.png")
         
-        obstacle_free_grid = 1 - obstacle_grid
         zoom_factor = 3
 
         if zoom_factor != 1:
-            obstacle_free_grid = cv2.resize(obstacle_free_grid, (0, 0), fx=zoom_factor, fy=zoom_factor, interpolation=cv2.INTER_NEAREST)
+            obstacle_grid = cv2.resize(obstacle_grid, (0, 0), fx=zoom_factor, fy=zoom_factor)
 
         adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
         grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]
        
-        grid_path = pathfinder(obstacle_free_grid, grid_start, grid_end)
+        grid_path = pathfinder(obstacle_grid, grid_start, grid_end)
 
         path = [self.grid_to_world([pos[0] / zoom_factor, pos[1] / zoom_factor]) for pos in grid_path]
         path.reverse()

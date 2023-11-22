@@ -5,7 +5,7 @@ import time
 import pyastar2d
 import cv2
 
-robot_radius = 6
+robot_radius = 5
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
 save_images = True
@@ -14,6 +14,9 @@ output = "./solve"
 
 def border_from_map_np(map):
     map = np.ones(map.shape).astype(np.float32)-map
+    if save_images:
+        plt.imshow(map>0.5)
+        plt.savefig("./map_without_border.png")
     for _ in range(robot_radius):
         map = (np.roll(map,(1, 0), axis=(1, 0))+
                np.roll(map,(0, 1), axis=(1, 0))+
@@ -25,7 +28,7 @@ def border_from_map_np(map):
                np.roll(map,(-1, 1), axis=(1, 0)))
     if save_images:
         plt.imshow(map>0.5)
-        plt.savefig("./map.png")
+        plt.savefig("./map_border.png")
     return map>0.5
 
 def interpolate_path(point1, point2, t):
