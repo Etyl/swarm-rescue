@@ -114,10 +114,10 @@ class Map:
         """
         returns the shortest path between start and end
         """
-        obstacle_grid = (self.mappers[Zone.OBSTACLE].binary_grid < 0.5).astype(np.uint8)
+        obstacle_grid = (self.mappers[Zone.OBSTACLE].binary_grid == -1).astype(np.uint8)
 
-        plt.imshow(obstacle_grid)
-        plt.savefig("./map.png")
+        # plt.imshow(obstacle_grid)
+        # plt.savefig("./map.png")
         
         zoom_factor = 3
 
@@ -229,3 +229,4 @@ class Mapper(Grid):
         self.binary_grid = np.where(self.grid > 0, 1, self.grid)
         self.binary_grid = np.where(self.grid < 0, -1, self.binary_grid)
         self.changed_points = np.where(self.binary_grid != self.previous_binary_grid)
+        self.previous_binary_grid = self.binary_grid.copy()

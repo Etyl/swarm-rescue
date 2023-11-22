@@ -14,9 +14,6 @@ output = "./solve"
 
 def border_from_map_np(map):
     map = np.ones(map.shape).astype(np.float32)-map
-    if save_images:
-        plt.imshow(map>0.5)
-        plt.savefig("./map_without_border.png")
     for _ in range(robot_radius):
         map = (np.roll(map,(1, 0), axis=(1, 0))+
                np.roll(map,(0, 1), axis=(1, 0))+
@@ -117,6 +114,7 @@ def pathfinder(map, start, end):
     t2 = time.time()
     path_refined = segmentize_path(map_border, path_smooth)
     path_refined = smooth_path(map_border, path_refined)
+    
     for _ in range(path_refinements-1):
         path_refined = segmentize_path(map_border, path_refined)
         path_refined = smooth_path(map_border, path_refined)
@@ -149,12 +147,12 @@ def pathfinder(map, start, end):
             path_plot = np.array(path_refined)
             plt.plot(path_plot[:,1],path_plot[:,0],color="red")
             plt.imshow(map)
-            print(f"Plotting path to {output}, {len(path_refined)} points)")
-            plt.savefig(output)
+            print(f"Plotting path to {current_output}, {len(path_refined)} points)")
+            plt.savefig(current_output)
     else:
         print("No path found")
     
-    return path_smooth
+    return path_refined
 
 
 # map = 1-cv2.imread("map.png", cv2.IMREAD_GRAYSCALE)
