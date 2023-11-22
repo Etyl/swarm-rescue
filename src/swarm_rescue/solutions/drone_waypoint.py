@@ -420,7 +420,9 @@ class DroneWaypoint(DroneAbstract):
             if len(self.path) > 0:
                 self.lastWaypoint = self.nextWaypoint.copy()
                 self.nextWaypoint = self.path.pop()
+                print("Next waypoint :", self.nextWaypoint)
             else:
+                print("Arrived at destination")
                 self.nextWaypoint = None
                 self.onRoute = False
         return command
@@ -491,7 +493,8 @@ class DroneWaypoint(DroneAbstract):
 
         if self.debug_path: 
             drawn_path = self.path.copy()
-            drawn_path.append(self.nextWaypoint)
+            
+            if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
             if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
 
             for k in range(len(drawn_path)-1):

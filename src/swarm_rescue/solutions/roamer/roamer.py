@@ -11,6 +11,7 @@ import os
 import cv2
 import asyncio
 import math
+from collections import deque
 
 class RoamerController(StateMachine):
     start_roaming = State('Start Roaming', initial=True)
@@ -24,7 +25,8 @@ class RoamerController(StateMachine):
         start_roaming.to(searching_for_target, cond="drone_position_valid") |
         searching_for_target.to(going_to_target) |
         # going_to_target.to(searching_for_target, cond="target_discorvered") 
-        going_to_target.to(searching_for_target, cond="check_target_reached") 
+        going_to_target.to(searching_for_target, cond="check_target_reached") |
+        going_to_target.to(going_to_target)
     )
 
     def __init__(self, drone: DroneAbstract, map: Map, debug_mode: bool = False):
@@ -45,12 +47,13 @@ class RoamerController(StateMachine):
         """
 
         dist = np.linalg.norm(self.drone.get_position() - self.target)
+        if len(self.drone.path) == 0: return dist < 150
 
         v1 = self.target- self.drone.get_position()
         v2 = np.array(self.drone.path[-1]) - np.array(self.map.grid_to_world(self.target))
         turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
-        return dist < 20 + (1+turning_angle)*20
+        return dist < 200 + (1+turning_angle)*20
 
     def drone_position_valid(self):
         return self.drone.get_position() is not None and not np.isnan(self.drone.get_position()).any()
@@ -86,7 +89,6 @@ class RoamerController(StateMachine):
 
     @going_to_target.enter
     def on_enter_going_to_target(self):
-        print("Entering going to target state")
         self.command = self.drone.get_control_from_path(self.drone.get_position())
 
     def on_enter_searching_for_target(self):
@@ -129,38 +131,61 @@ class Roamer:
         self.print_num_map(map_matrix_copy)
         
         def is_valid_move(row, col):
-            return 0 <= row < rows and 0 <= col < cols and map_matrix_copy[row, col] != Zone.OBSTACLE
+            return 0 <= row < rows and 0 <= col < cols and self.map[row, col] != Zone.OBSTACLE and self.map[row, col] != Zone.RESCUE_CENTER
 
         # Define the possible moves (up, down, left, right)
         moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
         # Helper function to check if a cell has a neighbor with Zone value >= 0
-        def has_valid_neighbor(row, col):
-            for dr, dc in moves:
-                new_row, new_col = row + dr, col + dc
-                if is_valid_move(new_row, new_col) and map_matrix_copy[new_row, new_col].value >= 0:
-                    return True
+        def has_valid_neighbors(row, col, n, r):
+            empty_neighbors = 0
+
+            for dr in range(-r, r+1):
+                for dc in range(-r, r+1):
+                    new_row, new_col = row + dr, col + dc
+
+                    if (
+                        0 <= new_row < rows and 0 <= new_col < cols
+                        and self.map[new_row, new_col] == Zone.EMPTY
+                        and (dr, dc) != (0, 0)  # Exclude the current point
+                    ):
+                        empty_neighbors += 1
+
+                        if empty_neighbors >= n:
+                            return True
+
             return False
+        
+        def is_surrounding_empty(row, col, radius):
+            for i in range(-radius, radius + 1):
+                for j in range(-radius, radius + 1):
+                    if not is_valid_move(row + i, col + j) or self.map[row + i, col + j] != Zone.EMPTY:
+                        return False
+            return True
 
         # BFS to find the closest unexplored point with a valid neighbor
         found_point = None
-        queue = [(current_row, current_col)]
+        queue = deque([(current_row, current_col)])
         visited = set()
 
         while queue:
-            current_row, current_col = queue.pop(0)
-
-            if (len(queue) % 100000) == 0:
+            current_row, current_col = queue.popleft()
+            
+            if (len(queue) % 100) == 0:
                 self.print_num_map(map_matrix_copy)
                 self.display_map(map_matrix_copy)
 
-            if map_matrix_copy[current_row, current_col] == Zone.INEXPLORED and has_valid_neighbor(current_row, current_col):
+            if (
+                self.map[current_row, current_col] == Zone.INEXPLORED
+                and has_valid_neighbors(current_row, current_col, 10, 5)
+            ):
                 print(f"Found unexplored target at {current_row, current_col}")
                 found_point = np.array([current_row, current_col])
                 queue = None
                 break
-            
+
             map_matrix_copy[current_row, current_col] = Zone.RESCUE_CENTER
+
             visited.add((current_row, current_col))
 
             for dr, dc in moves:
@@ -203,7 +228,7 @@ class Roamer:
         conversion_dict = {
             Zone.INEXPLORED: INF,
             Zone.OBSTACLE: INF,
-            Zone.RESCUE_CENTER: 1,
+            Zone.RESCUE_CENTER: INF,
             Zone.WOUNDED: 1,
             Zone.EMPTY: 1,
         }
