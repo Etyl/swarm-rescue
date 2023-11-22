@@ -176,11 +176,9 @@ class DroneWaypoint(DroneAbstract):
         self.rescue_center_position = None
         
         self.localizer = Localizer()
-        self.pos2 = np.array([0,0])
-        self.error1 = 0
-        self.count1 = 0
-        self.error2 = 0
-        self.count2 = 0
+        
+        self.time = 0
+        self.theorical_velocity = 0.0
 
     def adapt_angle_direction(self, pos: list):
         """
@@ -232,32 +230,25 @@ class DroneWaypoint(DroneAbstract):
         """
         returns the position of the drone
         """
-        angle = self.measured_compass_angle()
-        self.last_angles.append(angle)
-        if len(self.last_angles) > 5:
-            self.last_angles.popleft()
-        self.drone_angle = circular_mean(np.array(self.last_angles))
 
+        self.drone_angle = self.measured_compass_angle()
+        if self.time <= 10:
+            self.drone_position = self.measured_gps_position()
+            return
 
-        odom = self.odometer_values()
-        speed = odom[0]
+        angle = self.measured_compass_angle() + self.angle_offset
 
+        rot_matrix = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
+        command = np.array([self.controller.command["forward"], self.controller.command["lateral"]])
+        command = command@rot_matrix
 
-        self.pos2 = self.measured_gps_position() #+ self.measured_velocity()*10 # devant
-        xEst = self.localizer.localize(self.true_position(), speed, self.measured_compass_angle()+self.angle_offset)
+        velocity = np.zeros(2)
+        velocity[0] = (math.exp(-0.105*self.time) - 1)*command[0]*5,46 + math.exp(-0.105*self.time)*self.theorical_velocity[0]
+        velocity[1] = (math.exp(-0.105*self.time) - 1)*command[1]*5,46 + math.exp(-0.105*self.time)*self.theorical_velocity[1]
 
-        self.drone_position = xEst[0:2,0]
+        self.drone_position += velocity*0.1
+        
 
-
-        truepos = self.true_position()
-        self.error1 += np.linalg.norm(xEst[0:2,0] - truepos)
-        self.count1 += 1
-        self.error2 += np.linalg.norm(self.pos2 - truepos)
-        self.count2 += 1
-
-        print("Error 1 :", self.error1/self.count1)
-        print("Error 2 :", self.error2/self.count2)
-    
 
     def add_wounded(self, data_wounded):
         """
@@ -465,10 +456,6 @@ class DroneWaypoint(DroneAbstract):
         if self.debug_positions:
             pos = np.array(self.drone_position) + np.array(self.size_area)/2
             arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
-            pos = np.array(self.pos2) + np.array(self.size_area)/2
-            arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.YELLOW)
-            pos = np.array(self.true_position()) + np.array(self.size_area)/2
-            arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
 
             direction = np.array([1,0])
             rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
