@@ -9,6 +9,15 @@ from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
 
 from solutions.pathfinder.pathfinder import *
 
+EVERY_N = 1
+LIDAR_DIST_CLIP = 40.0
+EMPTY_ZONE_VALUE = -0.602
+OBSTACLE_ZONE_VALUE = 2.0
+FREE_ZONE_VALUE = -8
+THRESHOLD_MIN = -40
+THRESHOLD_MAX = 40
+
+
 class Zone(Enum):
     EMPTY = 0
     OBSTACLE = 1
@@ -27,7 +36,6 @@ class Map:
         self.map = np.full((self.x_max_grid, self.y_max_grid), Zone.INEXPLORED)
 
         self.mappers = {
-            Zone.EMPTY: Mapper(area_world, resolution, lidar, None),
             Zone.OBSTACLE: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WALL)
             #Zone.RESCUE_CENTER: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.RESCUE_CENTER),
             #Zone.WOUNDED: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON),
@@ -41,15 +49,19 @@ class Map:
         x,y = pos
         return self.map[x][y]
     
-    def update_grid(self, pose: Pose, semantic_lidar):
+    def update(self, pose: Pose, semantic_lidar):
 
         for zone, mapper in self.mappers.items():
             mapper.update_grid(pose, semantic_lidar)
-            for x, y in zip(*mapper.changed_points):
-                if mapper.binary_grid[x][y] == 1:
-                    self[x, y] = zone
-                else:
-                    self[x, y] = Zone.INEXPLORED
+            
+            if self.debug_mode:
+                for x, y in zip(*mapper.changed_points):
+                    if mapper.binary_grid[x][y] == 1:
+                        self[x, y] = zone
+                    elif mapper.binary_grid[x][y] == -1:
+                        self[x, y] = Zone.EMPTY
+                    else:
+                        self[x, y] = Zone.INEXPLORED
 
         if self.debug_mode:
             self.display_map()
@@ -156,77 +168,61 @@ class Mapper(Grid):
         lidar : lidar data
         pose : corrected pose in world coordinates
         """
-        EVERY_N = 1
-        LIDAR_DIST_CLIP = 40.0
-        EMPTY_ZONE_VALUE = -0.602
-        OBSTACLE_ZONE_VALUE = 2.0
-        FREE_ZONE_VALUE = -8
-        THRESHOLD_MIN = -40
-        THRESHOLD_MAX = 40
-
+    
         self.lock_grid = self.grid == THRESHOLD_MIN
         self.buffer = self.grid.copy()
 
         lidar_dist = self.lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.lidar.ray_angles[::EVERY_N].copy()
 
-        if self.zone_to_detect:
-            self.semantic_lidar = semantic_lidar
-            semantic_lidar_angles = [data.angle for data in semantic_lidar if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON]
-            if semantic_lidar_angles:
-                min_angle = min(semantic_lidar_angles)
-                max_angle = max(semantic_lidar_angles)
-                # Enlever tout les points de lidar_dist et lidar_angles qui sont dans l'angle min_angle et max_angle avec epsilon
-                lidar_dist = np.array([lidar_dist[i] for i in range(len(lidar_dist)) if lidar_angles[i] < min_angle - 0.1 or lidar_angles[i] > max_angle + 0.1])
-                lidar_angles = np.array([lidar_angles[i] for i in range(len(lidar_angles)) if lidar_angles[i] < min_angle - 0.1 or lidar_angles[i] > max_angle + 0.1])
+        self.semantic_lidar = semantic_lidar
+        semantic_lidar_angles = [data.angle for data in semantic_lidar if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON]
+
+        if semantic_lidar_angles:
+            min_angle = min(semantic_lidar_angles)
+            max_angle = max(semantic_lidar_angles)
+            # Enlever tout les points de lidar_dist et lidar_angles qui sont dans l'angle min_angle et max_angle avec epsilon
+            lidar_dist = np.array([lidar_dist[i] for i in range(len(lidar_dist)) if lidar_angles[i] < min_angle - 0.1 or lidar_angles[i] > max_angle + 0.1])
+            lidar_angles = np.array([lidar_angles[i] for i in range(len(lidar_angles)) if lidar_angles[i] < min_angle - 0.1 or lidar_angles[i] > max_angle + 0.1])
 
         # Compute cos and sin of the absolute angle of the lidar
         cos_rays = np.cos(lidar_angles + pose.orientation)
         sin_rays = np.sin(lidar_angles + pose.orientation)
 
-        if self.zone_to_detect:
-            max_range = MAX_RANGE_LIDAR_SENSOR * 0.9
-            # For empty zones
-            # points_x and point_y contains the border of detected empty zone
-            # We use a value a little bit less than LIDAR_DIST_CLIP because of the noise in lidar
-            lidar_dist_empty = np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0)
-            # All values of lidar_dist_empty_clip are now <= max_range
-            lidar_dist_empty_clip = np.minimum(lidar_dist_empty, max_range)
-            points_x = pose.position[0] + np.multiply(lidar_dist_empty_clip, cos_rays)
-            points_y = pose.position[1] + np.multiply(lidar_dist_empty_clip, sin_rays)
+        max_range = MAX_RANGE_LIDAR_SENSOR * 0.9
+        # For empty zones
+        # points_x and point_y contains the border of detected empty zone
+        # We use a value a little bit less than LIDAR_DIST_CLIP because of the noise in lidar
+        lidar_dist_empty = np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0)
+        # All values of lidar_dist_empty_clip are now <= max_range
+        lidar_dist_empty_clip = np.minimum(lidar_dist_empty, max_range)
+        points_x = pose.position[0] + np.multiply(lidar_dist_empty_clip, cos_rays)
+        points_y = pose.position[1] + np.multiply(lidar_dist_empty_clip, sin_rays)
 
-            for pt_x, pt_y in zip(points_x, points_y):
-                self.add_value_along_line(pose.position[0], pose.position[1], pt_x, pt_y, EMPTY_ZONE_VALUE)
+        for pt_x, pt_y in zip(points_x, points_y):
+            self.add_value_along_line(pose.position[0], pose.position[1], pt_x, pt_y, EMPTY_ZONE_VALUE)
 
-            # For obstacle zones, all values of lidar_dist are < max_range
-            select_collision = lidar_dist < max_range
+        # For obstacle zones, all values of lidar_dist are < max_range
+        select_collision = lidar_dist < max_range
 
-            points_x = pose.position[0] + np.multiply(lidar_dist, cos_rays)
-            points_y = pose.position[1] + np.multiply(lidar_dist, sin_rays)
+        points_x = pose.position[0] + np.multiply(lidar_dist, cos_rays)
+        points_y = pose.position[1] + np.multiply(lidar_dist, sin_rays)
 
-            points_x = points_x[select_collision]
-            points_y = points_y[select_collision]
+        points_x = points_x[select_collision]
+        points_y = points_y[select_collision]
 
-            self.add_points(points_x, points_y, OBSTACLE_ZONE_VALUE)
+        self.add_points(points_x, points_y, OBSTACLE_ZONE_VALUE)
 
-            # the current position of the drone is free !
-            self.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
-        else:
-            max_range = MAX_RANGE_LIDAR_SENSOR * 0.9
-            lidar_dist_empty_clip = np.minimum(lidar_dist, max_range)
-            points_x = pose.position[0] + np.multiply(lidar_dist_empty_clip, cos_rays)
-            points_y = pose.position[1] + np.multiply(lidar_dist_empty_clip, sin_rays)
-
-            for pt_x, pt_y in zip(points_x, points_y):
-                self.add_value_along_line(pose.position[0], pose.position[1], pt_x, pt_y, THRESHOLD_MAX)
-            
-
+        # the current position of the drone is free !
+        self.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
+        
         # threshold values
         self.grid = np.clip(self.grid, THRESHOLD_MIN, THRESHOLD_MAX)
         self.grid[self.lock_grid] = self.buffer[self.lock_grid]
 
-        # map to binary
-        self.binary_grid = np.where(self.grid > 0, 1, 0)
+        # convert into grid with if grid = 0 then 0 if grid > 0 then 1 if grid < 0 then -1
+        self.binary_grid = np.where(self.grid > 0, 1, self.grid)
+        self.binary_grid = np.where(self.grid < 0, -1, self.binary_grid)
         self.changed_points = np.where(self.binary_grid != self.previous_binary_grid)
         # blur binary grid
         # self.binary_grid = cv2.blur(self.binary_grid, (3,3)).astype(np.uint8)

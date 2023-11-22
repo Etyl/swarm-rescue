@@ -447,7 +447,7 @@ class DroneWaypoint(DroneAbstract):
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
         max_vel_angle = 0.08
         if abs(self.measured_angular_velocity()) < max_vel_angle:
-            self.map.update_grid(self.estimated_pose, detection_semantic)
+            self.map.update(self.estimated_pose, detection_semantic)
 
 
     def draw_top_layer(self):
