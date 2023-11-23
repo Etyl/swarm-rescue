@@ -124,6 +124,19 @@ class DroneController(StateMachine):
     def on_enter_going_to_center(self):
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
+        
+        # ret = self.drone.keep_distance_from_walls()
+        # if ret is not None:
+        #     min_angle, min_dist = ret
+        #     cos_angle = math.cos(min_angle)
+        #     sin_angle = math.sin(min_angle)
+
+        #     norm = max(abs(cos_angle),abs(sin_angle))
+        #     cos_angle = cos_angle/norm
+        #     sin_angle = sin_angle/norm 
+
+        #     self.command["forward"] = cos_angle
+        #     self.command["lateral"] = -sin_angle
 
     def before_approaching_center(self):
         self.drone.onRoute = False
@@ -437,8 +450,25 @@ class DroneWaypoint(DroneAbstract):
         self.controller.cycle()
 
         self.update_mapping()
+        self.keep_distance_from_walls()
             
         return self.controller.command
+    
+    def keep_distance_from_walls(self):
+        """
+        keeps the drone at a distance from the walls
+        """
+        
+        lidar_dist = self.lidar().get_sensor_values()
+        lidar_angles = self.lidar().ray_angles
+
+        min_dist_index = np.argmin(lidar_dist)
+        min_dist = lidar_dist[min_dist_index]
+        min_angle = lidar_angles[min_dist_index]
+
+        if min_dist < 30:
+            return min_angle, min_dist
+        return None
     
     def update_mapping(self):
         """
