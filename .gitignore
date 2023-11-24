@@ -62,3 +62,5 @@ MANIFEST
 .conda*/
 .python-version
 ./src/swarm_rescue/spg_overlay/gui_map/closed_playground.py
+
+*.png

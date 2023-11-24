@@ -15,11 +15,6 @@ from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
 from spg_overlay.utils.utils import circular_mean, normalize_angle
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
-from spg_overlay.utils.pose import Pose
-from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
-from solutions.mapper.mapper import Map
-from solutions.roamer.roamer import RoamerController
-from solutions.mapper.mapper import Zone
 
 class DroneController(StateMachine):
 
@@ -129,6 +124,19 @@ class DroneController(StateMachine):
     def on_enter_going_to_center(self):
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
+        
+        # ret = self.drone.keep_distance_from_walls()
+        # if ret is not None:
+        #     min_angle, min_dist = ret
+        #     cos_angle = math.cos(min_angle)
+        #     sin_angle = math.sin(min_angle)
+
+        #     norm = max(abs(cos_angle),abs(sin_angle))
+        #     cos_angle = cos_angle/norm
+        #     sin_angle = sin_angle/norm 
+
+        #     self.command["forward"] = cos_angle
+        #     self.command["lateral"] = -sin_angle
 
     def before_approaching_center(self):
         self.drone.onRoute = False
@@ -427,7 +435,16 @@ class DroneWaypoint(DroneAbstract):
                 self.nextWaypoint = None
                 # self.onRoute = False
         return command
-
+    
+    def compute_rescue_center_position(self):
+        """
+        computes the position of the rescue center
+        """
+        semantic_lidar_dist = [data.distance for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
+        min_dist = min(semantic_lidar_dist) if len(semantic_lidar_dist) > 0 else np.inf
+        
+        if min_dist > 10:
+            self.rescue_center_position = self.drone_position.copy()
 
     def control(self):
 
@@ -498,7 +515,6 @@ class DroneWaypoint(DroneAbstract):
             
             if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
             if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
-
             for k in range(len(drawn_path)-1):
                 pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
                 pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
