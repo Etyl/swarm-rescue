@@ -7,7 +7,7 @@ import cv2
 
 robot_radius = 5
 sub_segment_size = 20
-path_refinements = 3 # number of times to refine the path
+path_refinements = 1 # number of times to refine the path
 save_images = True
 output = "./solve"
 
@@ -87,6 +87,9 @@ def segmentize_path(map, path):
         if max_segment>0 and start_point!=0:
             new_path.append(currentSegment[start_point])
 
+    if new_path[-1][0]!=path[-1][0] or new_path[-1][1]!=path[-1][1]:
+        new_path.append(path[-1])
+
     return new_path
 
 def pathfinder(map, start, end):
@@ -152,7 +155,7 @@ def pathfinder(map, start, end):
     else:
         print("No path found")
     
-    return path_smooth
+    return path_refined
 
 
 # map = 1-cv2.imread("map.png", cv2.IMREAD_GRAYSCALE)
