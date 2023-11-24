@@ -2,7 +2,8 @@ import numpy as np
 from enum import Enum
 import os
 import pyastar2d
-from solutions.roamer.frontier_explorer import FrontierExplorer
+from scipy.ndimage import binary_dilation
+from scipy.ndimage import convolve
 
 class Zone(Enum):
     EMPTY = 0
@@ -99,6 +100,62 @@ def print_frontiers_on_map_with_letters(matrix, frontiers):
     for row in frontier_map:
         print(" ".join(row))
 
+def thicken_walls(original_map, wall_thickness=1):
+    # Create a binary map where obstacles are considered as foreground (1) and others as background (0)
+    binary_map = (original_map == Zone.OBSTACLE.value).astype(int)
+
+    # Perform morphological dilation to thicken the walls
+    dilated_map = binary_dilation(binary_map, iterations=wall_thickness)
+
+    # Convert the dilated binary map back to the numerical map
+    thickened_map = original_map.copy()
+    thickened_map[dilated_map == 1] = Zone.OBSTACLE.value
+
+    return thickened_map
+
+def thicken_walls2(original_map, n=1):
+    obstacle_map = (original_map == Zone.OBSTACLE.value).astype(int)
+
+    # Define a 3x3 kernel for convolution
+    kernel = np.ones((3, 3), dtype=int)
+
+    # Use convolution to count obstacle neighbors
+    neighbor_count = convolve(obstacle_map, kernel, mode='constant', cval=0)
+
+    # Set cells as obstacles if they have at least n obstacle neighbors
+    thickened_map = original_map.copy()
+    thickened_map[neighbor_count >= n] = Zone.OBSTACLE.value
+
+    return thickened_map
+    
+def thicken_walls3(matrix, n):
+    new_matrix = np.copy(matrix)
+    rows, cols = matrix.shape
+
+    for i in range(rows):
+        for j in range(cols):
+            if matrix[i, j] == Zone.INEXPLORED.value:
+                for x in range(max(0, i - n), min(rows, i + n + 1)):
+                    for y in range(max(0, j - n), min(cols, j + n + 1)):
+                        if matrix[x, y] == Zone.EMPTY.value:
+                            new_matrix[x, y] = Zone.OBSTACLE.value
+
+    return new_matrix
+
+def thicken_walls4(matrix, n):
+    new_matrix = np.copy(matrix)
+    rows, cols = matrix.shape
+
+    for i in range(rows):
+        for j in range(cols):
+            if matrix[i, j] == Zone.OBSTACLE:
+                for x in range(max(0, i - n), min(rows, i + n + 1)):
+                    for y in range(max(0, j - n), min(cols, j + n + 1)):
+                        if matrix[x, y] == Zone.EMPTY:
+                            new_matrix[x, y] = Zone.OBSTACLE
+
+    return new_matrix
+
 start_pos = np.array([3, 4])
 matrix = np.array([
     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
@@ -118,10 +175,18 @@ matrix = np.array([
 # matrix_astar = convert_matrix_for_astar(matrix_zone)
 # path = pyastar2d.astar_path(matrix_astar, tuple(start_pos), tuple(found_point), allow_diagonal=True)
 
-fd = FrontierExplorer(matrix, start_pos)
-frontiers = fd.computeWFD()
-print_frontiers_on_map_with_letters(matrix, frontiers)
-print(fd.getClosestFrontier())
+# fd = FrontierExplorer(matrix, start_pos)
+# frontiers = fd.computeWFD()
+# print_frontiers_on_map_with_letters(matrix, frontiers)
+# print(fd.getClosestFrontier())
 
+matrix_zone = convert_to_zone(matrix)
+matrix_astar1 = convert_matrix_for_astar(matrix_zone)
 
+matrix_zone = convert_to_zone(matrix)
+thickened_map = thicken_walls4(matrix_zone, 1)
+print(thickened_map == matrix_zone)
+matrix_astar2 = convert_matrix_for_astar(thickened_map)
+print(matrix_astar1)
+print(matrix_astar2)
 

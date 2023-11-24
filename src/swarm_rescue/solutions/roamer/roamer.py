@@ -1,3 +1,7 @@
+"""
+Roamer module
+implements roaming behavior of the drone
+"""
 from statemachine import StateMachine, State
 from solutions.mapper.mapper import Map
 from solutions.mapper.mapper import Zone
@@ -8,11 +12,13 @@ from scipy.ndimage import binary_dilation
 from scipy.ndimage import convolve
 
 import numpy as np
-import pyastar2d
-import threading
 import os
 import cv2
-import asyncio
+import pyastar2d
+
+# OTHER IMPL - ASYNC
+# import asyncio
+# import threading
 
 class RoamerController(StateMachine):
 
@@ -265,34 +271,20 @@ class Roamer:
         converted_matrix = np.vectorize(lambda x: conversion_dict[x])(matrix)
         return converted_matrix.astype(np.float32)
     
-    def thicken_walls(self, original_map, wall_thickness=1):
-        # Create a binary map where obstacles are considered as foreground (1) and others as background (0)
-        binary_map = (original_map == Zone.OBSTACLE.value).astype(int)
+    def thicken_walls(self, matrix, n):
+        new_matrix = np.copy(matrix)
+        rows, cols = matrix.shape
 
-        # Perform morphological dilation to thicken the walls
-        dilated_map = binary_dilation(binary_map, iterations=wall_thickness)
+        for i in range(rows):
+            for j in range(cols):
+                if matrix[i, j] == Zone.OBSTACLE:
+                    for x in range(max(0, i - n), min(rows, i + n + 1)):
+                        for y in range(max(0, j - n), min(cols, j + n + 1)):
+                            if matrix[x, y] == Zone.EMPTY:
+                                new_matrix[x, y] = Zone.OBSTACLE
 
-        # Convert the dilated binary map back to the numerical map
-        thickened_map = original_map.copy()
-        thickened_map[dilated_map == 1] = Zone.OBSTACLE.value
-
-        return thickened_map
-
-    def thicken_walls2(self, original_map, n=1):
-        obstacle_map = (original_map == Zone.OBSTACLE.value).astype(int)
-
-        # Define a 3x3 kernel for convolution
-        kernel = np.ones((3, 3), dtype=int)
-
-        # Use convolution to count obstacle neighbors
-        neighbor_count = convolve(obstacle_map, kernel, mode='constant', cval=0)
-
-        # Set cells as obstacles if they have at least n obstacle neighbors
-        thickened_map = original_map.copy()
-        thickened_map[neighbor_count >= n] = Zone.OBSTACLE.value
-
-        return thickened_map
-
+        return new_matrix
+    
     def find_path(self, sampling_rate: int = 1, frontiers_threshold: int = 5):
         """
         Find the path to the target
@@ -305,7 +297,7 @@ class Roamer:
         if target is None:
             return [], None
 
-        thickened_map = self.thicken_walls2(self.map_matrix, n=4)
+        thickened_map = self.thicken_walls(self.map_matrix, n=4)
         matrix_astar = self.convert_matrix_for_astar(thickened_map)
         # matrix_astar = self.convert_matrix_for_astar(self.map_matrix)
         # matrix_astar = self.thicken_walls(matrix_astar, wall_thickness=4)

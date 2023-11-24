@@ -432,7 +432,7 @@ class DroneWaypoint(DroneAbstract):
                     self.nextWaypoint = self.path.pop()
                 else:
                     self.nextWaypoint = None
-                    # self.onRoute = False
+                    self.onRoute = False
         return command
     
     def compute_rescue_center_position(self):
@@ -458,7 +458,6 @@ class DroneWaypoint(DroneAbstract):
         if self.roaming:
             try:
                 self.roamer_controller.cycle()
-                # print(self.roamer_controller.current_state.id)
             except exceptions.TransitionNotAllowed:
                 pass
         
