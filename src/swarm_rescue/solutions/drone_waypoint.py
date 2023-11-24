@@ -178,7 +178,8 @@ class DroneWaypoint(DroneAbstract):
         self.localizer = Localizer()
         
         self.time = 0
-        self.theorical_velocity = 0.0
+        self.theorical_velocity = np.zeros(2)
+        self.prev_angle = 0
 
     def adapt_angle_direction(self, pos: list):
         """
@@ -230,23 +231,31 @@ class DroneWaypoint(DroneAbstract):
         """
         returns the position of the drone
         """
-
-        self.drone_angle = self.measured_compass_angle()
+        self.time += 1
         if self.time <= 10:
             self.drone_position = self.measured_gps_position()
+            v = self.odometer_values()[0]
+            angle = self.measured_compass_angle() #+ self.angle_offset
+            self.theorical_velocity = np.array([v*math.cos(angle), v*math.sin(angle)])
+            self.drone_angle = self.measured_compass_angle()
             return
 
-        angle = self.measured_compass_angle() + self.angle_offset
+        angle = self.measured_compass_angle() #+ self.angle_offset
 
         rot_matrix = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
         command = np.array([self.controller.command["forward"], self.controller.command["lateral"]])
         command = command@rot_matrix
 
         velocity = np.zeros(2)
-        velocity[0] = (math.exp(-0.105*self.time) - 1)*command[0]*5,46 + math.exp(-0.105*self.time)*self.theorical_velocity[0]
-        velocity[1] = (math.exp(-0.105*self.time) - 1)*command[1]*5,46 + math.exp(-0.105*self.time)*self.theorical_velocity[1]
+        velocity[0] = (math.exp(-0.105*self.time) - 1)*command[0]*5.46 + math.exp(-0.105*self.time)*self.theorical_velocity[0]
+        velocity[1] = (math.exp(-0.105*self.time) - 1)*command[1]*5.46 + math.exp(-0.105*self.time)*self.theorical_velocity[1]
 
-        self.drone_position += velocity*0.1
+        self.theorical_velocity = velocity.copy()
+
+        self.drone_position -= velocity * math.cos(2*(angle-self.drone_angle))
+        print(angle-self.drone_angle)
+        self.drone_angle = angle
+
         
 
 
