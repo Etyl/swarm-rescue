@@ -10,12 +10,17 @@ class Zone(Enum):
     INEXPLORED = -1
 
 class FrontierExplorer():
-
+    """
+    Class that implements the Wavefront Detector algorithm
+    """
     def __init__(self, map, drone_position):
         self.map = map
         self.drone_position = drone_position
 
     def computeWFD(self):
+        """
+        Compute the Wavefront Detector algorithm on the current map
+        """
         if self.drone_position is None:
             raise ValueError("Robot position not set.")
 
@@ -43,7 +48,13 @@ class FrontierExplorer():
 
         return frontiers
 
-    def extract_frontiers(self, wavefront_map, min_points=20):
+    def extract_frontiers(self, wavefront_map, min_points=5):
+        """
+        Extract frontiers from the wavefront map
+        params:
+            - wavefront_map: the wavefront map
+            - min_points: the minimum number of points in a frontier
+        """
         # Extract frontiers from the wavefront map
         frontiers = []
         visited = set()
@@ -58,6 +69,12 @@ class FrontierExplorer():
         return frontiers
 
     def find_frontier(self, wavefront_map, start_row, start_col, visited):
+        """
+        Find a frontier starting from the given point
+        Doing a DFS to find a frontier starting from the given point
+        and itering over the neighbors to find the frontier by spreading
+        """
+
         # DFS to find a frontier starting from the given point
         frontier = []
         stack = [(start_row, start_col)]
@@ -97,6 +114,9 @@ class FrontierExplorer():
         return frontier
 
     def getRandomFrontier(self):
+        """
+        Find a random frontier
+        """
         frontiers = self.computeWFD()
 
         if not frontiers:
@@ -114,6 +134,9 @@ class FrontierExplorer():
         return frontier, frontier_center
 
     def getClosestFrontier(self):
+        """
+        Find the frontier with the closest center to the robot
+        """
         frontiers = self.computeWFD()
 
         if not frontiers:
@@ -150,6 +173,9 @@ class FrontierExplorer():
         return chosen_frontier_center
     
     def getFurthestFrontier(self):
+        """
+        Find the frontier with the furthest center from the robot
+        """
         frontiers = self.computeWFD()
 
         if not frontiers:

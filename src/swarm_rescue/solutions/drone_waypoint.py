@@ -7,14 +7,18 @@ import random
 import numpy as np
 from typing import Optional
 from statemachine import StateMachine, State
-from statemachine import exceptions
 import arcade
 from collections import deque 
+from statemachine import exceptions
 
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
 from spg_overlay.utils.utils import circular_mean, normalize_angle
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
+from spg_overlay.utils.pose import Pose
+from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
+from solutions.mapper.mapper import Map
+from solutions.roamer.roamer import RoamerController
 
 class DroneController(StateMachine):
 
@@ -157,8 +161,6 @@ class DroneWaypoint(DroneAbstract):
                          misc_data=misc_data,
                          display_lidar_graph=False,
                          **kwargs)
-        
-        self.roaming = False
 
         self.onRoute = False # True if the drone is on the route to the waypoint
         self.path = []
@@ -169,7 +171,7 @@ class DroneWaypoint(DroneAbstract):
         self.found_wounded = False # True if the drone has found a wounded person
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
-        self.controller = DroneController(self, debug_mode=False)
+        self.controller = DroneController(self, debug_mode=True)
         self.last_angles = deque() # queue of the last angles
         self.last_pos = deque() # queue of the last positions
         self.avg_pos = np.array([0,0]) # The average position of the drone
@@ -188,11 +190,11 @@ class DroneWaypoint(DroneAbstract):
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
-        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar())
+        self.map = Map(area_world=self.size_area, resolution=16, lidar=self.lidar(), debug_mode=True)
         self.rescue_center_position = None
 
+        self.roaming = False
         self.roamer_controller = RoamerController(self, self.map, debug_mode=True)
-        # self.roamer_controller.force_transition()
 
 
     def adapt_angle_direction(self, pos: list):
@@ -200,7 +202,7 @@ class DroneWaypoint(DroneAbstract):
         gives the angle to turn to in order to go to the next waypoint
         """
 
-        if self.drone_angle != None and self.nextWaypoint is not None:
+        if self.drone_angle is not None and self.nextWaypoint is not None:
             
             def angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
@@ -392,9 +394,7 @@ class DroneWaypoint(DroneAbstract):
         """
         if destination == 0:
             return [[-320,-180],[-260,138],[-200,150], [20, -200]]
-            
-        print("Drone position :", self.drone_position)
-        print("Rescue center position :", self.rescue_center_position)
+        
         path = self.map.shortest_path(self.drone_position, self.rescue_center_position)
         return path
 
@@ -426,14 +426,13 @@ class DroneWaypoint(DroneAbstract):
         command["lateral"] = command["lateral"]/norm     
         
         if self.nextWaypoint is not None and self.check_waypoint(pos):
-            if len(self.path) > 0:
-                self.lastWaypoint = self.nextWaypoint.copy()
-                self.nextWaypoint = self.path.pop()
-                print("Next waypoint :", self.nextWaypoint)
-            else:
-                print("Arrived at destination")
-                self.nextWaypoint = None
-                # self.onRoute = False
+            if self.check_waypoint(pos):
+                if len(self.path) > 0:
+                    self.lastWaypoint = self.nextWaypoint.copy()
+                    self.nextWaypoint = self.path.pop()
+                else:
+                    self.nextWaypoint = None
+                    # self.onRoute = False
         return command
     
     def compute_rescue_center_position(self):
@@ -451,28 +450,46 @@ class DroneWaypoint(DroneAbstract):
         self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.drone_position = self.get_position()
         self.drone_angle = self.get_angle()
-        semantic_lidar_dist = [data.distance for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
-        min_dist = min(semantic_lidar_dist) if len(semantic_lidar_dist) > 0 else np.inf
         
-        if self.rescue_center_position is None and min_dist > 100:
-            self.rescue_center_position = self.drone_position.copy()
+        if self.rescue_center_position is None:
+            self.compute_rescue_center_position()
+        
+
+        if self.roaming:
+            try:
+                self.roamer_controller.cycle()
+                # print(self.roamer_controller.current_state.id)
+            except exceptions.TransitionNotAllowed:
+                pass
         
         self.controller.cycle()
 
         self.update_mapping()
-        self.map.display_map()
+        self.keep_distance_from_walls()
+            
 
-
-        try:
-            self.roamer_controller.cycle()
-            # print(self.roamer_controller.current_state.id)
-        except exceptions.TransitionNotAllowed:
-            pass
-
+        
+        
         if self.roaming:
            return self.roamer_controller.command
         else:
             return self.controller.command
+    
+    def keep_distance_from_walls(self):
+        """
+        keeps the drone at a distance from the walls
+        """
+        
+        lidar_dist = self.lidar().get_sensor_values()
+        lidar_angles = self.lidar().ray_angles
+
+        min_dist_index = np.argmin(lidar_dist)
+        min_dist = lidar_dist[min_dist_index]
+        min_angle = lidar_angles[min_dist_index]
+
+        if min_dist < 30:
+            return min_angle, min_dist
+        return None
     
     def update_mapping(self):
         """
@@ -480,12 +497,9 @@ class DroneWaypoint(DroneAbstract):
         """
         detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
-        #self.estimated_pose = Pose(np.asarray(self.true_position()), self.true_angle())
         max_vel_angle = 0.08
-
-        # update map if angular velocity is not too high
         if abs(self.measured_angular_velocity()) < max_vel_angle:
-            self.map.update_grid(self.estimated_pose, detection_semantic)
+            self.map.update(self.estimated_pose, detection_semantic)
 
 
     def draw_top_layer(self):
@@ -512,7 +526,6 @@ class DroneWaypoint(DroneAbstract):
 
         if self.debug_path: 
             drawn_path = self.path.copy()
-            
             if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
             if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
             for k in range(len(drawn_path)-1):

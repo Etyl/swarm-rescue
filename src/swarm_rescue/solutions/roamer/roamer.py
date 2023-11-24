@@ -3,29 +3,31 @@ from solutions.mapper.mapper import Map
 from solutions.mapper.mapper import Zone
 from solutions.roamer.frontier_explorer import FrontierExplorer
 from spg_overlay.entities.drone_abstract import DroneAbstract
-import numpy as np
 from enum import Enum
+from scipy.ndimage import binary_dilation
+from scipy.ndimage import convolve
+
+import numpy as np
 import pyastar2d
-import time
 import threading
 import os
 import cv2
 import asyncio
-import math
-from collections import deque
+
 
 class RoamerController(StateMachine):
     start_roaming = State('Start Roaming', initial=True)
     searching_for_target = State('Searching for target')
     going_to_target = State('Going to target')
 
-    force_transition = start_roaming.to(searching_for_target, on='before_searching_for_target')
-    force_transition2 = searching_for_target.to(going_to_target, on='before_going_to_target')
+    force_searching_for_target = start_roaming.to(searching_for_target, on='before_searching_for_target')
+    force_going_to_target = searching_for_target.to(going_to_target, on='before_going_to_target')
 
     cycle = (
         start_roaming.to(searching_for_target, cond="drone_position_valid") |
+
         searching_for_target.to(going_to_target) |
-        # going_to_target.to(searching_for_target, cond="target_discorvered") 
+
         going_to_target.to(searching_for_target, cond="check_target_reached") |
         going_to_target.to(going_to_target)
     )
@@ -38,7 +40,7 @@ class RoamerController(StateMachine):
                         "rotation": 0.0,
                         "grasper": 0}
         self.debug_mode = debug_mode
-        self.roamer = Roamer(drone, map)
+        self.roamer = Roamer(drone, map, debug_mode)
         self.pos_count = 0
         self.target = None
 
@@ -49,8 +51,15 @@ class RoamerController(StateMachine):
         checks if the drone has reached the waypoint
         """
 
+        # TODO change implementation
+        # right now, we only increment a counter each time the check is called
+        # if the counter reaches a certain threshold, we restart the search
         if self.pos_count >= 100: return True
+
+        # in case the drone has ended its path
         if self.drone.nextWaypoint is None: return True
+
+        # TODO fix this
         if self.target is None: return False
 
         dist = np.linalg.norm(self.drone.get_position() - self.target)
@@ -60,13 +69,12 @@ class RoamerController(StateMachine):
         v2 = np.array(self.drone.path[-1]) - np.array(self.map.grid_to_world(self.target))
         turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
-        return dist < 20 + (1+turning_angle)*20 or self.drone.nextWaypoint is None
+        return dist < 20 + (1+turning_angle)*20
 
     def drone_position_valid(self):
         return self.drone.get_position() is not None and not np.isnan(self.drone.get_position()).any()
 
     def target_discorvered(self):
-        print(self.drone.nextWaypoint)
         return (self.map[self.target] != Zone.INEXPLORED or self.drone.nextWaypoint is None)
 
     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
@@ -74,52 +82,73 @@ class RoamerController(StateMachine):
         return f"Running {event} from {source.id} to {target.id}{message}"
     
     def before_going_to_target(self):
-        print(f"Going to target {self.target}")
-        self.pos_count = 0
+        if self.debug_mode: print(f"Going to target {self.target}")
 
-        # Compute path to target
+        # TODO change implementation
+        self.pos_count = 0 # reset position counter
+
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
     
     def search_for_target(self):
+        # OTHER IMPL - ASYNC        
         # await asyncio.sleep(1)
+        # END OTHER IMPL - ASYNC
+
         self.drone.path, self.target = self.roamer.find_path()
-        self.force_transition2()
+
+        if self.target is None:
+            if self.debug_mode: print("No target found")
+            return
+        
+        self.force_going_to_target()
 
     def before_searching_for_target(self):
-        print("Searching for target")
+        if self.debug_mode: print("Searching for target")
 
-        # Compute path to target
+        # OTHER IMPL - ASYNC        
         # search_thread = threading.Thread(target=self.search_for_target)
         # search_thread.start()
-
         # asyncio.run(self.search_for_target())
+        # END OTHER IMPL - ASYNC
 
 
     @going_to_target.enter
     def on_enter_going_to_target(self):
-        self.pos_count += 1 
+        # TODO change implementation
+        self.pos_count += 1 # increment position counter
+        
         self.command = self.drone.get_control_from_path(self.drone.get_position())
 
     def on_enter_searching_for_target(self):
-        print("Entering searching for target state")
-        # asyncio.run(self.search_for_target())
+        if self.debug_mode: print("Entering searching for target state")
         self.search_for_target()
 
+        # OTHER IMPL - ASYNC        
+        # asyncio.run(self.search_for_target())
+        # END OTHER IMPL - ASYNC
+
     def on_enter_start_roaming(self):
-        print("Entering start roaming state")
+        if self.debug_mode: print("Entering start roaming state")
 
 class Roamer:
-    def __init__(self, drone: DroneAbstract, map: Map):
+    """
+    Roamer class
+    defines the roaming behavior of the drone
+    """
+    def __init__(self, drone: DroneAbstract, map: Map, debug_mode: bool = False):
         self.drone = drone
         self.map = map
-        self.map_matrix = map.map
+        self.map_matrix = map.map # the map with the Zones values
         self.frontier_explorer = FrontierExplorer(self.map_matrix, drone)
+        self.debug_mode = debug_mode
     
     def print_num_map(self, map, output_file='output.txt'):
-        numeric_map = np.vectorize(lambda x: x.value)(map)
-        
-        # Save to file with alignment
+        """
+        Print the map to a file
+        Debugging purposes
+        """
+        numeric_map = np.vectorize(lambda x: x.value)(map)        
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_path = os.path.join(script_dir, output_file)
 
@@ -132,18 +161,25 @@ class Roamer:
         Find the closest unexplored target from the drone's curretn position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
-        
-        map_matrix_copy = self.map_matrix.copy() # copy map
-        map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int
+        map_matrix_copy = self.map_matrix.copy() # copy map (to not modify the original)
+        map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int (for the Frontier Explorer algorithms)
         drone_position = self.drone.get_position()
-        print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position))
-        fd = FrontierExplorer(map_matrix_copy, self.map.world_to_grid(drone_position))
 
+        if self.debug_mode: print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position))
+        
+        drone_position_grid = self.map.world_to_grid(drone_position)
+        fd = FrontierExplorer(map_matrix_copy, drone_position_grid)
         found_point = fd.getClosestFrontier()
-        print("[Roamer] Found point : ", found_point)
+
+        if self.debug_mode: print("[Roamer] Found point : ", found_point)
+
         return found_point
 
     def map_to_image(self, map):
+        """
+        returns the map as an image
+        debuggin purposes
+        """
         x_max_grid, y_max_grid = self.map_matrix.shape
         
         color_map = {
@@ -158,19 +194,27 @@ class Roamer:
         for x in range(x_max_grid):
             for y in range(y_max_grid):
                 img[x][y] = color_map[map[x, y]]
+
         # zoom image
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
         return np.transpose(img, (1, 0, 2))
 
     def display_map(self, map):
+        """
+        displays the map
+        debugging purposes
+        """
         img = self.map_to_image(map)
-        # TODO: fix this
-        # parce que openCV ne marche pas en multithread
-        cv2.imshow("map2", img)
+        cv2.imshow("map_debug", img)
         cv2.waitKey(1)
 
     def convert_matrix_for_astar(self, matrix):
-        INF = 1000
+        """
+        Convert the map matrix to a matrix that can be used by the A* algorithm
+        params:
+            - matrix: the map matrix with the Zone values
+        """
+        INF = 1000 # INF = 1000 c'est bien connu
 
         conversion_dict = {
             Zone.INEXPLORED: INF,
@@ -182,30 +226,64 @@ class Roamer:
 
         converted_matrix = np.vectorize(lambda x: conversion_dict[x])(matrix)
         return converted_matrix.astype(np.float32)
+    
+    def thicken_walls(self, original_map, wall_thickness=1):
+        # Create a binary map where obstacles are considered as foreground (1) and others as background (0)
+        binary_map = (original_map == Zone.OBSTACLE.value).astype(int)
+
+        # Perform morphological dilation to thicken the walls
+        dilated_map = binary_dilation(binary_map, iterations=wall_thickness)
+
+        # Convert the dilated binary map back to the numerical map
+        thickened_map = original_map.copy()
+        thickened_map[dilated_map == 1] = Zone.OBSTACLE.value
+
+        return thickened_map
+
+    def thicken_walls2(self, original_map, n=1):
+        obstacle_map = (original_map == Zone.OBSTACLE.value).astype(int)
+
+        # Define a 3x3 kernel for convolution
+        kernel = np.ones((3, 3), dtype=int)
+
+        # Use convolution to count obstacle neighbors
+        neighbor_count = convolve(obstacle_map, kernel, mode='constant', cval=0)
+
+        # Set cells as obstacles if they have at least n obstacle neighbors
+        thickened_map = original_map.copy()
+        thickened_map[neighbor_count >= n] = Zone.OBSTACLE.value
+
+        return thickened_map
 
     def find_path(self, sampling_rate: int = 1):
         """
         Find the path to the target
+        params
+            - sampling_rate: the sampling rate of the path (in order to reduce the number of points)
         """
         target = self.find_next_unexeplored_target()
-        
+
+        # TODO change implementation
         if target is None:
             return [], None
 
-        matrix_astar = self.convert_matrix_for_astar(self.map_matrix)
+        thickened_map = self.thicken_walls2(self.map_matrix, n=4)
+        matrix_astar = self.convert_matrix_for_astar(thickened_map)
+        # matrix_astar = self.convert_matrix_for_astar(self.map_matrix)
+        # matrix_astar = self.thicken_walls(matrix_astar, wall_thickness=4)
+
         drone_position_grid = self.map.world_to_grid(self.drone.get_position())
 
         path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
-        path_sampled = path[:-int(len(path) * 0.2)]
+        # path_sampled = path[:-int(len(path) * 0.2)]
+        path_sampled = path
         path_sampled = path_sampled[::sampling_rate]
 
         # convert path to world coordinates
         path_sampled = np.array([self.map.grid_to_world(pos) for pos in path_sampled])
-        print("[Roamer] Path found : ", path_sampled)
+        if self.debug_mode: print("[Roamer] Path found : ", path_sampled)
+
         path_list = path_sampled.tolist()
-        path_list.reverse()
+        path_list.reverse() 
+
         return path_list, target
-    
-
-
-    

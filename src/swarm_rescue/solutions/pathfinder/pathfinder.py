@@ -5,11 +5,11 @@ import time
 import pyastar2d
 import cv2
 
-robot_radius = 10
+robot_radius = 5
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
 save_images = True
-output = r"./solve.png"
+output = "./solve"
 
 
 def border_from_map_np(map):
@@ -23,6 +23,9 @@ def border_from_map_np(map):
                np.roll(map,(-1, -1), axis=(1, 0))+
                np.roll(map,(1, -1), axis=(1, 0))+
                np.roll(map,(-1, 1), axis=(1, 0)))
+    if save_images:
+        plt.imshow(map>0.5)
+        plt.savefig("./map_border.png")
     return map>0.5
 
 def interpolate_path(point1, point2, t):
@@ -146,14 +149,20 @@ def pathfinder(map, start, end):
             plt.imshow(map)
             print(f"Plotting path to {current_output}, {len(path_refined)} points)")
             plt.savefig(current_output)
+    else:
+        print("No path found")
+    
+    return path_smooth
 
-    return path_refined
 
+# map = 1-cv2.imread("map.png", cv2.IMREAD_GRAYSCALE)
+# start = np.array([89, 13])
+# end = np.array([14, 46])
 
-map = mpimg.imread("./map-f.png").astype(np.float32)
-map = (map[:, :, 0]+map[:, :, 1]+map[:, :, 3])/3
-start = np.array([30, 50])
-end = np.array([600, 800])
-
-# input map with 1=free, 0=obstacle
-pathfinder(map, start, end)
+# print("Start:", map[start[0]][start[1]])
+# print("End:", map[end[0]][end[1]])
+# print(np.unique(map))
+# plt.imshow(map)
+# plt.show()
+# # input map with 1=free, 0=obstacle
+# print(pathfinder(map, start, end))
