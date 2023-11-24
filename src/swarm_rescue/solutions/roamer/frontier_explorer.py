@@ -216,35 +216,5 @@ class FrontierExplorer():
         pass
 
 
-# def convert_to_zone(num_array):
-#     return np.vectorize(lambda x: Zone(x))(num_array)
-
-# def print_frontiers_on_map_with_letters(matrix, frontiers):
-#     frontier_map = np.array(matrix, dtype=str)
-
-#     for index, frontier in enumerate(frontiers):
-#         for point in frontier:
-#             frontier_map[point] = chr(ord('A') + index)
-
-#     for row in frontier_map:
-#         print(" ".join(row))
 
 
-# start_pos = np.array([3, 4])
-# matrix = np.array([
-#     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-#     [ 1,  1,  1,  1,  1,  1,  1, -1, -1, -1],
-#     [ 1,  0,  0,  1,  0,  0,  1, -1, -1, -1],
-#     [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
-#     [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
-#     [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
-#     [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
-#     [-1, -1, -1,  0,  0,  0,  0, -1, -1, -1],
-#     [-1, -1, -1,  0,  0,  0,  0, -1, -1, -1],
-#     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
-# ])
-
-# fd = FrontierExplorer(matrix, start_pos)
-# frontiers = fd.computeWFD()
-# print_frontiers_on_map_with_letters(matrix, frontiers)
-# print(fd.getClosestFrontier())
