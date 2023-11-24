@@ -194,7 +194,7 @@ class DroneWaypoint(DroneAbstract):
         self.rescue_center_position = None
 
         self.roaming = False
-        self.roamer_controller = RoamerController(self, self.map, debug_mode=True)
+        self.roamer_controller = RoamerController(self, self.map, debug_mode=False)
 
 
     def adapt_angle_direction(self, pos: list):

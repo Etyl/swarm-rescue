@@ -22,9 +22,23 @@ import pyastar2d
 
 class RoamerController(StateMachine):
 
+    # maximum number of times the drone can be in the same position
+    # i.e the maximum number of times the check_target_reached function can return False
     _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 100
+
+    # maximum number of times the drone can be close to the previous searching start point
+    # i.e the maximum number of times the test_position_close_start_point function can return True
     _COUNT_CLOSE_PREVIOUS_SEARCHING_START_POINT_THRESHOLD = 50
+
+    # maximum number of times the drone can't find a target
+    # i.e the maximum number of times the search_for_target function can return None
     _NONE_TARGET_FOUND_THRESHOLD = 10
+
+    # the thickness of the walls in the map when the path is computed (in order to allow a smoother path)
+    _WALL_THICKENING = 4
+
+    # the sampling rate of the path (in order to reduce the number of points)
+    _PATH_SAMPLING_RATE = 1
 
     start_roaming = State('Start Roaming', initial=True)
     searching_for_target = State('Searching for target')
@@ -121,13 +135,14 @@ class RoamerController(StateMachine):
         # await asyncio.sleep(1)
         # END OTHER IMPL - ASYNC
 
-        self.drone.path, self.target = self.roamer.find_path(self.frontiers_threshold)
+        self.drone.path, self.target = self.roamer.find_path(sampling_rate=self._PATH_SAMPLING_RATE, frontiers_threshold=self.frontiers_threshold, wall_thickness=self._WALL_THICKENING)
         
         if self.target is None:
             if self.debug_mode: print("No target found")
             self.none_target_count += 1
 
             if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
+                print("Current frontiers threshold : ", self.frontiers_threshold)
                 self.frontiers_threshold = max(1, self.frontiers_threshold - 1)
             return
         else:
@@ -285,7 +300,7 @@ class Roamer:
 
         return new_matrix
     
-    def find_path(self, sampling_rate: int = 1, frontiers_threshold: int = 5):
+    def find_path(self, sampling_rate: int = 1, frontiers_threshold: int = 5, wall_thickness: int = 4):
         """
         Find the path to the target
         params
@@ -297,7 +312,7 @@ class Roamer:
         if target is None:
             return [], None
 
-        thickened_map = self.thicken_walls(self.map_matrix, n=4)
+        thickened_map = self.thicken_walls(self.map_matrix, n=wall_thickness)
         matrix_astar = self.convert_matrix_for_astar(thickened_map)
         # matrix_astar = self.convert_matrix_for_astar(self.map_matrix)
         # matrix_astar = self.thicken_walls(matrix_astar, wall_thickness=4)
