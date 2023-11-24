@@ -445,8 +445,10 @@ class DroneWaypoint(DroneAbstract):
         self.update_mapping()
         self.map.display_map()
 
+
         try:
             self.roamer_controller.cycle()
+            # print(self.roamer_controller.current_state.id)
         except exceptions.TransitionNotAllowed:
             pass
 

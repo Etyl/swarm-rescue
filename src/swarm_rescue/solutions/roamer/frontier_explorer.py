@@ -43,7 +43,7 @@ class FrontierExplorer():
 
         return frontiers
 
-    def extract_frontiers(self, wavefront_map):
+    def extract_frontiers(self, wavefront_map, min_points=20):
         # Extract frontiers from the wavefront map
         frontiers = []
         visited = set()
@@ -52,7 +52,7 @@ class FrontierExplorer():
             for j in range(wavefront_map.shape[1]):
                 if wavefront_map[i, j] == Zone.INEXPLORED.value and (i, j) not in visited:
                     frontier = self.find_frontier(wavefront_map, i, j, visited)
-                    if len(frontier) > 0:
+                    if len(frontier) > min_points:
                         frontiers.append(frontier)
 
         return frontiers
@@ -148,41 +148,77 @@ class FrontierExplorer():
         )
 
         return chosen_frontier_center
+    
+    def getFurthestFrontier(self):
+        frontiers = self.computeWFD()
+
+        if not frontiers:
+            return None  # No frontiers found
+
+        curr_row, curr_col = self.drone_position
+
+        # Find the frontier with the closest center to the robot
+        best_distance = 0
+        best_frontier_idx = 0
+
+        for idx, frontier in enumerate(frontiers):
+            # Calculate the center of the frontier
+            frontier_center = (
+                sum(point[0] for point in frontier) / len(frontier),
+                sum(point[1] for point in frontier) / len(frontier)
+            )
+
+            # Calculate the distance from the robot to the center of the frontier
+            distance = np.sqrt((frontier_center[0] - curr_row)**2 + (frontier_center[1] - curr_col)**2)
+
+            # Update the best frontier if the current one is closer
+            if distance >= best_distance:
+                best_distance = distance
+                best_frontier_idx = idx
+
+        # Return the center and the points of the chosen frontier
+        chosen_frontier = frontiers[best_frontier_idx]
+        chosen_frontier_center = (
+            int(sum(point[0] for point in chosen_frontier) / len(chosen_frontier)),
+            int(sum(point[1] for point in chosen_frontier) / len(chosen_frontier))
+        )
+
+        return chosen_frontier_center
 
     def extractGrid(self, msg):
         # TODO: extract grid from msg.data and other usefull information
         pass
 
 
-def convert_to_zone(num_array):
-    return np.vectorize(lambda x: Zone(x))(num_array)
+# def convert_to_zone(num_array):
+#     return np.vectorize(lambda x: Zone(x))(num_array)
 
-def print_frontiers_on_map_with_letters(matrix, frontiers):
-    frontier_map = np.array(matrix, dtype=str)
+# def print_frontiers_on_map_with_letters(matrix, frontiers):
+#     frontier_map = np.array(matrix, dtype=str)
 
-    for index, frontier in enumerate(frontiers):
-        for point in frontier:
-            frontier_map[point] = chr(ord('A') + index)
+#     for index, frontier in enumerate(frontiers):
+#         for point in frontier:
+#             frontier_map[point] = chr(ord('A') + index)
 
-    for row in frontier_map:
-        print(" ".join(row))
+#     for row in frontier_map:
+#         print(" ".join(row))
 
 
-start_pos = np.array([3, 4])
-matrix = np.array([
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
-    [ 1,  1,  1,  1,  1,  1,  1, -1, -1, -1],
-    [ 1,  0,  0,  1,  0,  0,  1, -1, -1, -1],
-    [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
-    [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
-    [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
-    [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
-    [-1, -1, -1,  0,  0,  0,  0, -1, -1, -1],
-    [-1, -1, -1,  0,  0,  0,  0, -1, -1, -1],
-    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
-])
+# start_pos = np.array([3, 4])
+# matrix = np.array([
+#     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+#     [ 1,  1,  1,  1,  1,  1,  1, -1, -1, -1],
+#     [ 1,  0,  0,  1,  0,  0,  1, -1, -1, -1],
+#     [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
+#     [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
+#     [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
+#     [-1,  0,  0,  0,  0,  0,  1, -1, -1, -1],
+#     [-1, -1, -1,  0,  0,  0,  0, -1, -1, -1],
+#     [-1, -1, -1,  0,  0,  0,  0, -1, -1, -1],
+#     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
+# ])
 
-fd = FrontierExplorer(matrix, start_pos)
-frontiers = fd.computeWFD()
-print_frontiers_on_map_with_letters(matrix, frontiers)
-print(fd.getClosestFrontier())
+# fd = FrontierExplorer(matrix, start_pos)
+# frontiers = fd.computeWFD()
+# print_frontiers_on_map_with_letters(matrix, frontiers)
+# print(fd.getClosestFrontier())

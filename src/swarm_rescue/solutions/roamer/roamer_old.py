@@ -1,7 +1,6 @@
 from statemachine import StateMachine, State
 from solutions.mapper.mapper import Map
 from solutions.mapper.mapper import Zone
-from solutions.roamer.frontier_explorer import FrontierExplorer
 from spg_overlay.entities.drone_abstract import DroneAbstract
 import numpy as np
 from enum import Enum
@@ -39,8 +38,6 @@ class RoamerController(StateMachine):
                         "grasper": 0}
         self.debug_mode = debug_mode
         self.roamer = Roamer(drone, map)
-        self.pos_count = 0
-        self.target = None
 
         super(RoamerController, self).__init__()
     
@@ -49,10 +46,6 @@ class RoamerController(StateMachine):
         checks if the drone has reached the waypoint
         """
 
-        if self.pos_count >= 100: return True
-        if self.drone.nextWaypoint is None: return True
-        if self.target is None: return False
-
         dist = np.linalg.norm(self.drone.get_position() - self.target)
         if len(self.drone.path) == 0: return dist < 20
 
@@ -60,7 +53,7 @@ class RoamerController(StateMachine):
         v2 = np.array(self.drone.path[-1]) - np.array(self.map.grid_to_world(self.target))
         turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
-        return dist < 20 + (1+turning_angle)*20 or self.drone.nextWaypoint is None
+        return dist < 20 + (1+turning_angle)*20
 
     def drone_position_valid(self):
         return self.drone.get_position() is not None and not np.isnan(self.drone.get_position()).any()
@@ -75,14 +68,13 @@ class RoamerController(StateMachine):
     
     def before_going_to_target(self):
         print(f"Going to target {self.target}")
-        self.pos_count = 0
 
         # Compute path to target
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
     
-    def search_for_target(self):
-        # await asyncio.sleep(1)
+    async def search_for_target(self):
+        await asyncio.sleep(1)
         self.drone.path, self.target = self.roamer.find_path()
         self.force_transition2()
 
@@ -98,13 +90,11 @@ class RoamerController(StateMachine):
 
     @going_to_target.enter
     def on_enter_going_to_target(self):
-        self.pos_count += 1 
         self.command = self.drone.get_control_from_path(self.drone.get_position())
 
     def on_enter_searching_for_target(self):
         print("Entering searching for target state")
-        # asyncio.run(self.search_for_target())
-        self.search_for_target()
+        asyncio.run(self.search_for_target())
 
     def on_enter_start_roaming(self):
         print("Entering start roaming state")
@@ -114,7 +104,6 @@ class Roamer:
         self.drone = drone
         self.map = map
         self.map_matrix = map.map
-        self.frontier_explorer = FrontierExplorer(self.map_matrix, drone)
     
     def print_num_map(self, map, output_file='output.txt'):
         numeric_map = np.vectorize(lambda x: x.value)(map)
@@ -132,15 +121,80 @@ class Roamer:
         Find the closest unexplored target from the drone's curretn position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
-        
-        map_matrix_copy = self.map_matrix.copy() # copy map
-        map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int
-        drone_position = self.drone.get_position()
-        print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position))
-        fd = FrontierExplorer(map_matrix_copy, self.map.world_to_grid(drone_position))
+        print("[Roamer] Finding next unexplored target")
+        rows, cols = self.map_matrix.shape
+        print("[Roamer] Drone position : ", self.drone.get_position())
+        current_row, current_col = self.map.world_to_grid(self.drone.get_position())
+        print("[Roamer] Current position : ", current_row, current_col)
 
-        found_point = fd.getClosestFrontier()
-        print("[Roamer] Found point : ", found_point)
+        map_matrix_copy = self.map_matrix.copy()
+
+        self.print_num_map(map_matrix_copy)
+        
+        def is_valid_move(row, col):
+            return 0 <= row < rows and 0 <= col < cols and self.map[row, col] != Zone.OBSTACLE and self.map[row, col] != Zone.RESCUE_CENTER
+
+        # Define the possible moves (up, down, left, right)
+        moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+        # Helper function to check if a cell has a neighbor with Zone value >= 0
+        def has_valid_neighbors(row, col, n, r):
+            empty_neighbors = 0
+
+            for dr in range(-r, r+1):
+                for dc in range(-r, r+1):
+                    new_row, new_col = row + dr, col + dc
+
+                    if (
+                        0 <= new_row < rows and 0 <= new_col < cols
+                        and self.map[new_row, new_col] == Zone.EMPTY
+                        and (dr, dc) != (0, 0)  # Exclude the current point
+                    ):
+                        empty_neighbors += 1
+
+                        if empty_neighbors >= n:
+                            return True
+
+            return False
+        
+        def is_surrounding_empty(row, col, radius):
+            for i in range(-radius, radius + 1):
+                for j in range(-radius, radius + 1):
+                    if not is_valid_move(row + i, col + j) or self.map[row + i, col + j] != Zone.EMPTY:
+                        return False
+            return True
+
+        # BFS to find the closest unexplored point with a valid neighbor
+        found_point = None
+        queue = deque([(current_row, current_col)])
+        visited = set()
+
+        while queue:
+            current_row, current_col = queue.popleft()
+            
+            if (len(queue) % 100) == 0:
+                self.print_num_map(map_matrix_copy)
+                self.display_map(map_matrix_copy)
+
+            if (
+                self.map[current_row, current_col] == Zone.INEXPLORED
+                and has_valid_neighbors(current_row, current_col, 5, 5)
+            ):
+                print(f"Found unexplored target at {current_row, current_col}")
+                found_point = np.array([current_row, current_col])
+                queue = None
+                break
+
+            map_matrix_copy[current_row, current_col] = Zone.RESCUE_CENTER
+
+            visited.add((current_row, current_col))
+
+            for dr, dc in moves:
+                new_row, new_col = current_row + dr, current_col + dc
+                if is_valid_move(new_row, new_col) and (new_row, new_col) not in visited:
+                    queue.append((new_row, new_col))
+
+        print("[Roamer] Found next unexplored target : ", found_point)
         return found_point
 
     def map_to_image(self, map):
@@ -188,9 +242,6 @@ class Roamer:
         Find the path to the target
         """
         target = self.find_next_unexeplored_target()
-        
-        if target is None:
-            return [], None
 
         matrix_astar = self.convert_matrix_for_astar(self.map_matrix)
         drone_position_grid = self.map.world_to_grid(self.drone.get_position())
@@ -202,9 +253,7 @@ class Roamer:
         # convert path to world coordinates
         path_sampled = np.array([self.map.grid_to_world(pos) for pos in path_sampled])
         print("[Roamer] Path found : ", path_sampled)
-        path_list = path_sampled.tolist()
-        path_list.reverse()
-        return path_list, target
+        return path_sampled.tolist(), target
     
 
 
