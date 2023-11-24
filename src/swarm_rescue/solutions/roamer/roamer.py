@@ -47,19 +47,20 @@ class RoamerController(StateMachine):
         """
 
         dist = np.linalg.norm(self.drone.get_position() - self.target)
-        if len(self.drone.path) == 0: return dist < 150
+        if len(self.drone.path) == 0: return dist < 20
 
         v1 = self.target- self.drone.get_position()
         v2 = np.array(self.drone.path[-1]) - np.array(self.map.grid_to_world(self.target))
         turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
-        return dist < 200 + (1+turning_angle)*20
+        return dist < 20 + (1+turning_angle)*20
 
     def drone_position_valid(self):
         return self.drone.get_position() is not None and not np.isnan(self.drone.get_position()).any()
 
     def target_discorvered(self):
-        return self.map[self.target] != Zone.INEXPLORED
+        print(self.drone.nextWaypoint)
+        return (self.map[self.target] != Zone.INEXPLORED or self.drone.nextWaypoint is None)
 
     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
         message = ". " + message if message else ""
@@ -177,7 +178,7 @@ class Roamer:
 
             if (
                 self.map[current_row, current_col] == Zone.INEXPLORED
-                and has_valid_neighbors(current_row, current_col, 10, 5)
+                and has_valid_neighbors(current_row, current_col, 5, 5)
             ):
                 print(f"Found unexplored target at {current_row, current_col}")
                 found_point = np.array([current_row, current_col])
@@ -246,7 +247,8 @@ class Roamer:
         drone_position_grid = self.map.world_to_grid(self.drone.get_position())
 
         path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
-        path_sampled = path[::sampling_rate]
+        path_sampled = path[:-int(len(path) * 0.2)]
+        path_sampled = path_sampled[::sampling_rate]
 
         # convert path to world coordinates
         path_sampled = np.array([self.map.grid_to_world(pos) for pos in path_sampled])

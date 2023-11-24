@@ -19,6 +19,7 @@ from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
 from solutions.roamer.roamer import RoamerController
+from solutions.mapper.mapper import Zone
 
 class DroneController(StateMachine):
 
@@ -191,7 +192,7 @@ class DroneWaypoint(DroneAbstract):
         gives the angle to turn to in order to go to the next waypoint
         """
 
-        if self.drone_angle != None:
+        if self.drone_angle != None and self.nextWaypoint is not None:
             
             def angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
@@ -416,7 +417,7 @@ class DroneWaypoint(DroneAbstract):
         command["forward"] = command["forward"]/norm
         command["lateral"] = command["lateral"]/norm     
         
-        if self.check_waypoint(pos):
+        if self.nextWaypoint is not None and self.check_waypoint(pos):
             if len(self.path) > 0:
                 self.lastWaypoint = self.nextWaypoint.copy()
                 self.nextWaypoint = self.path.pop()
@@ -424,7 +425,7 @@ class DroneWaypoint(DroneAbstract):
             else:
                 print("Arrived at destination")
                 self.nextWaypoint = None
-                self.onRoute = False
+                # self.onRoute = False
         return command
 
 
@@ -443,7 +444,6 @@ class DroneWaypoint(DroneAbstract):
 
         self.update_mapping()
         self.map.display_map()
-
 
         try:
             self.roamer_controller.cycle()
