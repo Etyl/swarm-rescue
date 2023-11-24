@@ -14,8 +14,12 @@ import os
 import cv2
 import asyncio
 
-
 class RoamerController(StateMachine):
+
+    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 100
+    _COUNT_CLOSE_PREVIOUS_SEARCHING_START_POINT_THRESHOLD = 50
+    _NONE_TARGET_FOUND_THRESHOLD = 10
+
     start_roaming = State('Start Roaming', initial=True)
     searching_for_target = State('Searching for target')
     going_to_target = State('Going to target')
@@ -41,8 +45,20 @@ class RoamerController(StateMachine):
                         "grasper": 0}
         self.debug_mode = debug_mode
         self.roamer = Roamer(drone, map, debug_mode)
-        self.pos_count = 0
+
+        self.loop_count_going_to_target = 0
+
         self.target = None
+        self.none_target_count = 0
+        
+        # numbers of points required in a frontier
+        # the idea is to decrease this number if the drone is stuck at some point
+        # because it would mean that the drone has already explored a lot of the map
+        # and that the remaining unexplored areas are small
+        self.frontiers_threshold = 5
+
+        self.previous_searching_start_point = None
+        self.count_close_previous_searching_start_point = 0
 
         super(RoamerController, self).__init__()
     
@@ -54,7 +70,9 @@ class RoamerController(StateMachine):
         # TODO change implementation
         # right now, we only increment a counter each time the check is called
         # if the counter reaches a certain threshold, we restart the search
-        if self.pos_count >= 100: return True
+        if self.loop_count_going_to_target >= self._LOOP_COUNT_GOING_TO_TARGET_THRESHOLD: return True
+
+        if self.count_close_previous_searching_start_point >= self._COUNT_CLOSE_PREVIOUS_SEARCHING_START_POINT_THRESHOLD: return True
 
         # in case the drone has ended its path
         if self.drone.nextWaypoint is None: return True
@@ -85,7 +103,9 @@ class RoamerController(StateMachine):
         if self.debug_mode: print(f"Going to target {self.target}")
 
         # TODO change implementation
-        self.pos_count = 0 # reset position counter
+        self.loop_count_going_to_target = 0 # reset position counter
+
+        self.none_target_count = 0 # reset none target counter
 
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
@@ -95,11 +115,18 @@ class RoamerController(StateMachine):
         # await asyncio.sleep(1)
         # END OTHER IMPL - ASYNC
 
-        self.drone.path, self.target = self.roamer.find_path()
-
+        self.drone.path, self.target = self.roamer.find_path(self.frontiers_threshold)
+        
         if self.target is None:
             if self.debug_mode: print("No target found")
+            self.none_target_count += 1
+
+            if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
+                self.frontiers_threshold = max(1, self.frontiers_threshold - 1)
             return
+        else:
+            self.previous_searching_start_point = self.drone.get_position()
+            self.count_close_previous_searching_start_point = 0
         
         self.force_going_to_target()
 
@@ -116,8 +143,11 @@ class RoamerController(StateMachine):
     @going_to_target.enter
     def on_enter_going_to_target(self):
         # TODO change implementation
-        self.pos_count += 1 # increment position counter
-        
+        self.loop_count_going_to_target += 1 # increment position counter
+
+        if self.test_position_close_start_point():
+            self.count_close_previous_searching_start_point += 1
+
         self.command = self.drone.get_control_from_path(self.drone.get_position())
 
     def on_enter_searching_for_target(self):
@@ -131,6 +161,15 @@ class RoamerController(StateMachine):
     def on_enter_start_roaming(self):
         if self.debug_mode: print("Entering start roaming state")
 
+    def test_position_close_start_point(self, threshold=20):
+        """
+        checks if the drone is close to the previous searching start point
+        """
+        if self.previous_searching_start_point is None: return False
+
+        dist = np.linalg.norm(self.drone.get_position() - self.previous_searching_start_point)
+        return dist < threshold
+
 class Roamer:
     """
     Roamer class
@@ -140,7 +179,6 @@ class Roamer:
         self.drone = drone
         self.map = map
         self.map_matrix = map.map # the map with the Zones values
-        self.frontier_explorer = FrontierExplorer(self.map_matrix, drone)
         self.debug_mode = debug_mode
     
     def print_num_map(self, map, output_file='output.txt'):
@@ -156,7 +194,7 @@ class Roamer:
             np.savetxt(file, numeric_map, fmt='%3d', delimiter=', ')
             file.write('\n') 
     
-    def find_next_unexeplored_target(self):
+    def find_next_unexeplored_target(self, frontiers_threshold):
         """
         Find the closest unexplored target from the drone's curretn position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
@@ -168,7 +206,7 @@ class Roamer:
         if self.debug_mode: print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position))
         
         drone_position_grid = self.map.world_to_grid(drone_position)
-        fd = FrontierExplorer(map_matrix_copy, drone_position_grid)
+        fd = FrontierExplorer(map_matrix_copy, drone_position_grid, frontiers_threshold)
         found_point = fd.getClosestFrontier()
 
         if self.debug_mode: print("[Roamer] Found point : ", found_point)
@@ -255,13 +293,13 @@ class Roamer:
 
         return thickened_map
 
-    def find_path(self, sampling_rate: int = 1):
+    def find_path(self, sampling_rate: int = 1, frontiers_threshold: int = 5):
         """
         Find the path to the target
         params
             - sampling_rate: the sampling rate of the path (in order to reduce the number of points)
         """
-        target = self.find_next_unexeplored_target()
+        target = self.find_next_unexeplored_target(frontiers_threshold)
 
         # TODO change implementation
         if target is None:

@@ -13,9 +13,10 @@ class FrontierExplorer():
     """
     Class that implements the Wavefront Detector algorithm
     """
-    def __init__(self, map, drone_position):
+    def __init__(self, map, drone_position, frontiers_threshold):
         self.map = map
         self.drone_position = drone_position
+        self.frontiers_threshold = frontiers_threshold
 
     def computeWFD(self):
         """
@@ -44,7 +45,7 @@ class FrontierExplorer():
             wavefront_value += 1
 
         # Extract frontiers from the computed wavefront map
-        frontiers = self.extract_frontiers(wavefront_map)
+        frontiers = self.extract_frontiers(wavefront_map, self.frontiers_threshold)
 
         return frontiers
 

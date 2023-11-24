@@ -2,6 +2,7 @@ import numpy as np
 from enum import Enum
 import os
 import pyastar2d
+from solutions.roamer.frontier_explorer import FrontierExplorer
 
 class Zone(Enum):
     EMPTY = 0
@@ -88,6 +89,16 @@ def convert_matrix_for_astar(matrix):
     converted_matrix = np.vectorize(lambda x: conversion_dict[x])(matrix)
     return converted_matrix.astype(np.float32)
 
+def print_frontiers_on_map_with_letters(matrix, frontiers):
+    frontier_map = np.array(matrix, dtype=str)
+
+    for index, frontier in enumerate(frontiers):
+        for point in frontier:
+            frontier_map[point] = chr(ord('A') + index)
+
+    for row in frontier_map:
+        print(" ".join(row))
+
 start_pos = np.array([3, 4])
 matrix = np.array([
     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
@@ -102,11 +113,15 @@ matrix = np.array([
     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 ])
 
-matrix_zone = convert_to_zone(matrix)
-found_point = find_next_unexeplored_target(matrix_zone, start_pos)
-matrix_astar = convert_matrix_for_astar(matrix_zone)
+# matrix_zone = convert_to_zone(matrix)
+# found_point = find_next_unexeplored_target(matrix_zone, start_pos)
+# matrix_astar = convert_matrix_for_astar(matrix_zone)
+# path = pyastar2d.astar_path(matrix_astar, tuple(start_pos), tuple(found_point), allow_diagonal=True)
 
-path = pyastar2d.astar_path(matrix_astar, tuple(start_pos), tuple(found_point), allow_diagonal=True)
+fd = FrontierExplorer(matrix, start_pos)
+frontiers = fd.computeWFD()
+print_frontiers_on_map_with_letters(matrix, frontiers)
+print(fd.getClosestFrontier())
 
 
 
