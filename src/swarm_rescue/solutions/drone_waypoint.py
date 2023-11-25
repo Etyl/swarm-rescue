@@ -232,25 +232,29 @@ class DroneWaypoint(DroneAbstract):
         """
 
         measured_position = self.measured_gps_position()
-
-        if measured_position is not None:
-            self.drone_position = self.measured_gps_position()
-            v = self.odometer_values()[0]
-            angle = self.measured_compass_angle() - self.angle_offset
-            self.theorical_velocity = np.array([v*math.cos(angle), v*math.sin(angle)])
-            self.drone_angle = self.measured_compass_angle()
-            return
+        self.drone_angle = self.measured_compass_angle()
 
         angle = self.measured_compass_angle() 
-        self.drone_angle = angle
 
         rot_matrix = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
         command = np.array([self.controller.command["forward"], self.controller.command["lateral"]])
         command = command@rot_matrix
 
-        self.theorical_velocity += (command*0.556 - self.theorical_velocity*0.105)
+        theorical_velocity = self.theorical_velocity + (command*0.556 - self.theorical_velocity*0.105)
 
-        self.drone_position += self.theorical_velocity #* math.cos(2*(angle-self.drone_angle))
+        if measured_position is not None:
+            v = self.odometer_values()[0]
+            angle = self.measured_compass_angle() - self.angle_offset
+            self.theorical_velocity = (np.array([v*math.cos(angle), v*math.sin(angle)]) + theorical_velocity) / 2
+            theoretical_position = self.drone_position + self.theorical_velocity 
+            self.drone_position = (self.measured_gps_position() + theoretical_position)/2
+        else:
+            self.theorical_velocity = theorical_velocity
+            self.drone_position = self.drone_position + self.theorical_velocity
+        
+
+
+
         
 
         
