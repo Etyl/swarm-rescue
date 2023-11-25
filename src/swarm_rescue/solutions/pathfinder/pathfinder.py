@@ -7,8 +7,8 @@ import cv2
 
 robot_radius = 10
 sub_segment_size = 20
-path_refinements = 1 # number of times to refine the path
-save_images = True
+path_refinements = 3 # number of times to refine the path
+save_images = False
 output = "./solve"
 
 
