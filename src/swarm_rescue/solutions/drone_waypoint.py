@@ -177,9 +177,12 @@ class DroneWaypoint(DroneAbstract):
         
         self.localizer = Localizer()
         
-        self.time = 0
         self.theorical_velocity = np.zeros(2)
         self.prev_angle = 0
+
+        self.time = 0
+        self.error = 0
+        self.error2 = 0
 
     def adapt_angle_direction(self, pos: list):
         """
@@ -226,6 +229,7 @@ class DroneWaypoint(DroneAbstract):
         pass
 
 
+    # TODO: improve angle estimation
     def get_localization(self):
         """
         returns the position of the drone
@@ -240,20 +244,26 @@ class DroneWaypoint(DroneAbstract):
         command = np.array([self.controller.command["forward"], self.controller.command["lateral"]])
         command = command@rot_matrix
 
-        theorical_velocity = self.theorical_velocity + (command*0.556 - self.theorical_velocity*0.105)
+        theorical_velocity = self.theorical_velocity + (command*0.6 - self.theorical_velocity*0.105)
+        v = self.odometer_values()[0]
 
-        if measured_position is not None:
-            v = self.odometer_values()[0]
+        if measured_position is not None and v > 5:  
             angle = self.measured_compass_angle() - self.angle_offset
             self.theorical_velocity = (np.array([v*math.cos(angle), v*math.sin(angle)]) + theorical_velocity) / 2
             theoretical_position = self.drone_position + self.theorical_velocity 
             self.drone_position = (self.measured_gps_position() + theoretical_position)/2
+        elif measured_position is not None:
+            angle = self.measured_compass_angle() - self.angle_offset
+            self.theorical_velocity = np.array([v*math.cos(angle), v*math.sin(angle)]) / 2
+            self.drone_position = self.measured_gps_position()
         else:
             self.theorical_velocity = theorical_velocity
             self.drone_position = self.drone_position + self.theorical_velocity
         
-
-
+        self.error += np.linalg.norm(self.true_position() - self.drone_position)
+        self.error2 += np.linalg.norm(self.true_position() - self.measured_gps_position())
+        self.time += 1
+        print("Error :", v, self.error/self.time, self.error2/self.time)
 
         
 
