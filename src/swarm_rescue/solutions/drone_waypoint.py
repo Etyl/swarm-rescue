@@ -226,35 +226,32 @@ class DroneWaypoint(DroneAbstract):
         pass
 
 
-    # TODO: determine the position in no GPS zone
     def get_localization(self):
         """
         returns the position of the drone
         """
-        self.time += 1
-        if self.time <= 10:
+
+        measured_position = self.measured_gps_position()
+
+        if measured_position is not None:
             self.drone_position = self.measured_gps_position()
             v = self.odometer_values()[0]
-            angle = self.measured_compass_angle() #+ self.angle_offset
+            angle = self.measured_compass_angle() - self.angle_offset
             self.theorical_velocity = np.array([v*math.cos(angle), v*math.sin(angle)])
             self.drone_angle = self.measured_compass_angle()
             return
 
-        angle = self.measured_compass_angle() #+ self.angle_offset
+        angle = self.measured_compass_angle() 
+        self.drone_angle = angle
 
         rot_matrix = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
         command = np.array([self.controller.command["forward"], self.controller.command["lateral"]])
         command = command@rot_matrix
 
-        velocity = np.zeros(2)
-        velocity[0] = (math.exp(-0.105*self.time) - 1)*command[0]*5.46 + math.exp(-0.105*self.time)*self.theorical_velocity[0]
-        velocity[1] = (math.exp(-0.105*self.time) - 1)*command[1]*5.46 + math.exp(-0.105*self.time)*self.theorical_velocity[1]
+        self.theorical_velocity += (command*0.556 - self.theorical_velocity*0.105)
 
-        self.theorical_velocity = velocity.copy()
-
-        self.drone_position -= velocity * math.cos(2*(angle-self.drone_angle))
-        print(angle-self.drone_angle)
-        self.drone_angle = angle
+        self.drone_position += self.theorical_velocity #* math.cos(2*(angle-self.drone_angle))
+        
 
         
 
@@ -470,6 +467,9 @@ class DroneWaypoint(DroneAbstract):
             rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
             direction = direction@rot
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*200, pos[1]+direction[1]*200, arcade.color.RED)
+
+            direction = self.theorical_velocity
+            arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*20, pos[1]+direction[1]*20, arcade.color.GREEN)
 
 
     def draw_bottom_layer(self):
