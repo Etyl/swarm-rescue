@@ -191,11 +191,7 @@ class DroneWaypoint(DroneAbstract):
         self.localizer = Localizer()
         
         self.theorical_velocity = np.zeros(2)
-        self.prev_angle = 0
-
-        self.time = 0
-        self.error = 0
-        self.error2 = 0
+        
 
     def adapt_angle_direction(self, pos: list):
         """
@@ -257,10 +253,10 @@ class DroneWaypoint(DroneAbstract):
         command = np.array([self.controller.command["forward"], self.controller.command["lateral"]])
         command = command@rot_matrix
 
-        theorical_velocity = self.theorical_velocity + (command*0.6 - self.theorical_velocity*0.105)
+        theorical_velocity = self.theorical_velocity + (command*0.6 - self.theorical_velocity*0.1)
         v = self.odometer_values()[0]
 
-        if measured_position is not None and v > 5:  
+        if measured_position is not None and abs(v) > 5:  
             angle = self.measured_compass_angle() - self.angle_offset
             self.theorical_velocity = (np.array([v*math.cos(angle), v*math.sin(angle)]) + theorical_velocity) / 2
             theoretical_position = self.drone_position + self.theorical_velocity 
@@ -272,15 +268,6 @@ class DroneWaypoint(DroneAbstract):
         else:
             self.theorical_velocity = theorical_velocity
             self.drone_position = self.drone_position + self.theorical_velocity
-        
-        self.error += np.linalg.norm(self.true_position() - self.drone_position)
-        self.error2 += np.linalg.norm(self.true_position() - self.measured_gps_position())
-        self.time += 1
-        print("Error :", v, self.error/self.time, self.error2/self.time)
-
-        
-
-        
 
 
     def add_wounded(self, data_wounded):
