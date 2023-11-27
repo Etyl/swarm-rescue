@@ -112,6 +112,8 @@ def findPointsAvailable(map_border, start, end):
     queue = [start]
     while len(queue)>0:
         current = queue.pop(0)
+        if map_border[current[0]][current[1]]:
+            continue
         if map_border[current[0]][current[1]] == False:
             start = current
             break
@@ -123,6 +125,8 @@ def findPointsAvailable(map_border, start, end):
     queue = [end]
     while len(queue)>0:
         current = queue.pop(0)
+        if map_border[current[0]][current[1]]:
+            continue
         if map_border[current[0]][current[1]] == False:
             end = current
             break
@@ -155,6 +159,9 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray):
     t0 = time.time()
     path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
     dur = time.time() - t0
+    if path is None:
+        print("No path found")
+        return None
     print(f"Found path of length {path.shape[0]} in {dur:.6f}s")
 
     t1 = time.time()
