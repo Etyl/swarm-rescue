@@ -36,10 +36,13 @@ class RoamerController(StateMachine):
     _NONE_TARGET_FOUND_THRESHOLD = 10
 
     # the thickness of the walls in the map when the path is computed (in order to allow a smoother path)
-    _WALL_THICKENING = 4
+    _WALL_THICKENING = 1
 
     # the sampling rate of the path (in order to reduce the number of points)
     _PATH_SAMPLING_RATE = 1
+
+    # the number of points required in a frontier
+    _FRONTIERS_THRESHOLD = 4
 
     start_roaming = State('Start Roaming', initial=True)
     searching_for_target = State('Searching for target')
@@ -76,7 +79,7 @@ class RoamerController(StateMachine):
         # the idea is to decrease this number if the drone is stuck at some point
         # because it would mean that the drone has already explored a lot of the map
         # and that the remaining unexplored areas are small
-        self.frontiers_threshold = 5
+        self.frontiers_threshold = self._FRONTIERS_THRESHOLD
 
         self.previous_searching_start_point = None
         self.count_close_previous_searching_start_point = 0
@@ -268,6 +271,43 @@ class Roamer:
         cv2.imshow("map_debug", img)
         cv2.waitKey(1)
 
+    def display_map_with_path(self, grid_map, path, id):
+        """
+        Display the map with points 1 in white, points 1000 in brown, and the path in blue.
+        """
+        x_max_grid, y_max_grid = self.map_matrix.shape
+
+        # Define color map
+        color_map = {
+            Zone.OBSTACLE: (50, 100, 200),
+            Zone.EMPTY: (255, 255, 255),
+            Zone.WOUNDED: (0, 0, 255),
+            Zone.RESCUE_CENTER: (255, 255, 0),
+            Zone.INEXPLORED: (0, 0, 0),
+            1: (255, 255, 255),  # Color for points with value 1 (white)
+            1000: (139, 69, 19)  # Color for points with value 1000 (brown)
+        }
+
+        img = np.zeros((x_max_grid, y_max_grid, 3), np.uint8)
+
+        # Assign colors to each point based on the color map
+        for x in range(x_max_grid):
+            for y in range(y_max_grid):
+                img[x][y] = color_map[grid_map[x, y]]
+
+        # Convert coordinates to integers and assign blue color to the path
+        for coord in path:
+            x, y = map(int, coord)
+            img[x, y] = (0, 0, 255)
+
+        # Zoom image
+        img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
+
+        # Display the image
+        cv2.imshow("map_debug" + str(id), np.transpose(img, (1, 0, 2)))
+        cv2.waitKey(1)
+
+
     def convert_matrix_for_astar(self, matrix):
         """
         Convert the map matrix to a matrix that can be used by the A* algorithm
@@ -304,6 +344,35 @@ class Roamer:
                                 new_matrix[x, y] = Zone.OBSTACLE
 
         return new_matrix
+
+    def find_empty_point_near_wall(self, drone_position, grid_map, p):
+        x_max, y_max = grid_map.shape
+
+        # Définir la liste des voisins pour un point donné
+        def neighbors(point):
+            x, y = point
+            return [(x + i, y + j) for i in [-1, 0, 1] for j in [-1, 0, 1]
+                    if 0 <= x + i < x_max and 0 <= y + j < y_max and (i != 0 or j != 0)]
+
+        # Calculer la distance entre deux points
+        def distance(point1, point2):
+            return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
+
+        # Parcourir les points dans l'ordre croissant de distance depuis le drone
+        for d in range(1, max(x_max, y_max)):
+            for i in range(-d, d + 1):
+                for j in range(-d, d + 1):
+                    current_point = (drone_position[0] + i, drone_position[1] + j)
+
+                    # Vérifier si le point est à une distance minimale d'une case mur
+                    if (0 <= current_point[0] < x_max and 0 <= current_point[1] < y_max
+                            and grid_map[current_point] == 1):
+                        if all(grid_map[neighbor] != 1000 for neighbor in neighbors(current_point)):
+                            # Trouvé un point vide éloigné d'au moins p cases d'une case mur
+                            return current_point
+
+        # Si aucun point n'est trouvé, retourner None
+        return None
     
     def find_path(self, sampling_rate: int = 1, frontiers_threshold: int = 5, wall_thickness: int = 4):
         """
@@ -318,20 +387,33 @@ class Roamer:
             return [], None
 
         thickened_map = self.thicken_walls(self.map_matrix, n=wall_thickness)
+        # thickened_map = self.map_matrix
         matrix_astar = self.convert_matrix_for_astar(thickened_map)
         # matrix_astar = self.convert_matrix_for_astar(self.map_matrix)
         # matrix_astar = self.thicken_walls(matrix_astar, wall_thickness=4)
 
         drone_position_grid = self.map.world_to_grid(self.drone.get_position())
+        drone_position_grid = self.find_empty_point_near_wall(drone_position_grid, matrix_astar, p=2)
 
-        # path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
+        # test if the drone position is not INF
+        if matrix_astar[drone_position_grid[0], drone_position_grid[1]] == 1000:
+            matrix_astar[drone_position_grid[0], drone_position_grid[1]] = 1
+            print("[Roamer] Drone position is INF")
+            # return [], None
+
+        # path_bis = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
         path = pathfinder(matrix_astar, tuple(drone_position_grid), tuple(target))
-        # path_sampled = path[:-int(len(path) * 0.2)]
+        # path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
+        
+        self.display_map_with_path(matrix_astar, path, 1) 
+        # self.display_map_with_path(matrix_astar, path_bis, 2) 
+
         path_sampled = path
-        path_sampled = path_sampled[::sampling_rate]
+        # path_sampled = path_sampled[::sampling_rate]
 
         # convert path to world coordinates
         path_sampled = np.array([self.map.grid_to_world(pos) for pos in path_sampled])
+
         if self.debug_mode: print("[Roamer] Path found : ", path_sampled)
 
         path_list = path_sampled.tolist()

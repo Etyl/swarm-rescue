@@ -113,10 +113,10 @@ class DroneController(StateMachine):
 
     def before_approaching_wounded(self):
         self.drone.onRoute = False
+        self.drone.roaming = False
     
     @approaching_wounded.enter
     def on_enter_approaching_wounded(self):
-        self.drone.roaming = False
         self.command = self.drone.command_semantic
         self.command["grasper"] = 1
 
@@ -172,7 +172,7 @@ class DroneWaypoint(DroneAbstract):
         self.found_wounded = False # True if the drone has found a wounded person
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
-        self.controller = DroneController(self, debug_mode=True)
+        self.controller = DroneController(self, debug_mode=False)
         self.last_angles = deque() # queue of the last angles
         self.angle_offset = np.pi/4 # The angle offset to go to the next waypoint
 
