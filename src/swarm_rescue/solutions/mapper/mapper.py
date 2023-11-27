@@ -125,7 +125,7 @@ class Map:
             obstacle_grid = cv2.resize(obstacle_grid, (0, 0), fx=zoom_factor, fy=zoom_factor)
             # erosion
             kernel = np.ones((2,2),np.uint8)
-            obstacle_grid = 1-cv2.erode(1-obstacle_grid, kernel, iterations=2)
+            obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
 
         adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]

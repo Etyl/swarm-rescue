@@ -100,7 +100,7 @@ class DroneController(StateMachine):
         self.drone.onRoute = False
 
     def before_going_to_wounded(self):
-        self.drone.path = self.drone.get_path(self.drone.drone_position, 0)
+        self.drone.path = self.drone.get_path(self.drone.rescue_center_position, 0)
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
 
@@ -117,7 +117,7 @@ class DroneController(StateMachine):
         self.command["grasper"] = 1
 
     def before_going_to_center(self):
-        self.drone.path = self.drone.get_path(self.drone.drone_position, 1)
+        self.drone.path = self.drone.get_path(self.drone.rescue_center_position, 1)
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
 
@@ -168,7 +168,6 @@ class DroneWaypoint(DroneAbstract):
         self.found_wounded = False # True if the drone has found a wounded person
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
-        self.controller = DroneController(self, debug_mode=False)
         self.last_angles = deque() # queue of the last angles
         self.angle_offset = np.pi/4 # The angle offset to go to the next waypoint
 
@@ -181,7 +180,6 @@ class DroneWaypoint(DroneAbstract):
         self.debug_wounded = True
         self.debug_positions = True
         
-        self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
@@ -191,6 +189,11 @@ class DroneWaypoint(DroneAbstract):
         self.localizer = Localizer()
         
         self.theorical_velocity = np.zeros(2)
+
+        self.controller = DroneController(self, debug_mode=False)
+        self.controller.force_transition()
+
+
         
 
     def adapt_angle_direction(self, pos: list):
@@ -392,7 +395,7 @@ class DroneWaypoint(DroneAbstract):
         if destination == 0:
             return [[-320,-180],[-260,138],[-200,150], [20, -200]]
         
-        path = self.map.shortest_path(self.drone_position, self.rescue_center_position)
+        path = self.map.shortest_path(self.drone_position, pos)
         return path
 
 

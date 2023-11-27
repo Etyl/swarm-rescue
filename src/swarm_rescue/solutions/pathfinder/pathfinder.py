@@ -8,12 +8,12 @@ import cv2
 robot_radius = 10
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
-save_images = False
+save_images = True
 output = "./solve"
 
 
 def border_from_map_np(map):
-    map = np.ones(map.shape).astype(np.float32)-map
+    #map = np.ones(map.shape).astype(np.float32)-map
     for _ in range(robot_radius):
         map = (np.roll(map,(1, 0), axis=(1, 0))+
                np.roll(map,(0, 1), axis=(1, 0))+
@@ -133,7 +133,13 @@ def findPointsAvailable(map_border, start, end):
     return start, end
 
 
-def pathfinder(map, start, end):
+def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray):
+    """
+    Args:
+        map: 2D numpy array with 0=free, 1=obstacle
+        start: tuple of start coordinates
+        end: tuple of end coordinates
+    """
 
     tb = time.time()
     map_border = border_from_map_np(map)
@@ -147,7 +153,6 @@ def pathfinder(map, start, end):
     assert grid.min() == 1, "cost of moving must be at least 1"
 
     t0 = time.time()
-    # set allow_diagonal=True to enable 8-connectivity
     path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
     dur = time.time() - t0
     print(f"Found path of length {path.shape[0]} in {dur:.6f}s")
@@ -165,50 +170,36 @@ def pathfinder(map, start, end):
         path_refined = segmentize_path(map_border, path_refined)
         path_refined = smooth_path(map_border, path_refined)
     print(f"Refined path of length {len(path_refined)} in {time.time()-t2:.6f}s")
+       
+    if save_images:
+        plt.imshow(np.stack((map_border, map_border, map_border), axis=2).astype(np.float32))
+        plt.savefig("./border.png")
+        map = np.stack((map, map, map), axis=2)
 
-    if len(path_refined) > 0:        
-        if save_images:
-            plt.imshow(np.stack((map_border, map_border, map_border), axis=2).astype(np.float32))
-            plt.savefig("./border.png")
-            map = np.stack((map, map, map), axis=2)
+        current_output = output+"-raw.png"
+        plt.figure()
+        path_plot = np.array(path)
+        plt.plot(path_plot[:,1],path_plot[:,0],color="red")
+        plt.imshow(map)
+        print(f"Plotting path to {current_output}, {len(path)} points)")
+        plt.savefig(current_output)
 
-            current_output = output+"-raw.png"
-            plt.figure()
-            path_plot = np.array(path)
-            plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-            plt.imshow(map)
-            print(f"Plotting path to {current_output}, {len(path)} points)")
-            plt.savefig(current_output)
+        current_output = output+"-smooth.png"
+        plt.figure()
+        path_plot = np.array(path_smooth)
+        plt.plot(path_plot[:,1],path_plot[:,0],color="red")
+        plt.imshow(map)
+        print(f"Plotting path to {current_output}, {len(path_smooth)} points)")
+        plt.savefig(current_output)
 
-            current_output = output+"-smooth.png"
-            plt.figure()
-            path_plot = np.array(path_smooth)
-            plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-            plt.imshow(map)
-            print(f"Plotting path to {current_output}, {len(path_smooth)} points)")
-            plt.savefig(current_output)
+        current_output = output+"-refined.png"
+        plt.figure()
+        path_plot = np.array(path_refined)
+        plt.plot(path_plot[:,1],path_plot[:,0],color="red")
+        plt.imshow(map)
+        print(f"Plotting path to {current_output}, {len(path_refined)} points)")
+        plt.savefig(current_output)
 
-            current_output = output+"-refined.png"
-            plt.figure()
-            path_plot = np.array(path_refined)
-            plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-            plt.imshow(map)
-            print(f"Plotting path to {current_output}, {len(path_refined)} points)")
-            plt.savefig(current_output)
-    else:
-        print("No path found")
     
     return path_refined
 
-
-# map = 1-cv2.imread("map.png", cv2.IMREAD_GRAYSCALE)
-# start = np.array([89, 13])
-# end = np.array([14, 46])
-
-# print("Start:", map[start[0]][start[1]])
-# print("End:", map[end[0]][end[1]])
-# print(np.unique(map))
-# plt.imshow(map)
-# plt.show()
-# # input map with 1=free, 0=obstacle
-# print(pathfinder(map, start, end))
