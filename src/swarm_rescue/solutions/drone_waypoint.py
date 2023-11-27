@@ -189,6 +189,10 @@ class DroneWaypoint(DroneAbstract):
         # self.controller._graph().write_png("./graph.png")
 
         self.roaming = False
+        self.command = {"forward": 0.0,
+                        "lateral": 0.0,
+                        "rotation": 0.0,
+                        "grasper": 0}
 
         self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=True)
         self.rescue_center_position = None
@@ -200,6 +204,7 @@ class DroneWaypoint(DroneAbstract):
 
         self.controller = DroneController(self, debug_mode=False)
         self.controller.force_transition()
+        self.gps_disabled = True
 
         
 
@@ -260,25 +265,32 @@ class DroneWaypoint(DroneAbstract):
         returns the position of the drone
         """
 
+        rot = self.command["rotation"]
+        measured_angle = self.measured_compass_angle()
+        if measured_angle is not None:
+            self.drone_angle = measured_angle
+            self.gps_disabled = False
+        else:
+            self.drone_angle = self.drone_angle + 0.2*rot
+            self.gps_disabled = True
+
         measured_position = self.measured_gps_position()
-        self.drone_angle = self.measured_compass_angle()
 
-        angle = self.measured_compass_angle() 
-
+        angle = self.drone_angle
         rot_matrix = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
-        command = np.array([self.controller.command["forward"], self.controller.command["lateral"]])
+        command = np.array([self.command["forward"], self.command["lateral"]])
         command = command@rot_matrix
 
         theorical_velocity = self.theorical_velocity + (command*0.6 - self.theorical_velocity*0.1)
         v = self.odometer_values()[0]
 
         if measured_position is not None and abs(v) > 5:  
-            angle = self.measured_compass_angle() - self.angle_offset
+            angle -= self.angle_offset
             self.theorical_velocity = (np.array([v*math.cos(angle), v*math.sin(angle)]) + theorical_velocity) / 2
             theoretical_position = self.drone_position + self.theorical_velocity 
             self.drone_position = (self.measured_gps_position() + theoretical_position)/2
         elif measured_position is not None:
-            angle = self.measured_compass_angle() - self.angle_offset
+            angle -= self.angle_offset
             self.theorical_velocity = np.array([v*math.cos(angle), v*math.sin(angle)]) / 2
             self.drone_position = self.measured_gps_position()
         else:
@@ -478,13 +490,19 @@ class DroneWaypoint(DroneAbstract):
         self.update_mapping()
         self.keep_distance_from_walls()
             
-
-        
-        
         if self.roaming:
-           return self.roamer_controller.command
+            if self.gps_disabled:
+               self.roamer_controller.command["rotation"] /=2
+               self.roamer_controller.command["forward"] /=2
+               self.roamer_controller.command["lateral"] /=2
+            self.command = self.roamer_controller.command.copy()
         else:
-            return self.controller.command
+            if self.gps_disabled:
+               self.controller.command["rotation"] /=2
+               self.controller.command["forward"] /=2
+               self.controller.command["lateral"] /=2
+            self.command = self.controller.command.copy()
+        return self.command
     
     def keep_distance_from_walls(self):
         """

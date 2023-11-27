@@ -36,7 +36,7 @@ class RoamerController(StateMachine):
     _NONE_TARGET_FOUND_THRESHOLD = 10
 
     # the thickness of the walls in the map when the path is computed (in order to allow a smoother path)
-    _WALL_THICKENING = 2
+    _WALL_THICKENING = 3
 
     # the sampling rate of the path (in order to reduce the number of points)
     _PATH_SAMPLING_RATE = 1
