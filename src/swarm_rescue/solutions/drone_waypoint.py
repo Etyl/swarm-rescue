@@ -18,6 +18,7 @@ from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
+from solutions.localizer.localizer import Localizer
 from solutions.roamer.roamer import RoamerController
 
 class DroneController(StateMachine):
@@ -173,8 +174,6 @@ class DroneWaypoint(DroneAbstract):
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.controller = DroneController(self, debug_mode=True)
         self.last_angles = deque() # queue of the last angles
-        self.last_pos = deque() # queue of the last positions
-        self.avg_pos = np.array([0,0]) # The average position of the drone
         self.angle_offset = np.pi/4 # The angle offset to go to the next waypoint
 
         self.wounded_found = []
@@ -190,12 +189,16 @@ class DroneWaypoint(DroneAbstract):
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 
+        self.roaming = False
+
         self.map = Map(area_world=self.size_area, resolution=16, lidar=self.lidar(), debug_mode=True)
         self.rescue_center_position = None
-
-        self.roaming = False
+        
         self.roamer_controller = RoamerController(self, self.map, debug_mode=False)
 
+        self.localizer = Localizer()
+        self.theorical_velocity = np.zeros(2)
+        
 
     def adapt_angle_direction(self, pos: list):
         """
@@ -241,37 +244,44 @@ class DroneWaypoint(DroneAbstract):
     def define_message_for_all(self):
         pass
 
-
-    # TODO: determine the position in no GPS zone
     def get_position(self):
         """
         returns the position of the drone
         """
+        return self.drone_position
 
-        pos = self.measured_gps_position()
-        self.last_pos.append(pos)
-        if len(self.last_pos) > 5:
-            self.last_pos.popleft()
-        self.avg_pos = np.mean(np.array(self.last_pos), axis=0)
-        direction = np.array([1,0])
-        angle = self.drone_angle-self.angle_offset
-        rot = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
-        direction = direction@rot
-        self.avg_pos = self.avg_pos + direction*20
-        return pos
-    
 
-    # TODO: determine the angle with more precision
-    def get_angle(self):
+    # TODO: improve angle estimation
+    def get_localization(self):
         """
-        returns the angle of the drone
+        returns the position of the drone
         """
-        angle = self.measured_compass_angle()
-        self.last_angles.append(angle)
-        if len(self.last_angles) > 5:
-            self.last_angles.popleft()
-        return circular_mean(np.array(self.last_angles))
-    
+
+        measured_position = self.measured_gps_position()
+        self.drone_angle = self.measured_compass_angle()
+
+        angle = self.measured_compass_angle() 
+
+        rot_matrix = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
+        command = np.array([self.controller.command["forward"], self.controller.command["lateral"]])
+        command = command@rot_matrix
+
+        theorical_velocity = self.theorical_velocity + (command*0.6 - self.theorical_velocity*0.1)
+        v = self.odometer_values()[0]
+
+        if measured_position is not None and abs(v) > 5:  
+            angle = self.measured_compass_angle() - self.angle_offset
+            self.theorical_velocity = (np.array([v*math.cos(angle), v*math.sin(angle)]) + theorical_velocity) / 2
+            theoretical_position = self.drone_position + self.theorical_velocity 
+            self.drone_position = (self.measured_gps_position() + theoretical_position)/2
+        elif measured_position is not None:
+            angle = self.measured_compass_angle() - self.angle_offset
+            self.theorical_velocity = np.array([v*math.cos(angle), v*math.sin(angle)]) / 2
+            self.drone_position = self.measured_gps_position()
+        else:
+            self.theorical_velocity = theorical_velocity
+            self.drone_position = self.drone_position + self.theorical_velocity
+
 
     def add_wounded(self, data_wounded):
         """
@@ -314,7 +324,7 @@ class DroneWaypoint(DroneAbstract):
         def angle(v1, v2):
             return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
-        command = {"forward": 0.5,
+        command = {"forward": 1.0,
                    "lateral": 0.0,
                    "rotation": 0.0,
                    "grasper": 0}
@@ -448,8 +458,7 @@ class DroneWaypoint(DroneAbstract):
     def control(self):
 
         self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
-        self.drone_position = self.get_position()
-        self.drone_angle = self.get_angle()
+        self.get_localization()
         
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
@@ -511,14 +520,15 @@ class DroneWaypoint(DroneAbstract):
 
         if self.debug_positions:
             pos = np.array(self.drone_position) + np.array(self.size_area)/2
-            pos2 = np.array(self.avg_pos) + np.array(self.size_area)/2
             arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
-            arcade.draw_circle_filled(pos2[0], pos2[1],5, arcade.color.YELLOW)
 
             direction = np.array([1,0])
             rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
             direction = direction@rot
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*200, pos[1]+direction[1]*200, arcade.color.RED)
+
+            direction = self.theorical_velocity
+            arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*20, pos[1]+direction[1]*20, arcade.color.GREEN)
 
 
     def draw_bottom_layer(self):

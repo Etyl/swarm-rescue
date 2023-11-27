@@ -5,10 +5,10 @@ import time
 import pyastar2d
 import cv2
 
-robot_radius = 5
+robot_radius = 10
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
-save_images = True
+save_images = False
 output = "./solve"
 
 
@@ -87,13 +87,59 @@ def segmentize_path(map, path):
         if max_segment>0 and start_point!=0:
             new_path.append(currentSegment[start_point])
 
+    if new_path[-1][0]!=path[-1][0] or new_path[-1][1]!=path[-1][1]:
+        new_path.append(path[-1])
+
     return new_path
+
+def neighbors(map,point):
+    neighbors = []
+    if point[0]>0:
+        neighbors.append((point[0]-1,point[1]))
+    if point[0]<map.shape[0]-1:
+        neighbors.append((point[0]+1,point[1]))
+    if point[1]>0:
+        neighbors.append((point[0],point[1]-1))
+    if point[1]<map.shape[1]-1:
+        neighbors.append((point[0],point[1]+1))
+    return neighbors
+
+def findPointsAvailable(map_border, start, end):
+    # find closest available point to start and end using BFS
+    start = np.array(start)
+    end = np.array(end)
+    explored = np.zeros(map_border.shape).astype(bool)
+    queue = [start]
+    while len(queue)>0:
+        current = queue.pop(0)
+        if map_border[current[0]][current[1]] == False:
+            start = current
+            break
+        explored[current[0]][current[1]] = True
+        for neighbor in neighbors(map_border, current):
+            if not explored[neighbor[0]][neighbor[1]]:
+                queue.append(neighbor)
+    explored = np.zeros(map_border.shape).astype(bool)
+    queue = [end]
+    while len(queue)>0:
+        current = queue.pop(0)
+        if map_border[current[0]][current[1]] == False:
+            end = current
+            break
+        explored[current[0]][current[1]] = True
+        for neighbor in neighbors(map_border, current):
+            if not explored[neighbor[0]][neighbor[1]]:
+                queue.append(neighbor)
+    return start, end
+
 
 def pathfinder(map, start, end):
 
     tb = time.time()
     map_border = border_from_map_np(map)
     print(f"Border map generated in {time.time()-tb:.6f}s")
+    
+    start,end = findPointsAvailable(map_border, start, end)
 
     grid = np.ones(map.shape).astype(np.float32)
     grid[map_border == True] = np.inf
@@ -152,7 +198,7 @@ def pathfinder(map, start, end):
     else:
         print("No path found")
     
-    return path_smooth
+    return path_refined
 
 
 # map = 1-cv2.imread("map.png", cv2.IMREAD_GRAYSCALE)
