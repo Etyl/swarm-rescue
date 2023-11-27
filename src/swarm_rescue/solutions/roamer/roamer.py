@@ -10,6 +10,7 @@ from spg_overlay.entities.drone_abstract import DroneAbstract
 from enum import Enum
 from scipy.ndimage import binary_dilation
 from scipy.ndimage import convolve
+from solutions.pathfinder.pathfinder import *
 
 import numpy as np
 import os
@@ -287,6 +288,10 @@ class Roamer:
         return converted_matrix.astype(np.float32)
     
     def thicken_walls(self, matrix, n):
+        """
+        Thicken the walls in the map
+        in order to allow a smoother path
+        """
         new_matrix = np.copy(matrix)
         rows, cols = matrix.shape
 
@@ -319,7 +324,8 @@ class Roamer:
 
         drone_position_grid = self.map.world_to_grid(self.drone.get_position())
 
-        path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
+        # path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
+        path = pathfinder(matrix_astar, tuple(drone_position_grid), tuple(target))
         # path_sampled = path[:-int(len(path) * 0.2)]
         path_sampled = path
         path_sampled = path_sampled[::sampling_rate]
