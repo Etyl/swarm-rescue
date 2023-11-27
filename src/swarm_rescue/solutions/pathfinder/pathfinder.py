@@ -8,12 +8,12 @@ import cv2
 robot_radius = 10
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
-save_images = True
+save_images = False
 output = "./solve"
 
 
-def border_from_map_np(map):
-    #map = np.ones(map.shape).astype(np.float32)-map
+def border_from_map_np(map, robot_radius):
+    map = np.ones(map.shape).astype(np.float32)-map
     for _ in range(robot_radius):
         map = (np.roll(map,(1, 0), axis=(1, 0))+
                np.roll(map,(0, 1), axis=(1, 0))+
@@ -112,7 +112,7 @@ def findPointsAvailable(map_border, start, end):
     queue = [start]
     while len(queue)>0:
         current = queue.pop(0)
-        if map_border[current[0]][current[1]]:
+        if explored[current[0]][current[1]]:
             continue
         if map_border[current[0]][current[1]] == False:
             start = current
@@ -125,7 +125,7 @@ def findPointsAvailable(map_border, start, end):
     queue = [end]
     while len(queue)>0:
         current = queue.pop(0)
-        if map_border[current[0]][current[1]]:
+        if explored[current[0]][current[1]]:
             continue
         if map_border[current[0]][current[1]] == False:
             end = current
@@ -137,7 +137,7 @@ def findPointsAvailable(map_border, start, end):
     return start, end
 
 
-def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray):
+def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=robot_radius):
     """
     Args:
         map: 2D numpy array with 0=free, 1=obstacle
@@ -146,7 +146,7 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray):
     """
 
     tb = time.time()
-    map_border = border_from_map_np(map)
+    map_border = border_from_map_np(map, robot_radius)
     print(f"Border map generated in {time.time()-tb:.6f}s")
     
     start,end = findPointsAvailable(map_border, start, end)

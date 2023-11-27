@@ -36,13 +36,13 @@ class RoamerController(StateMachine):
     _NONE_TARGET_FOUND_THRESHOLD = 10
 
     # the thickness of the walls in the map when the path is computed (in order to allow a smoother path)
-    _WALL_THICKENING = 1
+    _WALL_THICKENING = 2
 
     # the sampling rate of the path (in order to reduce the number of points)
     _PATH_SAMPLING_RATE = 1
 
     # the number of points required in a frontier
-    _FRONTIERS_THRESHOLD = 4
+    _FRONTIERS_THRESHOLD = 6
 
     start_roaming = State('Start Roaming', initial=True)
     searching_for_target = State('Searching for target')
@@ -327,6 +327,26 @@ class Roamer:
         converted_matrix = np.vectorize(lambda x: conversion_dict[x])(matrix)
         return converted_matrix.astype(np.float32)
     
+
+    def convert_matrix_for_pathfinder(self, matrix):
+        """
+        Convert the map matrix to a matrix that can be used by the A* algorithm
+        params:
+            - matrix: the map matrix with the Zone values
+        """
+        INF = 1000 # INF = 1000 c'est bien connu
+
+        conversion_dict = {
+            Zone.INEXPLORED: 0,
+            Zone.OBSTACLE: 0,
+            Zone.RESCUE_CENTER: 0,
+            Zone.WOUNDED: 1,
+            Zone.EMPTY: 1,
+        }
+
+        converted_matrix = np.vectorize(lambda x: conversion_dict[x])(matrix)
+        return converted_matrix.astype(np.float32)
+    
     def thicken_walls(self, matrix, n):
         """
         Thicken the walls in the map
@@ -387,23 +407,20 @@ class Roamer:
             return [], None
 
         thickened_map = self.thicken_walls(self.map_matrix, n=wall_thickness)
-        # thickened_map = self.map_matrix
         matrix_astar = self.convert_matrix_for_astar(thickened_map)
-        # matrix_astar = self.convert_matrix_for_astar(self.map_matrix)
-        # matrix_astar = self.thicken_walls(matrix_astar, wall_thickness=4)
+
+        matrix_pathfinder = self.convert_matrix_for_pathfinder(self.map_matrix)
 
         drone_position_grid = self.map.world_to_grid(self.drone.get_position())
         drone_position_grid = self.find_empty_point_near_wall(drone_position_grid, matrix_astar, p=2)
 
-        # test if the drone position is not INF
-        if matrix_astar[drone_position_grid[0], drone_position_grid[1]] == 1000:
-            matrix_astar[drone_position_grid[0], drone_position_grid[1]] = 1
-            print("[Roamer] Drone position is INF")
-            # return [], None
-
-        path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
-        # path = pathfinder(matrix_astar, tuple(drone_position_grid), tuple(target))
+        # path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
+        path = pathfinder(matrix_pathfinder, drone_position_grid, target, wall_thickness)
         # path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
+        
+        # TODO change implementation
+        if path is None:
+            return [], None
         
         self.display_map_with_path(matrix_astar, path, 1) 
         # self.display_map_with_path(matrix_astar, path_bis, 2) 

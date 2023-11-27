@@ -190,7 +190,7 @@ class DroneWaypoint(DroneAbstract):
 
         self.roaming = False
 
-        self.map = Map(area_world=self.size_area, resolution=16, lidar=self.lidar(), debug_mode=True)
+        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = RoamerController(self, self.map, debug_mode=False)
@@ -200,7 +200,6 @@ class DroneWaypoint(DroneAbstract):
 
         self.controller = DroneController(self, debug_mode=False)
         self.controller.force_transition()
-
 
         
 
