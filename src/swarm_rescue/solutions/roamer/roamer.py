@@ -401,8 +401,8 @@ class Roamer:
             print("[Roamer] Drone position is INF")
             # return [], None
 
-        # path_bis = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
-        path = pathfinder(matrix_astar, tuple(drone_position_grid), tuple(target))
+        path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
+        # path = pathfinder(matrix_astar, tuple(drone_position_grid), tuple(target))
         # path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
         
         self.display_map_with_path(matrix_astar, path, 1) 
