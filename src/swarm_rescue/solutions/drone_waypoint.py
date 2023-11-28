@@ -10,6 +10,7 @@ from statemachine import StateMachine, State
 import arcade
 from collections import deque 
 from statemachine import exceptions
+import scipy.optimize
 
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
@@ -257,6 +258,42 @@ class DroneWaypoint(DroneAbstract):
         returns the position of the drone
         """
         return self.drone_position
+    
+    def get_angle(self):
+        """
+        returns the angle of the drone
+        """
+        return self.drone_angle
+
+
+    def optimise_localization(self):
+        """
+        optimises the localization of the drone using SLAM
+        """
+        starting_pos = self.get_position()
+        starting_angle = self.get_angle()
+
+        lidar_dist = self.lidar().get_sensor_values()[::].copy()
+        lidar_angles = self.lidar().ray_angles[::].copy()
+
+        def Q(x):
+            [posX, posY, angle] = x
+            value = 0
+            for k in range(len(lidar_dist)):
+                point = np.zeros(2)
+                point[0] = posX + lidar_dist[k]*math.cos(lidar_angles[k]+angle)
+                point[1] = posY + lidar_dist[k]*math.sin(lidar_angles[k]+angle)
+                #value -= self.map[point]
+                value -= 1
+            return value
+        
+        res = scipy.optimize.minimize(Q,
+                                      np.array([starting_pos[0], starting_pos[1], starting_angle]),
+                                      bounds=[(-10,10),(-10,10),(-0.1,0.1)])
+        
+        dx,dy,dangle = res.x
+        self.drone_position = np.array([starting_pos[0]+dx, starting_pos[1]+dy])
+        self.drone_angle = starting_angle + dangle        
 
 
     # TODO: improve angle estimation
@@ -281,7 +318,7 @@ class DroneWaypoint(DroneAbstract):
         command = np.array([self.command["forward"], self.command["lateral"]])
         command = command@rot_matrix
 
-        theorical_velocity = self.theorical_velocity + (command*0.6 - self.theorical_velocity*0.1)
+        theorical_velocity = self.theorical_velocity + (command*0.56 - self.theorical_velocity*0.095)
         v = self.odometer_values()[0]
 
         if measured_position is not None and abs(v) > 5:  
@@ -296,6 +333,7 @@ class DroneWaypoint(DroneAbstract):
         else:
             self.theorical_velocity = theorical_velocity
             self.drone_position = self.drone_position + self.theorical_velocity
+            self.optimise_localization()
 
 
     def add_wounded(self, data_wounded):
