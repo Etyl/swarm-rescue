@@ -21,6 +21,8 @@ from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
 from solutions.localizer.localizer import Localizer
 from solutions.roamer.roamer import RoamerController
+from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
+
 
 class DroneController(StateMachine):
 
@@ -273,20 +275,24 @@ class DroneWaypoint(DroneAbstract):
         starting_pos = self.get_position()
         starting_angle = self.get_angle()
 
-        lidar_dist = self.lidar().get_sensor_values()[::].copy()
-        lidar_angles = self.lidar().ray_angles[::].copy()
+        lidar_dists = self.lidar().get_sensor_values().copy()
+        lidar_angles = self.lidar().ray_angles.copy()
+        measures = []
+        for k in range(len(lidar_dists)):
+            if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
+                measures.append([lidar_dists[k], lidar_angles[k]])
 
         def Q(x):
             [posX, posY, angle] = x
             value = 0
-            for k in range(len(lidar_dist)):
+            for [lidar_dist,lidar_angle] in measures:
                 point = np.zeros(2)
-                point[0] = starting_pos[0] + posX + lidar_dist[k]*math.cos(lidar_angles[k]+starting_angle+angle)
-                point[1] = starting_pos[1] + posY + lidar_dist[k]*math.sin(lidar_angles[k]+starting_angle+angle)
+                point[0] = starting_pos[0] + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle)
+                point[1] = starting_pos[1] + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle)
                 point = self.map.world_to_grid(point)
-                point[0] = min(self.map.x_max_grid-1, max(point[0], 0))
-                point[1] = min(self.map.y_max_grid-1, max(point[1], 0))
-                value -= self.map.confidence_map[point[0], point[1]]
+                if point[0] < 0 or point[0] >= self.map.x_max_grid or point[1] < 0 or point[1] >= self.map.y_max_grid:
+                    continue
+                value -= self.map.confidence_map[point[0],point[1]]
             return value
         
         """
@@ -298,8 +304,8 @@ class DroneWaypoint(DroneAbstract):
         dx,dy,dangle = res.x
         """
         mindx, mindy, mindangle = -10,-10,-0.2
-        for dx in np.linspace(-5,5,10):
-            for dy in np.linspace(-5,5,10):
+        for dx in np.linspace(-3,3,10):
+            for dy in np.linspace(-3,3,10):
                 for dangle in np.linspace(-0.1,0.1,10):
                     if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
                         mindx, mindy, mindangle = dx, dy, dangle
@@ -582,6 +588,16 @@ class DroneWaypoint(DroneAbstract):
 
 
     def draw_top_layer(self):
+
+        if True:
+            lidar_dist = self.lidar().get_sensor_values()[::].copy()
+            lidar_angles = self.lidar().ray_angles[::].copy()
+            for k in range(len(lidar_dist)):
+                pos = self.get_position() + np.array(self.size_area)/2
+                pos[0] += lidar_dist[k]*math.cos(lidar_angles[k]+self.get_angle())
+                pos[1] += lidar_dist[k]*math.sin(lidar_angles[k]+self.get_angle())
+                arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
+
 
         if self.debug_wounded:
             for wounded in self.wounded_found:
