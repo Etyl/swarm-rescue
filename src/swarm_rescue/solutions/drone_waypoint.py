@@ -281,19 +281,31 @@ class DroneWaypoint(DroneAbstract):
             value = 0
             for k in range(len(lidar_dist)):
                 point = np.zeros(2)
-                point[0] = posX + lidar_dist[k]*math.cos(lidar_angles[k]+angle)
-                point[1] = posY + lidar_dist[k]*math.sin(lidar_angles[k]+angle)
-                #value -= self.map[point]
-                value -= 1
+                point[0] = starting_pos[0] + posX + lidar_dist[k]*math.cos(lidar_angles[k]+starting_angle+angle)
+                point[1] = starting_pos[1] + posY + lidar_dist[k]*math.sin(lidar_angles[k]+starting_angle+angle)
+                point = self.map.world_to_grid(point)
+                point[0] = min(self.map.x_max_grid-1, max(point[0], 0))
+                point[1] = min(self.map.y_max_grid-1, max(point[1], 0))
+                value -= self.map.confidence_map[point[0], point[1]]
             return value
         
+        """
         res = scipy.optimize.minimize(Q,
                                       np.array([starting_pos[0], starting_pos[1], starting_angle]),
-                                      bounds=[(-10,10),(-10,10),(-0.1,0.1)])
-        
+                                      bounds=[(-4,4),(-4,4),(-0.2,0.2)],
+                                      tol=1e-7)
+        print(res.x, Q(res.x),Q([0,0,0]))
         dx,dy,dangle = res.x
-        self.drone_position = np.array([starting_pos[0]+dx, starting_pos[1]+dy])
-        self.drone_angle = starting_angle + dangle        
+        """
+        mindx, mindy, mindangle = -10,-10,-0.2
+        for dx in np.linspace(-5,5,10):
+            for dy in np.linspace(-5,5,10):
+                for dangle in np.linspace(-0.1,0.1,10):
+                    if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
+                        mindx, mindy, mindangle = dx, dy, dangle
+
+        self.drone_position = np.array([starting_pos[0]+mindx, starting_pos[1]+mindy])
+        self.drone_angle = starting_angle + mindangle
 
 
     # TODO: improve angle estimation
