@@ -238,11 +238,14 @@ class Mapper(Grid):
         self.previous_binary_grid = self.binary_grid.copy()
 
         # Update confidence map all the values of binary grid that are not 0
-        self.confidence_map = np.where(self.binary_grid > 0, 1, self.confidence_map).astype(np.uint8)
+        self.confidence_map = np.where(self.binary_grid > 0, 1, self.confidence_map)
+        #erosion
+        kernel = np.ones((2,2),np.uint8)
+        self.confidence_map = cv2.erode(self.confidence_map, kernel, iterations=1)
         # get the botder of the binary grid with Cannys algorithm
-        self.confidence_map = cv2.Canny(self.confidence_map, 0, 1)
+        #self.confidence_map = cv2.Canny(self.confidence_map, 0, 1)
         # apply a gaussian blur to the confidence map
-        self.confidence_map = cv2.GaussianBlur(self.confidence_map, (7,7), 0)
+        #self.confidence_map = cv2.GaussianBlur(self.confidence_map, (7,7), 0)
 
 
     def get_confidence_map(self):
