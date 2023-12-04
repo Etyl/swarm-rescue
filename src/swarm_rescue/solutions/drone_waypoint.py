@@ -242,7 +242,11 @@ class DroneWaypoint(DroneAbstract):
 
         v1 = self.nextWaypoint - pos
         v2 = np.array(self.path[-1]) - np.array(self.nextWaypoint)
-        turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
+
+        if np.linalg.norm(v1) == 0 or np.linalg.norm(v2) == 0: 
+            turning_angle = 0
+        else:
+            turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
         # TODO: tune values
         return dist < 20 + (1+turning_angle)*20

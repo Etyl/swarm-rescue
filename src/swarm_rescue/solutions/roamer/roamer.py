@@ -109,7 +109,11 @@ class RoamerController(StateMachine):
 
         v1 = self.target- self.drone.get_position()
         v2 = np.array(self.drone.path[-1]) - np.array(self.map.grid_to_world(self.target))
-        turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
+        
+        if np.linalg.norm(v1) == 0 or np.linalg.norm(v2) == 0: 
+            turning_angle = 0
+        else: 
+            turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
         return dist < 20 + (1+turning_angle)*20
 
@@ -140,7 +144,7 @@ class RoamerController(StateMachine):
         # END OTHER IMPL - ASYNC
 
         self.drone.path, self.target = self.roamer.find_path(sampling_rate=self._PATH_SAMPLING_RATE, frontiers_threshold=self.frontiers_threshold, wall_thickness=self._WALL_THICKENING)
-        
+
         if self.target is None:
             if self.debug_mode: print("No target found")
             self.none_target_count += 1
@@ -148,6 +152,12 @@ class RoamerController(StateMachine):
             if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
                 print("Current frontiers threshold : ", self.frontiers_threshold)
                 self.frontiers_threshold = max(1, self.frontiers_threshold - 1)
+            return
+        if np.linalg.norm(self.drone.get_position() - self.drone.map.grid_to_world(self.target)) < 50:
+            self.command = {"forward": 0.0,
+                            "lateral": 0.0,
+                            "rotation": 0.0,
+                            "grasper": 0}
             return
         else:
             self.previous_searching_start_point = self.drone.get_position()

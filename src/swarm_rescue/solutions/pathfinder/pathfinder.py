@@ -9,6 +9,7 @@ robot_radius = 10
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
 save_images = False
+debug_mode = False
 output = "./solve"
 
 
@@ -144,39 +145,64 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=ro
         start: tuple of start coordinates
         end: tuple of end coordinates
     """
+    if debug_mode:
 
-    tb = time.time()
-    map_border = border_from_map_np(map, robot_radius)
-    print(f"Border map generated in {time.time()-tb:.6f}s")
-    
-    start,end = findPointsAvailable(map_border, start, end)
+        tb = time.time()
+        map_border = border_from_map_np(map, robot_radius)
+        print(f"Border map generated in {time.time()-tb:.6f}s")
+        
+        start,end = findPointsAvailable(map_border, start, end)
 
-    grid = np.ones(map.shape).astype(np.float32)
-    grid[map_border == True] = np.inf
+        grid = np.ones(map.shape).astype(np.float32)
+        grid[map_border == True] = np.inf
 
-    assert grid.min() == 1, "cost of moving must be at least 1"
+        assert grid.min() == 1, "cost of moving must be at least 1"
 
-    t0 = time.time()
-    path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
-    dur = time.time() - t0
-    if path is None:
-        print("No path found")
-        return None
-    print(f"Found path of length {path.shape[0]} in {dur:.6f}s")
+        t0 = time.time()
+        path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
+        dur = time.time() - t0
+        if path is None:
+            print("No path found")
+            return None
+        print(f"Found path of length {path.shape[0]} in {dur:.6f}s")
 
-    t1 = time.time()
-    path_smooth = smooth_path(map_border, path)
-    dur_smooth = time.time() - t1
-    print(f"Smoothed path of length {len(path_smooth)} in {dur_smooth:.6f}s")
+        t1 = time.time()
+        path_smooth = smooth_path(map_border, path)
+        dur_smooth = time.time() - t1
+        print(f"Smoothed path of length {len(path_smooth)} in {dur_smooth:.6f}s")
 
-    t2 = time.time()
-    path_refined = segmentize_path(map_border, path_smooth)
-    path_refined = smooth_path(map_border, path_refined)
-    
-    for _ in range(path_refinements-1):
-        path_refined = segmentize_path(map_border, path_refined)
+        t2 = time.time()
+        path_refined = segmentize_path(map_border, path_smooth)
         path_refined = smooth_path(map_border, path_refined)
-    print(f"Refined path of length {len(path_refined)} in {time.time()-t2:.6f}s")
+        
+        for _ in range(path_refinements-1):
+            path_refined = segmentize_path(map_border, path_refined)
+            path_refined = smooth_path(map_border, path_refined)
+        print(f"Refined path of length {len(path_refined)} in {time.time()-t2:.6f}s")
+    
+    else:    
+        map_border = border_from_map_np(map, robot_radius)
+        
+        start,end = findPointsAvailable(map_border, start, end)
+
+        grid = np.ones(map.shape).astype(np.float32)
+        grid[map_border == True] = np.inf
+
+        assert grid.min() == 1, "cost of moving must be at least 1"
+
+        path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
+        if path is None:
+            print("No path found")
+            return None
+
+        path_smooth = smooth_path(map_border, path)
+
+        path_refined = segmentize_path(map_border, path_smooth)
+        path_refined = smooth_path(map_border, path_refined)
+        
+        for _ in range(path_refinements-1):
+            path_refined = segmentize_path(map_border, path_refined)
+            path_refined = smooth_path(map_border, path_refined)
        
     if save_images:
         plt.imshow(np.stack((map_border, map_border, map_border), axis=2).astype(np.float32))
