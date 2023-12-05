@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.ndimage import morphology
 from enum import Enum
+import cv2
 
 class Zone(Enum):
     EMPTY = 0
@@ -46,7 +47,7 @@ class FrontierExplorer():
 
         # Extract frontiers from the computed wavefront map
         frontiers = self.extract_frontiers(wavefront_map, self.frontiers_threshold)
-
+        
         return frontiers
 
     def extract_frontiers(self, wavefront_map, min_points=5):
@@ -59,7 +60,7 @@ class FrontierExplorer():
         # Extract frontiers from the wavefront map
         frontiers = []
         visited = set()
-
+        
         for i in range(wavefront_map.shape[0]):
             for j in range(wavefront_map.shape[1]):
                 if wavefront_map[i, j] == Zone.INEXPLORED.value and (i, j) not in visited:
@@ -111,7 +112,6 @@ class FrontierExplorer():
                 for neighbor in neighbors:
                     if 0 <= neighbor[0] < wavefront_map.shape[0] and 0 <= neighbor[1] < wavefront_map.shape[1]:
                         stack.append(neighbor)
-
         return frontier
 
     def getRandomFrontier(self):
@@ -212,10 +212,13 @@ class FrontierExplorer():
 
         return chosen_frontier_center
 
+    def getFrontiers(self):
+        """
+        Return the frontiers
+        """
+        return self.computeWFD()
+    
     def extractGrid(self, msg):
         # TODO: extract grid from msg.data and other usefull information
         pass
-
-
-
-
+    

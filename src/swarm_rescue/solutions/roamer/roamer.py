@@ -84,6 +84,8 @@ class RoamerController(StateMachine):
         self.previous_searching_start_point = None
         self.count_close_previous_searching_start_point = 0
 
+        self.frontiers = None
+
         super(RoamerController, self).__init__()
     
     def check_target_reached(self):
@@ -245,6 +247,7 @@ class Roamer:
         
         drone_position_grid = self.map.world_to_grid(drone_position)
         fd = FrontierExplorer(map_matrix_copy, drone_position_grid, frontiers_threshold)
+        self.frontiers = fd.getFrontiers()
         found_point = fd.getClosestFrontier()
 
         if self.debug_mode: print("[Roamer] Found point : ", found_point)
@@ -275,15 +278,6 @@ class Roamer:
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
         return np.transpose(img, (1, 0, 2))
 
-    def display_map(self, map):
-        """
-        displays the map
-        debugging purposes
-        """
-        img = self.map_to_image(map)
-        cv2.imshow("map_debug", img)
-        cv2.waitKey(1)
-
     def display_map_with_path(self, grid_map, path, id):
         """
         Display the map with points 1 in white, points 1000 in brown, and the path in blue.
@@ -307,11 +301,13 @@ class Roamer:
         for x in range(x_max_grid):
             for y in range(y_max_grid):
                 img[x][y] = color_map[grid_map[x, y]]
+                if (x, y) in self.frontiers[0]:
+                    img[x][y] = (0, 255, 0)
 
         # Convert coordinates to integers and assign blue color to the path
-        for coord in path:
-            x, y = map(int, coord)
-            img[x, y] = (0, 0, 255)
+        # for coord in path:
+        #     x, y = map(int, coord)
+        #     img[x, y] = (0, 0, 255)
 
         # Zoom image
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
@@ -438,7 +434,7 @@ class Roamer:
         if path is None:
             return [], None
         
-        self.display_map_with_path(matrix_astar, path, 1) 
+        self.display_map_with_path(thickened_map, path, 1) 
         # self.display_map_with_path(matrix_astar, path_bis, 2) 
 
         path_sampled = path
