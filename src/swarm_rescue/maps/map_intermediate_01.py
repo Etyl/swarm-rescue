@@ -62,8 +62,8 @@ class MyMapIntermediate01(MapAbstract):
                                    CollisionTypes.DEVICE,
                                    srdisabler_disables_device)
 
-        if ZoneType.NO_GPS_ZONE in self._zones_config:
-            playground.add(self._no_gps_zone, self._no_gps_zone_pos)
+        #if ZoneType.NO_GPS_ZONE in self._zones_config:
+        playground.add(self._no_gps_zone, self._no_gps_zone_pos)
 
         # POSITIONS OF THE WOUNDED PERSONS
         for i in range(self._number_wounded_persons):

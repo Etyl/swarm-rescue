@@ -1,6 +1,6 @@
 from statemachine import StateMachine, State
-from drone_waypoint import DroneWaypoint
 
+from solutions.drone_waypoint import DroneWaypoint
 
 class DroneController(StateMachine):
 

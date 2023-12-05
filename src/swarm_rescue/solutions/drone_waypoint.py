@@ -20,7 +20,8 @@ from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
 from solutions.localizer.localizer import Localizer
 from solutions.roamer.roamer import RoamerController
-from drone_controller import DroneController
+from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
+
 
 class DroneWaypoint(DroneAbstract):
 
@@ -53,6 +54,8 @@ class DroneWaypoint(DroneAbstract):
         self.debug_wounded = True
         self.debug_positions = True
         self.debug_map = True
+        self.debug_roamer = False
+        self.debug_controller = True
         
         # self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
@@ -67,12 +70,12 @@ class DroneWaypoint(DroneAbstract):
         self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
         self.rescue_center_position = None
         
-        self.roamer_controller = RoamerController(self, self.map, debug_mode=False)
+        self.roamer_controller = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer = Localizer()
         self.theorical_velocity = np.zeros(2)
 
-        self.controller = DroneController(self, debug_mode=True)
+        self.controller = DroneController(self, debug_mode=self.debug_controller)
         self.controller.force_transition()
         self.gps_disabled = True
 
@@ -503,3 +506,4 @@ class DroneWaypoint(DroneAbstract):
                 pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
                 pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
                 arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
+from solutions.drone_controller import DroneController
