@@ -245,7 +245,7 @@ class Mapper(Grid):
         # get the botder of the binary grid with Cannys algorithm
         #self.confidence_map = cv2.Canny(self.confidence_map, 0, 1)
         # apply a gaussian blur to the confidence map
-        #self.confidence_map = cv2.GaussianBlur(self.confidence_map, (7,7), 0)
+        self.confidence_map = cv2.GaussianBlur(self.confidence_map, (7,7), 0)
 
 
     def get_confidence_map(self):
