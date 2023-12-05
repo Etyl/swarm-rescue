@@ -183,6 +183,7 @@ class DroneWaypoint(DroneAbstract):
         self.debug_path = True # True if the path must be displayed
         self.debug_wounded = True
         self.debug_positions = True
+        self.debug_map = True
         
         # self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
@@ -194,7 +195,7 @@ class DroneWaypoint(DroneAbstract):
                         "rotation": 0.0,
                         "grasper": 0}
 
-        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=True)
+        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
         self.rescue_center_position = None
         
         self.roamer_controller = RoamerController(self, self.map, debug_mode=False)
@@ -202,7 +203,7 @@ class DroneWaypoint(DroneAbstract):
         self.localizer = Localizer()
         self.theorical_velocity = np.zeros(2)
 
-        self.controller = DroneController(self, debug_mode=False)
+        self.controller = DroneController(self, debug_mode=True)
         self.controller.force_transition()
         self.gps_disabled = True
 
