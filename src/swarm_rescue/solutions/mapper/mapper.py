@@ -41,6 +41,8 @@ class Map:
             #Zone.WOUNDED: Mapper(area_world, resolution, lidar, DroneSemanticSensor.TypeEntity.WOUNDED_PERSON),
         }
 
+        self.confidence_map = np.zeros((self.x_max_grid, self.y_max_grid))
+
     def __setitem__(self, pos, zone):
         x,y = pos
         self.map[x][y] = zone
@@ -53,6 +55,7 @@ class Map:
 
         for zone, mapper in self.mappers.items():
             mapper.update_grid(pose, semantic_lidar)
+            self.confidence_map = mapper.get_confidence_map()
             
             if self.debug_mode:
                 for x, y in zip(*mapper.changed_points):
@@ -90,8 +93,9 @@ class Map:
         """
         displays the map
         """
-        img = self.map_to_image()
-        cv2.imshow("map", img)
+        #img = self.map_to_image()
+        img = cv2.resize(self.confidence_map, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
+        cv2.imshow("map", img.T)
         cv2.waitKey(1)
     
     def world_to_grid(self, pos: Pose):
@@ -168,6 +172,8 @@ class Mapper(Grid):
 
         self.changed_points = np.array([])
 
+        self.confidence_map = np.zeros((self.x_max_grid, self.y_max_grid))
+
     def update_grid(self, pose: Pose, semantic_lidar):
         """
         Updates the Bayesian map with new observations from LIDAR and semantic LIDAR.
@@ -176,7 +182,7 @@ class Mapper(Grid):
         - pose: Corrected pose in world coordinates
         - semantic_lidar: Semantic LIDAR data
         """
-
+        self.confidence_map = np.zeros((self.x_max_grid, self.y_max_grid))
         # Extract data from LIDAR
         self.lock_grid = np.logical_or(self.grid == THRESHOLD_MIN, self.grid == THRESHOLD_MAX)
 
@@ -230,3 +236,17 @@ class Mapper(Grid):
         self.binary_grid = np.where(self.grid < 0, -1, self.binary_grid)
         self.changed_points = np.where(self.binary_grid != self.previous_binary_grid)
         self.previous_binary_grid = self.binary_grid.copy()
+
+        # Update confidence map all the values of binary grid that are not 0
+        self.confidence_map = np.where(self.binary_grid > 0, 1, self.confidence_map)
+        #erosion
+        kernel = np.ones((2,2),np.uint8)
+        self.confidence_map = cv2.erode(self.confidence_map, kernel, iterations=1)
+        # get the botder of the binary grid with Cannys algorithm
+        #self.confidence_map = cv2.Canny(self.confidence_map, 0, 1)
+        # apply a gaussian blur to the confidence map
+        self.confidence_map = cv2.GaussianBlur(self.confidence_map, (7,7), 0)
+
+
+    def get_confidence_map(self):
+        return self.confidence_map

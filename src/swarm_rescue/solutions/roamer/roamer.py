@@ -434,7 +434,7 @@ class Roamer:
         if path is None:
             return [], None
         
-        self.display_map_with_path(thickened_map, path, 1) 
+        #self.display_map_with_path(matrix_astar, path, 1) 
         # self.display_map_with_path(matrix_astar, path_bis, 2) 
 
         path_sampled = path

@@ -9,6 +9,7 @@ from typing import Optional
 import arcade
 from collections import deque 
 from statemachine import exceptions
+import scipy.optimize
 
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
@@ -75,6 +76,8 @@ class DroneWaypoint(DroneAbstract):
         self.controller.force_transition()
         self.gps_disabled = True
 
+        self.iteration = 0
+
         
 
     def adapt_angle_direction(self, pos: list):
@@ -130,6 +133,63 @@ class DroneWaypoint(DroneAbstract):
         returns the position of the drone
         """
         return self.drone_position
+    
+    def get_angle(self):
+        """
+        returns the angle of the drone
+        """
+        return self.drone_angle
+
+
+    def optimise_localization(self):
+        """
+        optimises the localization of the drone using SLAM
+        """
+        starting_pos = self.get_position()
+        starting_angle = self.get_angle()
+
+        lidar_dists = self.lidar().get_sensor_values()[::4].copy()
+        lidar_angles = self.lidar().ray_angles[::4].copy()
+        measures = []
+        for k in range(len(lidar_dists)):
+            if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
+                measures.append([lidar_dists[k], lidar_angles[k]])
+
+        def Q(x):
+            [posX, posY, angle] = x
+            value = 0
+            for [lidar_dist,lidar_angle] in measures:
+                point = np.zeros(2)
+                point[0] = starting_pos[0] + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle)
+                point[1] = starting_pos[1] + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle)
+                point = self.map.world_to_grid(point)
+                if point[0] < 0 or point[0] >= self.map.x_max_grid or point[1] < 0 or point[1] >= self.map.y_max_grid:
+                    continue
+                value -= self.map.confidence_map[point[0],point[1]]
+            return value
+        
+        """
+        res = scipy.optimize.minimize(Q,
+                                      np.array([starting_pos[0], starting_pos[1], starting_angle]),
+                                      bounds=[(-4,4),(-4,4),(-0.2,0.2)],
+                                      tol=1e-7)
+        print(res.x, Q(res.x),Q([0,0,0]))
+        dx,dy,dangle = res.x
+        """
+        mindx, mindy, mindangle = -10,-10,-0.2
+        # for dx in np.linspace(-3,3,10):
+        #     for dy in np.linspace(-3,3,10):
+        #         for dangle in np.linspace(-0.1,0.1,10):
+        #             if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
+        #                 mindx, mindy, mindangle = dx, dy, dangle
+
+        for k in range(30):
+            dx, dy, dangle = np.random.normal(0,1), np.random.normal(0,1), np.random.normal(0,0.1)
+            if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
+                mindx, mindy, mindangle = dx, dy, dangle
+
+        self.drone_position = np.array([starting_pos[0]+mindx, starting_pos[1]+mindy])
+        self.drone_angle = starting_angle + mindangle
 
 
     # TODO: improve angle estimation
@@ -154,7 +214,7 @@ class DroneWaypoint(DroneAbstract):
         command = np.array([self.command["forward"], self.command["lateral"]])
         command = command@rot_matrix
 
-        theorical_velocity = self.theorical_velocity + (command*0.6 - self.theorical_velocity*0.1)
+        theorical_velocity = self.theorical_velocity + (command*0.56 - self.theorical_velocity*0.095)
         v = self.odometer_values()[0]
 
         if measured_position is not None and abs(v) > 5:  
@@ -167,6 +227,7 @@ class DroneWaypoint(DroneAbstract):
         else:
             self.theorical_velocity = theorical_velocity
             self.drone_position = self.drone_position + self.theorical_velocity
+            self.optimise_localization()
 
 
     def add_wounded(self, data_wounded):
@@ -342,7 +403,7 @@ class DroneWaypoint(DroneAbstract):
             self.rescue_center_position = self.drone_position.copy()
 
     def control(self):
-
+        self.iteration += 1
         self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.get_localization()
         
@@ -357,7 +418,6 @@ class DroneWaypoint(DroneAbstract):
                 pass
         
         self.controller.cycle()
-
         self.update_mapping()
         self.keep_distance_from_walls()
             
@@ -403,6 +463,16 @@ class DroneWaypoint(DroneAbstract):
 
 
     def draw_top_layer(self):
+
+        if True:
+            lidar_dist = self.lidar().get_sensor_values()[::].copy()
+            lidar_angles = self.lidar().ray_angles[::].copy()
+            for k in range(len(lidar_dist)):
+                pos = self.get_position() + np.array(self.size_area)/2
+                pos[0] += lidar_dist[k]*math.cos(lidar_angles[k]+self.get_angle())
+                pos[1] += lidar_dist[k]*math.sin(lidar_angles[k]+self.get_angle())
+                arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
+
 
         if self.debug_wounded:
             for wounded in self.wounded_found:
