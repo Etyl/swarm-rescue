@@ -145,6 +145,7 @@ class RoamerController(StateMachine):
 
         self.drone.path, self.target = self.roamer.find_path(sampling_rate=self._PATH_SAMPLING_RATE, frontiers_threshold=self.frontiers_threshold, wall_thickness=self._WALL_THICKENING)
 
+        # if no target found
         if self.target is None:
             if self.debug_mode: print("No target found")
             self.none_target_count += 1
@@ -153,15 +154,17 @@ class RoamerController(StateMachine):
                 print("Current frontiers threshold : ", self.frontiers_threshold)
                 self.frontiers_threshold = max(1, self.frontiers_threshold - 1)
             return
-        if np.linalg.norm(self.drone.get_position() - self.drone.map.grid_to_world(self.target)) < 50:
+        
+        # if target is too close
+        if self.target == 0:
             self.command = {"forward": 0.0,
                             "lateral": 0.0,
                             "rotation": 0.0,
                             "grasper": 0}
             return
-        else:
-            self.previous_searching_start_point = self.drone.get_position()
-            self.count_close_previous_searching_start_point = 0
+        
+        self.previous_searching_start_point = self.drone.get_position()
+        self.count_close_previous_searching_start_point = 0
         
         self.force_going_to_target()
 
@@ -415,6 +418,9 @@ class Roamer:
         # TODO change implementation
         if target is None:
             return [], None
+        
+        if np.linalg.norm(self.drone.get_position() - self.drone.map.grid_to_world(target)) < 50:
+            return [], 0
 
         thickened_map = self.thicken_walls(self.map_matrix, n=wall_thickness)
         matrix_astar = self.convert_matrix_for_astar(thickened_map)
