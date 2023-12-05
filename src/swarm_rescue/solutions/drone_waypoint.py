@@ -173,7 +173,6 @@ class DroneWaypoint(DroneAbstract):
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.last_angles = deque() # queue of the last angles
-        self.angle_offset = np.pi/4 # The angle offset to go to the next waypoint
 
         self.wounded_found = []
         self.wounded_distance = 80 # The distance between wounded person to be considered as the same
@@ -290,12 +289,10 @@ class DroneWaypoint(DroneAbstract):
         v = self.odometer_values()[0]
 
         if measured_position is not None and abs(v) > 5:  
-            angle -= self.angle_offset
             self.theorical_velocity = (np.array([v*math.cos(angle), v*math.sin(angle)]) + theorical_velocity) / 2
             theoretical_position = self.drone_position + self.theorical_velocity 
             self.drone_position = (self.measured_gps_position() + theoretical_position)/2
         elif measured_position is not None:
-            angle -= self.angle_offset
             self.theorical_velocity = np.array([v*math.cos(angle), v*math.sin(angle)]) / 2
             self.drone_position = self.measured_gps_position()
         else:
@@ -440,7 +437,7 @@ class DroneWaypoint(DroneAbstract):
                    "grasper": 0}
         
         angle_from_waypoint = self.adapt_angle_direction(pos)
-        angle_from_waypoint = normalize_angle(angle_from_waypoint+math.pi/4)
+        angle_from_waypoint = normalize_angle(angle_from_waypoint)
 
         if angle_from_waypoint > 0.5:
             command["rotation"] =  1.0
@@ -449,8 +446,8 @@ class DroneWaypoint(DroneAbstract):
         else:
             command["rotation"] = angle_from_waypoint
 
-        command["forward"] = math.cos(angle_from_waypoint-math.pi/4)
-        command["lateral"] = math.sin(angle_from_waypoint-math.pi/4)
+        command["forward"] = math.cos(angle_from_waypoint)
+        command["lateral"] = math.sin(angle_from_waypoint)
         norm = max(abs(command["forward"]),abs(command["lateral"]))
         command["forward"] = command["forward"]/norm
         command["lateral"] = command["lateral"]/norm     
