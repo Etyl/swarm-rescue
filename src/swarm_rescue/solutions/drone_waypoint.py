@@ -50,12 +50,13 @@ class DroneWaypoint(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = True # True if the path must be displayed
-        self.debug_wounded = True
-        self.debug_positions = True
-        self.debug_map = True
+        self.debug_path = False # True if the path must be displayed
+        self.debug_wounded = False
+        self.debug_positions = False
+        self.debug_map = False
         self.debug_roamer = False
-        self.debug_controller = True
+        self.debug_controller = False 
+        self.debug_lidar = False
         
         # self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
@@ -81,7 +82,6 @@ class DroneWaypoint(DroneAbstract):
 
         self.iteration = 0
 
-        
 
     def adapt_angle_direction(self, pos: list):
         """
@@ -151,8 +151,8 @@ class DroneWaypoint(DroneAbstract):
         starting_pos = self.get_position()
         starting_angle = self.get_angle()
 
-        lidar_dists = self.lidar().get_sensor_values()[::4].copy()
-        lidar_angles = self.lidar().ray_angles[::4].copy()
+        lidar_dists = self.lidar().get_sensor_values()[::10].copy()
+        lidar_angles = self.lidar().ray_angles[::10].copy()
         measures = []
         for k in range(len(lidar_dists)):
             if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
@@ -179,7 +179,7 @@ class DroneWaypoint(DroneAbstract):
         print(res.x, Q(res.x),Q([0,0,0]))
         dx,dy,dangle = res.x
         """
-        mindx, mindy, mindangle = -10,-10,-0.2
+        mindx, mindy, mindangle = 0,0,0
         # for dx in np.linspace(-3,3,10):
         #     for dy in np.linspace(-3,3,10):
         #         for dangle in np.linspace(-0.1,0.1,10):
@@ -467,7 +467,7 @@ class DroneWaypoint(DroneAbstract):
 
     def draw_top_layer(self):
 
-        if True:
+        if self.debug_lidar:
             lidar_dist = self.lidar().get_sensor_values()[::].copy()
             lidar_angles = self.lidar().ray_angles[::].copy()
             for k in range(len(lidar_dist)):

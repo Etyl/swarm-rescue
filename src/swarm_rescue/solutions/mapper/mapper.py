@@ -56,15 +56,14 @@ class Map:
         for zone, mapper in self.mappers.items():
             mapper.update_grid(pose, semantic_lidar)
             self.confidence_map = mapper.get_confidence_map()
-            
-            if self.debug_mode:
-                for x, y in zip(*mapper.changed_points):
-                    if mapper.binary_grid[x][y] == 1:
-                        self[x, y] = zone
-                    elif mapper.binary_grid[x][y] == -1:
-                        self[x, y] = Zone.EMPTY
-                    else:
-                        self[x, y] = Zone.INEXPLORED
+        
+            for x, y in zip(*mapper.changed_points):
+                if mapper.binary_grid[x][y] == 1:
+                    self[x, y] = zone
+                elif mapper.binary_grid[x][y] == -1:
+                    self[x, y] = Zone.EMPTY
+                else:
+                    self[x, y] = Zone.INEXPLORED
 
         if self.debug_mode:
             self.display_map()
