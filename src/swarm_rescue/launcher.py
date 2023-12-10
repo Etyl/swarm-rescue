@@ -54,10 +54,9 @@ class Launcher:
         self.team_info = TeamInfo()
         self.eval_plan = EvalPlan()
 
-        eval_config = EvalConfig(map_type=MyMapIntermediate02, nb_rounds=1)
+        eval_config = EvalConfig(map_type=MyMapIntermediate01, nb_rounds=2)
         self.eval_plan.add(eval_config=eval_config)
 
-        """
         eval_config = EvalConfig(map_type=MyMapIntermediate02)
         self.eval_plan.add(eval_config=eval_config)
 
@@ -72,7 +71,6 @@ class Launcher:
         zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
         eval_config = EvalConfig(map_type=MyMapMedium02, zones_config=zones_config, nb_rounds=1, config_weight=1)
         self.eval_plan.add(eval_config=eval_config)
-        """
 
         self.number_drones = None
         self.time_step_limit = None
@@ -173,7 +171,7 @@ class Launcher:
                 print(
                     f"\t* Round n°{num_round + 1}/{eval_config.nb_rounds}: "
                     f"\n\t\trescued nb: {int(rescued_number)}/{self.number_wounded_persons}, "
-                    f"explor. score: {score_exploration:.0f}%, "
+                    f"explor. score: {score_exploration:.1f}%, "
                     f"real time elapsed: {real_time_elapsed:.0f}s/{self.real_time_limit}s, "
                     f"elapse time: {elapsed_time_step}/{self.time_step_limit} steps, "
                     f"time to rescue all: {rescued_all_time_step} steps."

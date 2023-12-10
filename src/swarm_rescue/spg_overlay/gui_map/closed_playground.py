@@ -26,7 +26,7 @@ class ClosedPlayground(Playground):
     """
     def __init__(self, size: Tuple[int, int]):
         background = (220, 220, 220)
-        use_shaders = False
+        use_shaders = True
         if platform.system() == "Darwin":
             use_shaders = False
 
@@ -39,6 +39,8 @@ class ClosedPlayground(Playground):
         assert isinstance(self._height, int)
 
         self._walls_creation()
+
+        # print(f"Version OpenGL : {self._window.ctx.gl_version}")
 
     def _walls_creation(self):
         h = self._height / 2
