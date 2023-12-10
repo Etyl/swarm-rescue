@@ -21,17 +21,8 @@ from solutions.mapper.mapper import Map
 from solutions.localizer.localizer import Localizer
 from solutions.roamer.roamer import RoamerController
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
+from solutions.types.types import DroneData
 import solutions
-
-
-class DroneData:
-    def __init__(self) -> None:
-        self.id : int = None
-        self.position : np.ndarray = None
-        self.angle : float = None
-        self.wounded : list = None
-        self.wounded_target : int = None
-
 
 
 class DroneWaypoint(DroneAbstract):
@@ -147,7 +138,7 @@ class DroneWaypoint(DroneAbstract):
         data.id = self.identifier
         data.position = self.get_position()
         data.angle = self.get_angle()
-        data.wounded = self.wounded_found
+        data.wounded_found = self.wounded_found
         data.wounded_target = self.wounded_target
         return data
 
@@ -191,21 +182,8 @@ class DroneWaypoint(DroneAbstract):
                 value -= self.map.confidence_map[point[0],point[1]]
             return value
         
-        """
-        res = scipy.optimize.minimize(Q,
-                                      np.array([starting_pos[0], starting_pos[1], starting_angle]),
-                                      bounds=[(-4,4),(-4,4),(-0.2,0.2)],
-                                      tol=1e-7)
-        print(res.x, Q(res.x),Q([0,0,0]))
-        dx,dy,dangle = res.x
-        """
         mindx, mindy, mindangle = 0,0,0
-        # for dx in np.linspace(-3,3,10):
-        #     for dy in np.linspace(-3,3,10):
-        #         for dangle in np.linspace(-0.1,0.1,10):
-        #             if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
-        #                 mindx, mindy, mindangle = dx, dy, dangle
-
+        
         for k in range(30):
             dx, dy, dangle = np.random.normal(0,1), np.random.normal(0,1), np.random.normal(0,0.1)
             if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
