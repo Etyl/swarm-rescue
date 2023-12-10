@@ -6,4 +6,4 @@ class DroneData:
         self.position : np.ndarray = None
         self.angle : float = None
         self.wounded_found : list = None
-        self.wounded_target : int = None
+        self.wounded_target : np.ndarray = None
