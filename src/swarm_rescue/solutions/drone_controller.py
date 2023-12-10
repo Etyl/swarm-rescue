@@ -1,6 +1,7 @@
 from statemachine import StateMachine, State
+import solutions
 
-from solutions.drone_waypoint import DroneWaypoint
+
 
 class DroneController(StateMachine):
 
@@ -37,8 +38,7 @@ class DroneController(StateMachine):
         approaching_center.to(approaching_center)
     )
  
-
-    def __init__(self, drone : DroneWaypoint, debug_mode: bool = False):
+    def __init__(self, drone : solutions.drone_waypoint.DroneWaypoint, debug_mode: bool = False):
         self.drone = drone
         self.command = {"forward": 0.0,
                         "lateral": 0.0,

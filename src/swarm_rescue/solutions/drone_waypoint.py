@@ -21,6 +21,17 @@ from solutions.mapper.mapper import Map
 from solutions.localizer.localizer import Localizer
 from solutions.roamer.roamer import RoamerController
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
+import solutions
+
+
+class DroneData:
+    def __init__(self) -> None:
+        self.id : int = None
+        self.position : np.ndarray = None
+        self.angle : float = None
+        self.wounded : list = None
+        self.wounded_target : int = None
+
 
 
 class DroneWaypoint(DroneAbstract):
@@ -45,8 +56,11 @@ class DroneWaypoint(DroneAbstract):
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.last_angles = deque() # queue of the last angles
 
-        self.wounded_found = []
+        self.wounded_found = [] # the list of wounded persons found
         self.wounded_distance = 80 # The distance between wounded person to be considered as the same
+        self.wounded_target = None # The wounded id to go to
+
+        self.drone_list = [] # The list of drones
 
         ## Debug controls
 
@@ -76,7 +90,7 @@ class DroneWaypoint(DroneAbstract):
         self.localizer = Localizer()
         self.theorical_velocity = np.zeros(2)
 
-        self.controller = DroneController(self, debug_mode=self.debug_controller)
+        self.controller = solutions.drone_controller.DroneController(self, debug_mode=self.debug_controller)
         self.controller.force_transition()
         self.gps_disabled = True
 
@@ -129,7 +143,13 @@ class DroneWaypoint(DroneAbstract):
 
     # TODO: implement communication
     def define_message_for_all(self):
-        pass
+        data = DroneData()
+        data.id = self.identifier
+        data.position = self.get_position()
+        data.angle = self.get_angle()
+        data.wounded = self.wounded_found
+        data.wounded_target = self.wounded_target
+        return data
 
     def get_position(self):
         """
@@ -265,6 +285,25 @@ class DroneWaypoint(DroneAbstract):
             self.wounded_found[k]["last_seen"] += 1
             if np.linalg.norm(self.drone_position - self.wounded_found[k]["position"])<80 and self.wounded_found[k]["last_seen"] > frame_limit:
                 self.wounded_found.pop(k)
+
+    def update_drones(self, drone_data : DroneData):
+        """
+        updates the data of the drones
+        """
+        for k in range(len(self.drone_list)):
+            if self.drone_list[k].id == drone_data.id:
+                self.drone_list[k] = drone_data
+                return
+        self.drone_list.append(drone_data)
+
+    def process_communicator(self):
+        """
+        process the information from the communicator
+        """
+        data_list  = self.communicator.received_messages
+        for (drone_communicator,drone_data) in data_list:
+            self.update_drones(drone_data)
+
 
     def process_semantic_sensor(self):
         """
@@ -409,6 +448,7 @@ class DroneWaypoint(DroneAbstract):
         self.iteration += 1
         self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.get_localization()
+        self.process_communicator()
         
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
@@ -506,4 +546,3 @@ class DroneWaypoint(DroneAbstract):
                 pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
                 pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
                 arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
-from solutions.drone_controller import DroneController
