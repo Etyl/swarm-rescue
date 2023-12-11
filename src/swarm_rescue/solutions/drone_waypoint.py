@@ -57,13 +57,12 @@ class DroneWaypoint(DroneAbstract):
 
         self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
-        self.debug_positions = True
+        self.debug_positions = False
         self.debug_map = True
-        self.debug_roamer = True
+        self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
         
-        # self.controller.force_transition()
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
 

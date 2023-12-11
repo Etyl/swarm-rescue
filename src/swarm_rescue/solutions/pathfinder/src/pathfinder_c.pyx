@@ -3,11 +3,9 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import time
 import pyastar2d
-import cv2
 import cython
 
 cimport numpy as cnp
-from libc.math cimport round
 
 cnp.import_array()
 DTYPE = np.int64
@@ -15,9 +13,9 @@ ctypedef cnp.int64_t DTYPE_t
 
 robot_radius = 15
 sub_segment_size = 20
-path_refinements = 3 # number of times to refine the path
+path_refinements = 5 # number of times to refine the path
 save_images = False
-debug_mode = True
+debug_mode = False
 output = "./solve"
 
 
@@ -207,7 +205,7 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=ro
 
         print(f"Ratio : {ts/tp:.6f}, Time : {time.time()-t0:.6f}")    
     else:    
-        map_border = border_from_map_np(map, robot_radius)
+        map_border = border_from_map_np(map, robot_radius).astype(DTYPE)
         
         start,end = findPointsAvailable(map_border, start, end)
 
@@ -221,14 +219,14 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=ro
             print("No path found")
             return None
 
-        path_smooth = smooth_path(map_border, path)
+        path_smooth = smooth_path(map_border, path.astype(DTYPE))
 
-        path_refined = segmentize_path(map_border, path_smooth)
-        path_refined = smooth_path(map_border, path_refined)
+        path_refined = segmentize_path(map_border,np.array(path_smooth).astype(DTYPE))
+        path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
         
         for _ in range(path_refinements-1):
-            path_refined = segmentize_path(map_border, path_refined)
-            path_refined = smooth_path(map_border, path_refined)
+            path_refined = segmentize_path(map_border, np.array(path_refined).astype(DTYPE))
+            path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
        
     if save_images:
         plt.imshow(np.stack((map_border, map_border, map_border), axis=2).astype(np.float32))
