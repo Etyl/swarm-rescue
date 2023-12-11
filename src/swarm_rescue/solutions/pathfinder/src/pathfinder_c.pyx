@@ -6,14 +6,15 @@ import pyastar2d
 import cython
 
 cimport numpy as cnp
+from libc.math cimport sqrt
 
 cnp.import_array()
 DTYPE = np.int64
 ctypedef cnp.int64_t DTYPE_t
 
 robot_radius = 15
-sub_segment_size = 20
-path_refinements = 5 # number of times to refine the path
+sub_segment_size = 10 # the number of segment to divide each path segment into
+path_refinements = 1 # number of times to refine the path
 save_images = False
 debug_mode = False
 output = "./solve"
@@ -83,12 +84,11 @@ cdef smooth_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, 
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False) # turn off negative indexing for entire function
-@cython.cdivision(True)
 cdef segmentize(cnp.ndarray[cnp.int64_t, ndim=2] path, int i):
     cdef int num_sub_segments = np.sqrt(np.sum((path[i+1]-path[i])**2))/sub_segment_size
     return [np.rint(interpolate_path(path[i], path[i+1], t/(num_sub_segments+1))) for t in range(num_sub_segments+2)]
 
-def segmentize_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
+cdef segmentize_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
     if len(path)<2:
         return path
     new_path = []
@@ -99,14 +99,15 @@ def segmentize_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_
         currentSegment = nextSegment[end_point:]
         if k<len(path)-2:
             nextSegment = segmentize(path, k+1)
-        start_point, end_point, max_segment = 0, 0, 0
+        start_point, end_point, max_segment = 0, 0, np.inf
         for i in range(len(currentSegment)-1):
             for j in range(len(nextSegment)-1,-1,-1):
                 if is_path_free(map, np.array(currentSegment[i], dtype=DTYPE), np.array(nextSegment[j],dtype=DTYPE)):
-                    val = (np.sqrt(np.sum((currentSegment[i]-nextSegment[0])**2))+
-                           np.sqrt(np.sum((nextSegment[0]-nextSegment[j])**2))-
-                           np.sqrt(np.sum((currentSegment[i]-nextSegment[j])**2)))
-                    if val>max_segment:
+                    val = (sqrt(np.sum((currentSegment[i]-currentSegment[0])**2))+
+                            sqrt(np.sum((nextSegment[j]-currentSegment[i])**2)) +
+                            sqrt(np.sum((nextSegment[len(nextSegment)-1]-nextSegment[j])**2)))
+                           
+                    if val<max_segment:
                         start_point = i
                         end_point = j
                         max_segment = val
@@ -218,6 +219,8 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=ro
         if path is None:
             print("No path found")
             return None
+
+        print("========================================")
 
         path_smooth = smooth_path(map_border, path.astype(DTYPE))
 
