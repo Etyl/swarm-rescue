@@ -14,7 +14,7 @@ ctypedef cnp.int64_t DTYPE_t
 
 robot_radius = 15
 sub_segment_size = 10 # the number of segment to divide each path segment into
-path_refinements = 1 # number of times to refine the path
+path_refinements = 3 # number of times to refine the path
 save_images = False
 debug_mode = False
 output = "./solve"
@@ -219,8 +219,6 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=ro
         if path is None:
             print("No path found")
             return None
-
-        print("========================================")
 
         path_smooth = smooth_path(map_border, path.astype(DTYPE))
 
