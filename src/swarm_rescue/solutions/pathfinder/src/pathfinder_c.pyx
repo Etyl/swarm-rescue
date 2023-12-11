@@ -38,6 +38,8 @@ cdef border_from_map_np(map, robot_radius):
 cdef interpolate_path(cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.int64_t, ndim=1] point2, float t):
     return point1 + (point2-point1)*t
 
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False) # turn off negative indexing for entire function
 cdef is_path_free(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point1,cnp.ndarray[cnp.int64_t, ndim=1] point2):
     cdef int n = int(np.sum(np.abs(point2-point1)))
     for t in range(n+2):
@@ -45,19 +47,20 @@ cdef is_path_free(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t,
             return False
     return True
 
-# TODO: C implementation 
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False) # turn off negative indexing for entire function
 cdef smooth_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
     cdef int i_ref = 0
     cdef int j_ref = 2
-    cdef cnp.ndarray[cnp.int64_t, ndim=2] new_path = np.zeros((len(path)+1,2)).astype(DTYPE)
+    cdef cnp.ndarray[cnp.int64_t, ndim=2] new_path = np.zeros((len(path),2)).astype(DTYPE)
     new_path[0] = path[0]
     cdef int path_index = 1
-    cdef int maxpath_index = len(path)-1
+    cdef int maxpath_index = len(path)
     while i_ref<len(path):
         if j_ref<len(path) and is_path_free(map, path[i_ref], path[j_ref]):
             j_ref += 1
         elif j_ref>=len(path):
-            new_path[path_index-1] = path[-1]
+            new_path[path_index] = path[maxpath_index-1]
             path_index += 1
             break
         else:
@@ -65,16 +68,20 @@ cdef smooth_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, 
             path_index += 1
             i_ref = j_ref-1
             j_ref = i_ref+2
-    if new_path[max(path_index-1,maxpath_index)][0]!=path[-1][0] or new_path[max(path_index-1,maxpath_index)][1]!=path[-1][1]:
-        new_path[path_index] = path[-1]
+    if path_index >= maxpath_index:
+        return new_path
+    if new_path[max(path_index,maxpath_index-1)][0]!=path[maxpath_index-1][0] or new_path[max(path_index,maxpath_index-1)][1]!=path[maxpath_index-1][1]:
+        new_path[path_index] = path[maxpath_index-1]
         path_index += 1
-    return new_path[:path_index]
+    return new_path[:path_index-1]
 
 def segmentize(cnp.ndarray[cnp.int64_t, ndim=2] path, int i):
     cdef int num_sub_segments = round(np.sqrt(np.sum((path[i+1]-path[i])**2))/sub_segment_size)
     return [np.rint(interpolate_path(path[i], path[i+1], t/(num_sub_segments+1))) for t in range(num_sub_segments+2)]
 
 def segmentize_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
+    if len(path)<2:
+        return path
     new_path = []
     currentSegment = []
     nextSegment = segmentize(path, 0)

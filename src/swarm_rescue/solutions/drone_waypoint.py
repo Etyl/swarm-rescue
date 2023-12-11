@@ -55,7 +55,7 @@ class DroneWaypoint(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
