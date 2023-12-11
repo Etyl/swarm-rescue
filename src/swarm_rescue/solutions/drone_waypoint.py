@@ -49,7 +49,7 @@ class DroneWaypoint(DroneAbstract):
 
         self.wounded_found = [] # the list of wounded persons found
         self.wounded_distance = 80 # The distance between wounded person to be considered as the same
-        self.wounded_target = None # The wounded id to go to
+        self.wounded_target = None # The wounded position to go to
 
         self.drone_list = [] # The list of drones
 
@@ -183,7 +183,7 @@ class DroneWaypoint(DroneAbstract):
             return value
         
         mindx, mindy, mindangle = 0,0,0
-        
+
         for k in range(30):
             dx, dy, dangle = np.random.normal(0,1), np.random.normal(0,1), np.random.normal(0,0.1)
             if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
@@ -268,6 +268,11 @@ class DroneWaypoint(DroneAbstract):
         """
         updates the data of the drones
         """
+        if drone_data.wounded_target is not None:
+            for k in range(len(self.wounded_found)):
+                if np.linalg.norm(self.wounded_found[k]["position"] - drone_data.wounded_target) < self.wounded_distance:
+                    self.wounded_found[k]["taken"] = True
+                    break
         for k in range(len(self.drone_list)):
             if self.drone_list[k].id == drone_data.id:
                 self.drone_list[k] = drone_data
@@ -281,6 +286,55 @@ class DroneWaypoint(DroneAbstract):
         data_list  = self.communicator.received_messages
         for (drone_communicator,drone_data) in data_list:
             self.update_drones(drone_data)
+
+
+    def check_wounded_available(self):
+
+        def angle(v1, v2):
+            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
+        
+        self.found_wounded = False
+        if (len(self.wounded_found) > 0 and 
+            (self.controller.current_state == self.controller.going_to_wounded 
+            or self.controller.current_state == self.controller.approaching_wounded
+            or self.controller.current_state == self.controller.roaming)):
+        
+            # Select the best one among wounded persons detected
+            min_distance = 0
+            best_position = None
+            for wounded in self.wounded_found:
+                distance = np.linalg.norm(self.get_position() - wounded["position"])
+                if "taken" not in wounded and (best_position is None or distance < min_distance):
+                    min_distance = distance
+                    best_position = wounded["position"]
+            self.wounded_target = best_position
+            if best_position is not None:
+                self.found_wounded = True
+        
+        if self.found_wounded:
+            # simple P controller
+            # The robot will turn until best_angle is 0
+
+            command = {"forward": 1.0,
+                        "lateral": 0.0,
+                        "rotation": 0.0,
+                        "grasper": 0}
+
+            best_angle = normalize_angle(angle(np.array([1,0]), best_position - self.drone_position))
+            best_angle = normalize_angle(best_angle - normalize_angle(self.get_angle()))
+
+            kp = 2.0
+            a = kp * best_angle
+            a = min(a, 1.0)
+            a = max(a, -1.0)
+            command["rotation"] = a
+
+            # reduce speed if we need to turn a lot
+            if abs(a) == 1:
+                command["forward"] = 0.4
+            
+            self.command_semantic = command
+
 
 
     def process_semantic_sensor(self):
@@ -304,29 +358,11 @@ class DroneWaypoint(DroneAbstract):
 
         self.clear_wounded_found()
 
-        found_wounded = False
         if (detection_semantic):
             for data in detection_semantic:
                 # If the wounded person detected is held by nobody
                 if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON and not data.grasped:
                     self.add_wounded(data)
-            
-            found_wounded = len(self.wounded_found) > 0
-            if (len(self.wounded_found) > 0 and 
-                (self.controller.current_state == self.controller.going_to_wounded 
-                or self.controller.current_state == self.controller.approaching_wounded
-                or self.controller.current_state == self.controller.roaming)):
-            
-                # Select the best one among wounded persons detected
-                min_distance = np.linalg.norm(self.drone_position - self.wounded_found[0]["position"])
-                best_position = self.wounded_found[0]["position"]
-                for wounded in self.wounded_found[1:]:
-                    distance = np.linalg.norm(self.drone_position - wounded["position"])
-                    if distance < min_distance:
-                        min_distance = distance
-                        best_position = wounded["position"]
-                best_angle = normalize_angle(angle(np.array([1,0]), best_position - self.drone_position))
-                best_angle = normalize_angle(best_angle - normalize_angle(self.drone_angle))
 
         found_rescue_center = False
         is_near = False
@@ -344,7 +380,7 @@ class DroneWaypoint(DroneAbstract):
                 best_angle = circular_mean(np.array(angles_list))
 
 
-        if found_rescue_center or found_wounded:
+        if found_rescue_center:
             # simple P controller
             # The robot will turn until best_angle is 0
             kp = 2.0
@@ -361,7 +397,7 @@ class DroneWaypoint(DroneAbstract):
             command["forward"] = 0
             command["rotation"] = random.uniform(0.5, 1)
 
-        return found_wounded, found_rescue_center, command
+        return found_rescue_center, command
 
 
     # TODO: implement pathfinder with map
@@ -424,9 +460,10 @@ class DroneWaypoint(DroneAbstract):
 
     def control(self):
         self.iteration += 1
-        self.found_wounded, self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.get_localization()
+        self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.process_communicator()
+        self.check_wounded_available()
         
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
