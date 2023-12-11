@@ -7,6 +7,8 @@ import cv2
 import cython
 
 cimport numpy as cnp
+from libc.math cimport round
+
 cnp.import_array()
 DTYPE = np.int64
 ctypedef cnp.int64_t DTYPE_t
@@ -40,10 +42,16 @@ cdef interpolate_path(cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.i
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False) # turn off negative indexing for entire function
+@cython.cdivision(True)
 cdef is_path_free(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point1,cnp.ndarray[cnp.int64_t, ndim=1] point2):
     cdef int n = int(np.sum(np.abs(point2-point1)))
+    cdef int[2] b = point1
+    cdef int[2] a = point2-point1
+    cdef int x,y
     for t in range(n+2):
-        if map[round(interpolate_path(point1, point2, t/(n+1))[0])][round(interpolate_path(point1, point2, t/(n+1))[1])] == 1:
+        x = b[0] + (a[0]*t)/(n+1)
+        y = b[1] + (a[1]*t)/(n+1)
+        if map[x][y] == 1:
             return False
     return True
 
@@ -56,10 +64,10 @@ cdef smooth_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, 
     new_path[0] = path[0]
     cdef int path_index = 1
     cdef int maxpath_index = len(path)
-    while i_ref<len(path):
-        if j_ref<len(path) and is_path_free(map, path[i_ref], path[j_ref]):
+    while i_ref<maxpath_index:
+        if j_ref<maxpath_index and is_path_free(map, path[i_ref], path[j_ref]):
             j_ref += 1
-        elif j_ref>=len(path):
+        elif j_ref>=maxpath_index:
             new_path[path_index] = path[maxpath_index-1]
             path_index += 1
             break
@@ -75,8 +83,11 @@ cdef smooth_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, 
         path_index += 1
     return new_path[:path_index-1]
 
-def segmentize(cnp.ndarray[cnp.int64_t, ndim=2] path, int i):
-    cdef int num_sub_segments = round(np.sqrt(np.sum((path[i+1]-path[i])**2))/sub_segment_size)
+@cython.boundscheck(False) # turn off bounds-checking for entire function
+@cython.wraparound(False) # turn off negative indexing for entire function
+@cython.cdivision(True)
+cdef segmentize(cnp.ndarray[cnp.int64_t, ndim=2] path, int i):
+    cdef int num_sub_segments = np.sqrt(np.sum((path[i+1]-path[i])**2))/sub_segment_size
     return [np.rint(interpolate_path(path[i], path[i+1], t/(num_sub_segments+1))) for t in range(num_sub_segments+2)]
 
 def segmentize_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
