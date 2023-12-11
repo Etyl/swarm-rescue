@@ -6,6 +6,11 @@ import pyastar2d
 import cv2
 import cython
 
+cimport numpy as cnp
+cnp.import_array()
+DTYPE = np.int64
+ctypedef cnp.int64_t DTYPE_t
+
 robot_radius = 15
 sub_segment_size = 20
 path_refinements = 3 # number of times to refine the path
@@ -14,7 +19,7 @@ debug_mode = True
 output = "./solve"
 
 
-def border_from_map_np(map, robot_radius):
+cdef border_from_map_np(map, robot_radius):
     map = np.ones(map.shape).astype(np.float32)-map
     for _ in range(robot_radius):
         map = (np.roll(map,(1, 0), axis=(1, 0))+
@@ -30,27 +35,29 @@ def border_from_map_np(map, robot_radius):
         plt.savefig("./map_border.png")
     return map>0.5
 
-def interpolate_path(point1 : cython.int, point2 : cython.int, t : cython.float):
+cdef interpolate_path(cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.int64_t, ndim=1] point2, float t):
     return point1 + (point2-point1)*t
 
-def is_path_free(map : np.ndarray, point1 : np.ndarray, point2 : np.ndarray):
-    n : cython.int = int(np.sum(np.abs(point2-point1)))
+cdef is_path_free(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point1,cnp.ndarray[cnp.int64_t, ndim=1] point2):
+    cdef int n = int(np.sum(np.abs(point2-point1)))
     for t in range(n+2):
-        if map[round(interpolate_path(point1, point2, t/(n+1))[0])][round(interpolate_path(point1, point2, t/(n+1))[1])] == True:
+        if map[round(interpolate_path(point1, point2, t/(n+1))[0])][round(interpolate_path(point1, point2, t/(n+1))[1])] == 1:
             return False
     return True
 
 # TODO: C implementation 
-def smooth_path(map : np.ndarray, path : np.ndarray):
-    i_ref : cython.int = 0
-    j_ref : cython.int = 2
-    new_path : np.ndarray = path.copy()
-    path_index : cython.int = 1
+cdef smooth_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
+    cdef int i_ref = 0
+    cdef int j_ref = 2
+    cdef cnp.ndarray[cnp.int64_t, ndim=2] new_path = np.zeros((len(path)+1,2)).astype(DTYPE)
+    new_path[0] = path[0]
+    cdef int path_index = 1
+    cdef int maxpath_index = len(path)-1
     while i_ref<len(path):
         if j_ref<len(path) and is_path_free(map, path[i_ref], path[j_ref]):
             j_ref += 1
         elif j_ref>=len(path):
-            new_path[path_index] = path[-1]
+            new_path[path_index-1] = path[-1]
             path_index += 1
             break
         else:
@@ -58,16 +65,16 @@ def smooth_path(map : np.ndarray, path : np.ndarray):
             path_index += 1
             i_ref = j_ref-1
             j_ref = i_ref+2
-    if new_path[-1][0]!=path[-1][0] or new_path[-1][1]!=path[-1][1]:
+    if new_path[max(path_index-1,maxpath_index)][0]!=path[-1][0] or new_path[max(path_index-1,maxpath_index)][1]!=path[-1][1]:
         new_path[path_index] = path[-1]
         path_index += 1
     return new_path[:path_index]
 
-def segmentize(path, i):
-    num_sub_segments = round(np.sqrt(np.sum((path[i+1]-path[i])**2))/sub_segment_size)
+def segmentize(cnp.ndarray[cnp.int64_t, ndim=2] path, int i):
+    cdef int num_sub_segments = round(np.sqrt(np.sum((path[i+1]-path[i])**2))/sub_segment_size)
     return [np.rint(interpolate_path(path[i], path[i+1], t/(num_sub_segments+1))) for t in range(num_sub_segments+2)]
 
-def segmentize_path(map, path):
+def segmentize_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
     new_path = []
     currentSegment = []
     nextSegment = segmentize(path, 0)
@@ -79,7 +86,7 @@ def segmentize_path(map, path):
         start_point, end_point, max_segment = 0, 0, 0
         for i in range(len(currentSegment)-1):
             for j in range(len(nextSegment)-1,-1,-1):
-                if is_path_free(map, currentSegment[i], nextSegment[j]):
+                if is_path_free(map, np.array(currentSegment[i], dtype=DTYPE), np.array(nextSegment[j],dtype=DTYPE)):
                     val = (np.sqrt(np.sum((currentSegment[i]-nextSegment[0])**2))+
                            np.sqrt(np.sum((nextSegment[0]-nextSegment[j])**2))-
                            np.sqrt(np.sum((currentSegment[i]-nextSegment[j])**2)))
@@ -152,39 +159,35 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=ro
     """
     if debug_mode:
 
-        tb = time.time()
-        map_border = border_from_map_np(map, robot_radius)
-        print(f"Border map generated in {time.time()-tb:.6f}s")
+        t0 = time.time()
+        map_border = border_from_map_np(map, robot_radius).astype(DTYPE)
         
         start,end = findPointsAvailable(map_border, start, end)
 
         grid = np.ones(map.shape).astype(np.float32)
-        grid[map_border == True] = np.inf
+        grid[map_border == 1] = np.inf
 
         assert grid.min() == 1, "cost of moving must be at least 1"
 
-        t0 = time.time()
+        tp0 = time.time()
         path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
-        dur = time.time() - t0
+        tp = time.time() - tp0
         if path is None:
             print("No path found")
             return None
-        print(f"Found path of length {path.shape[0]} in {dur:.6f}s")
 
-        t1 = time.time()
-        path_smooth = smooth_path(map_border, path)
-        dur_smooth = time.time() - t1
-        print(f"Smoothed path of length {len(path_smooth)} in {dur_smooth:.6f}s")
-
-        t2 = time.time()
-        path_refined = segmentize_path(map_border, path_smooth)
-        path_refined = smooth_path(map_border, path_refined)
+        ts0 = time.time()
+        path_smooth = smooth_path(map_border, path.astype(DTYPE))
+        ts = time.time() - ts0
+        
+        path_refined = segmentize_path(map_border, np.array(path_smooth).astype(DTYPE))
+        path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
         
         for _ in range(path_refinements-1):
-            path_refined = segmentize_path(map_border, path_refined)
-            path_refined = smooth_path(map_border, path_refined)
-        print(f"Refined path of length {len(path_refined)} in {time.time()-t2:.6f}s")
-    
+            path_refined = segmentize_path(map_border, np.array(path_refined).astype(DTYPE))
+            path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
+
+        print(f"Ratio : {ts/tp:.6f}, Time : {time.time()-t0:.6f}")    
     else:    
         map_border = border_from_map_np(map, robot_radius)
         
