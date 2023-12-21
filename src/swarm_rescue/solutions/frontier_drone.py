@@ -9,7 +9,6 @@ from typing import Optional
 import arcade
 from collections import deque 
 from statemachine import exceptions
-import scipy.optimize
 
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
@@ -25,7 +24,7 @@ from solutions.types.types import DroneData
 import solutions
 
 
-class DroneWaypoint(DroneAbstract):
+class FrontierDrone(DroneAbstract):
 
     def __init__(self,
                  identifier: Optional[int] = None,

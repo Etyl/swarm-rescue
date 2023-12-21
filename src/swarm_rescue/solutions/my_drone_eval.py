@@ -1,5 +1,4 @@
-from solutions.drone_waypoint import DroneWaypoint
+import solutions
 
-
-class MyDroneEval(DroneWaypoint):
+class MyDroneEval(solutions.frontier_drone.FrontierDrone):
     pass

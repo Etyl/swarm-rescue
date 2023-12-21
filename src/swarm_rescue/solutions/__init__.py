@@ -1,2 +1,2 @@
-from . import drone_waypoint 
+from . import frontier_drone 
 from . import drone_controller
