@@ -116,6 +116,11 @@ class Map:
     def shortest_path(self, start: Pose, end: Pose):
         """
         returns the shortest path between start and end
+        Params:
+            - start: start position (world coordinates)
+            - end: end position (world coordinates)
+        Returns:
+            - path: list of positions (world coordinates)
         """
         obstacle_grid = (self.mappers[Zone.OBSTACLE].binary_grid == -1).astype(np.uint8)
 

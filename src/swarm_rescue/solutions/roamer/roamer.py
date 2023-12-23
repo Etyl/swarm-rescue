@@ -402,6 +402,25 @@ class Roamer:
         # Si aucun point n'est trouvé, retourner None
         return None
     
+    def get_path_length(self, target, wall_thickness: int = 4):
+        """
+        Get the length of the path to the target
+        params:
+            - target: the target
+        """
+        if target is None: return np.inf
+
+        path = self.map.shortest_path(self.drone.get_position(), target)
+        
+        # TODO change implementation
+        if path is None:
+            return np.inf
+        
+        path_length = np.sum(np.linalg.norm(np.diff(path, axis=0), axis=1))
+        return path_length
+
+
+
     def find_path(self, sampling_rate: int = 1, frontiers_threshold: int = 5, wall_thickness: int = 4):
         """
         Find the path to the target
@@ -417,34 +436,14 @@ class Roamer:
         if np.linalg.norm(self.drone.get_position() - self.drone.map.grid_to_world(target)) < 50:
             return [], 0
 
-        thickened_map = self.thicken_walls(self.map_matrix, n=wall_thickness)
-        matrix_astar = self.convert_matrix_for_astar(thickened_map)
-
-        matrix_pathfinder = self.convert_matrix_for_pathfinder(self.map_matrix)
-
-        drone_position_grid = self.map.world_to_grid(self.drone.get_position())
-        drone_position_grid = self.find_empty_point_near_wall(drone_position_grid, matrix_astar, p=2)
-
-        # path = pyastar2d.astar_path(matrix_astar, tuple(drone_position_grid), tuple(target), allow_diagonal=True)
-        path = pathfinder(matrix_pathfinder, drone_position_grid, target, wall_thickness)
-        # path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
+        path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
         
         # TODO change implementation
         if path is None:
             return [], None
         
-        #self.display_map_with_path(matrix_astar, path, 1) 
-        # self.display_map_with_path(matrix_astar, path_bis, 2) 
+        if self.debug_mode: 
+            print("[Roamer] Path found : ", path)
+            self.display_map_with_path(self.map_matrix, path, 5)
 
-        path_sampled = path
-        # path_sampled = path_sampled[::sampling_rate]
-
-        # convert path to world coordinates
-        path_sampled = np.array([self.map.grid_to_world(pos) for pos in path_sampled])
-
-        if self.debug_mode: print("[Roamer] Path found : ", path_sampled)
-
-        path_list = path_sampled.tolist()
-        path_list.reverse() 
-
-        return path_list, target
+        return path, target
