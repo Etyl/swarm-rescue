@@ -25,3 +25,4 @@ gprof2dot
 
 # pathfinding
 pyastar2d
+Cython
