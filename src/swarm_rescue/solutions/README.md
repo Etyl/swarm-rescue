@@ -2,10 +2,16 @@
 
 ## How to run
 
-Building the pathfinder:
+### Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Building the pathfinder:
     
 ```bash
-cd solutions/pathfinder
+cd ./pathfinder
 python setup.py build_ext --inplace
 ```	
 
