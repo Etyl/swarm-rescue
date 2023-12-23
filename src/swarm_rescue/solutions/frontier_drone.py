@@ -18,7 +18,6 @@ from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
 from solutions.localizer.localizer import Localizer
-from solutions.roamer.roamer import RoamerController
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
 from solutions.types.types import DroneData
 import solutions
@@ -74,7 +73,7 @@ class FrontierDrone(DroneAbstract):
         self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
         self.rescue_center_position = None
         
-        self.roamer_controller = RoamerController(self, self.map, debug_mode=self.debug_roamer)
+        self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer = Localizer()
         self.theorical_velocity = np.zeros(2)

@@ -15,7 +15,6 @@ from solutions.pathfinder.pathfinder import *
 import numpy as np
 import os
 import cv2
-import pyastar2d
 
 # OTHER IMPL - ASYNC
 # import asyncio
@@ -248,7 +247,7 @@ class Roamer:
         drone_position_grid = self.map.world_to_grid(drone_position)
         fd = FrontierExplorer(map_matrix_copy, drone_position_grid, frontiers_threshold)
         self.frontiers = fd.getFrontiers()
-        found_point = fd.getClosestFrontier()
+        found_point = fd.getBiggestFrontier()
 
         if self.debug_mode: print("[Roamer] Found point : ", found_point)
 

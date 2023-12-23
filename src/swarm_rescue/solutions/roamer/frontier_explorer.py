@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.ndimage import morphology
+from scipy.ndimage import label
 from enum import Enum
 import cv2
 
@@ -18,6 +18,10 @@ class FrontierExplorer():
         self.map = map
         self.drone_position = drone_position
         self.frontiers_threshold = frontiers_threshold
+        self.frontiers = self.computeWFD()
+        self.connectedMap = None
+        self.connectedCount = None
+        self.buildConnectedComponents()
 
     def computeWFD(self):
         """
@@ -113,32 +117,32 @@ class FrontierExplorer():
                     if 0 <= neighbor[0] < wavefront_map.shape[0] and 0 <= neighbor[1] < wavefront_map.shape[1]:
                         stack.append(neighbor)
         return frontier
-
-    def getRandomFrontier(self):
+    
+    
+    def buildConnectedComponents(self):
         """
-        Find a random frontier
+        Build the connected components of the given map
         """
-        frontiers = self.computeWFD()
+        map = np.abs(self.map[2:-2, 2:-2])
+        # Build the connected components of the map
+        
+        structure = np.ones((3, 3), dtype=int)
+        connectedMap, ncomponents = label(map, structure)
 
-        if not frontiers:
-            return None  # No frontiers found
+        values, connectedCount = np.unique(connectedMap, return_counts=True)
 
-        # Randomly choose a frontier
-        frontier = np.random.choice(frontiers)
+        fullConnectedMap = ncomponents*np.ones(self.map.shape, dtype=int)
+        fullConnectedMap[2:-2, 2:-2] = connectedMap
+        self.connectedMap = fullConnectedMap
 
-        # Calculate the center of the randomly chosen frontier
-        frontier_center = (
-            sum(point[0] for point in frontier) / len(frontier),
-            sum(point[1] for point in frontier) / len(frontier)
-        )
+        self.connectedCount = np.append(connectedCount, [0])
 
-        return frontier, frontier_center
 
     def getClosestFrontier(self):
         """
         Find the frontier with the closest center to the robot
         """
-        frontiers = self.computeWFD()
+        frontiers = self.frontiers
 
         if not frontiers:
             return None  # No frontiers found
@@ -172,12 +176,18 @@ class FrontierExplorer():
         )
 
         return chosen_frontier_center
+
+    def getFrontiers(self):
+        """
+        Return the frontiers
+        """
+        return self.frontiers
     
-    def getFurthestFrontier(self):
+    def getBiggestFrontier(self):
         """
-        Find the frontier with the furthest center from the robot
+        Find the frontier with the closest center to the robot
         """
-        frontiers = self.computeWFD()
+        frontiers = self.frontiers
 
         if not frontiers:
             return None  # No frontiers found
@@ -185,21 +195,34 @@ class FrontierExplorer():
         curr_row, curr_col = self.drone_position
 
         # Find the frontier with the closest center to the robot
-        best_distance = 0
+        best_distance = float('inf')
         best_frontier_idx = 0
+        best_count = 0
 
         for idx, frontier in enumerate(frontiers):
+
             # Calculate the center of the frontier
             frontier_center = (
                 sum(point[0] for point in frontier) / len(frontier),
                 sum(point[1] for point in frontier) / len(frontier)
             )
 
+            # Get the unexplored points connected to the frontier
+            count = self.connectedCount[self.connectedMap[int(np.rint(frontier_center[0])), int(np.rint(frontier_center[1]))]]
+
             # Calculate the distance from the robot to the center of the frontier
             distance = np.sqrt((frontier_center[0] - curr_row)**2 + (frontier_center[1] - curr_col)**2)
 
-            # Update the best frontier if the current one is closer
-            if distance >= best_distance:
+            if count > best_count:
+                best_count = count
+                best_frontier_idx = idx
+                best_distance = distance
+                continue
+            
+            if count < best_count:
+                continue
+
+            if distance < best_distance:
                 best_distance = distance
                 best_frontier_idx = idx
 
@@ -216,9 +239,10 @@ class FrontierExplorer():
         """
         Return the frontiers
         """
-        return self.computeWFD()
-    
+        return self.frontiers
+
+
     def extractGrid(self, msg):
         # TODO: extract grid from msg.data and other usefull information
         pass
-    
+
