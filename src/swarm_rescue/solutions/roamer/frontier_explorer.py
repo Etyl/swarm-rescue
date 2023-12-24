@@ -118,7 +118,7 @@ class FrontierExplorer():
                         stack.append(neighbor)
         return frontier
     
-    
+
     def buildConnectedComponents(self):
         """
         Build the connected components of the given map
@@ -183,63 +183,18 @@ class FrontierExplorer():
         """
         return self.frontiers
     
-    def getBiggestFrontier(self):
+    def getFrontiersCount(self):
         """
-        Find the frontier with the closest center to the robot
+        Return the frontiers count
         """
-        frontiers = self.frontiers
+        frontierCount = []
+        for frontier in self.frontiers:
 
-        if not frontiers:
-            return None  # No frontiers found
-
-        curr_row, curr_col = self.drone_position
-
-        # Find the frontier with the closest center to the robot
-        best_distance = float('inf')
-        best_frontier_idx = 0
-        best_count = 0
-
-        for idx, frontier in enumerate(frontiers):
-
-            # Calculate the center of the frontier
-            frontier_center = (
-                sum(point[0] for point in frontier) / len(frontier),
-                sum(point[1] for point in frontier) / len(frontier)
-            )
-
-            # Get the unexplored points connected to the frontier
-            count = self.connectedCount[self.connectedMap[int(np.rint(frontier_center[0])), int(np.rint(frontier_center[1]))]]
-
-            # Calculate the distance from the robot to the center of the frontier
-            distance = np.sqrt((frontier_center[0] - curr_row)**2 + (frontier_center[1] - curr_col)**2)
-
-            if count > best_count:
-                best_count = count
-                best_frontier_idx = idx
-                best_distance = distance
-                continue
-            
-            if count < best_count:
-                continue
-
-            if distance < best_distance:
-                best_distance = distance
-                best_frontier_idx = idx
-
-        # Return the center and the points of the chosen frontier
-        chosen_frontier = frontiers[best_frontier_idx]
-        chosen_frontier_center = (
-            int(sum(point[0] for point in chosen_frontier) / len(chosen_frontier)),
-            int(sum(point[1] for point in chosen_frontier) / len(chosen_frontier))
-        )
-
-        return chosen_frontier_center
-
-    def getFrontiers(self):
-        """
-        Return the frontiers
-        """
-        return self.frontiers
+            [x,y] = frontier[len(frontier)//2]
+            connectedZoneID = self.connectedMap[x,y]
+            frontierCount.append(self.connectedCount[connectedZoneID])
+        
+        return frontierCount
 
 
     def extractGrid(self, msg):

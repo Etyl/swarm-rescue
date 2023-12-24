@@ -24,7 +24,7 @@ class RoamerController(StateMachine):
 
     # maximum number of times the drone can be in the same position
     # i.e the maximum number of times the check_target_reached function can return False
-    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 100
+    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 500
 
     # maximum number of times the drone can be close to the previous searching start point
     # i.e the maximum number of times the test_position_close_start_point function can return True
@@ -144,7 +144,7 @@ class RoamerController(StateMachine):
         # await asyncio.sleep(1)
         # END OTHER IMPL - ASYNC
 
-        self.drone.path, self.target = self.roamer.find_path(sampling_rate=self._PATH_SAMPLING_RATE, frontiers_threshold=self.frontiers_threshold, wall_thickness=self._WALL_THICKENING)
+        self.drone.path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
 
         # if no target found
         if self.target is None:
@@ -233,7 +233,7 @@ class Roamer:
             np.savetxt(file, numeric_map, fmt='%3d', delimiter=', ')
             file.write('\n') 
     
-    def find_next_unexeplored_target(self, frontiers_threshold):
+    def find_next_unexplored_target(self, frontiers_threshold):
         """
         Find the closest unexplored target from the drone's curretn position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
@@ -246,12 +246,63 @@ class Roamer:
         
         drone_position_grid = self.map.world_to_grid(drone_position)
         fd = FrontierExplorer(map_matrix_copy, drone_position_grid, frontiers_threshold)
-        self.frontiers = fd.getFrontiers()
-        found_point = fd.getBiggestFrontier()
+        frontiers = fd.getFrontiers()
+        self.frontiers = frontiers
+        
+        frontierCount = fd.getFrontiersCount()
 
-        if self.debug_mode: print("[Roamer] Found point : ", found_point)
+        if not frontiers:
+            return None  # No frontiers found
 
-        return found_point
+        # Find the frontier with the closest center to the robot
+        best_distance = float('inf')
+        best_frontier_idx = 0
+        best_count = 0
+
+        print('SELECTING NEXT FRONTIER')
+
+        for idx, frontier in enumerate(frontiers):
+
+            # Calculate the center of the frontier
+            frontier_center = (
+                sum(point[0] for point in frontier) / len(frontier),
+                sum(point[1] for point in frontier) / len(frontier)
+            )
+
+            # Get the unexplored points connected to the frontier
+            count = frontierCount[idx]
+
+            # Calculate the distance from the robot to the center of the frontier
+            distance = self.get_path_length(frontier_center)
+
+            print(f"count: {count} - distance: {distance}")
+
+            if count > best_count:
+                best_count = count
+                best_frontier_idx = idx
+                best_distance = distance
+                continue
+            
+            if count < best_count:
+                continue
+
+            if distance < best_distance:
+                best_distance = distance
+                best_frontier_idx = idx
+
+        # Return the center and the points of the chosen frontier
+        chosen_frontier = frontiers[best_frontier_idx]
+        chosen_frontier_center = (
+            int(sum(point[0] for point in chosen_frontier) / len(chosen_frontier)),
+            int(sum(point[1] for point in chosen_frontier) / len(chosen_frontier))
+        )
+
+        print(f"best_count: {best_count} - best_distance: {best_distance}")
+
+        if self.debug_mode: print("[Roamer] Found point : ", chosen_frontier_center)
+
+        return chosen_frontier_center
+
 
     def map_to_image(self, map):
         """
@@ -402,7 +453,7 @@ class Roamer:
         # Si aucun point n'est trouvé, retourner None
         return None
     
-    def get_path_length(self, target, wall_thickness: int = 4):
+    def get_path_length(self, target):
         """
         Get the length of the path to the target
         params:
@@ -410,8 +461,8 @@ class Roamer:
         """
         if target is None: return np.inf
 
-        path = self.map.shortest_path(self.drone.get_position(), target)
-        
+        path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
+
         # TODO change implementation
         if path is None:
             return np.inf
@@ -421,13 +472,13 @@ class Roamer:
 
 
 
-    def find_path(self, sampling_rate: int = 1, frontiers_threshold: int = 5, wall_thickness: int = 4):
+    def find_path(self, frontiers_threshold):
         """
         Find the path to the target
         params
             - sampling_rate: the sampling rate of the path (in order to reduce the number of points)
         """
-        target = self.find_next_unexeplored_target(frontiers_threshold)
+        target = self.find_next_unexplored_target(frontiers_threshold)
 
         # TODO change implementation
         if target is None:
