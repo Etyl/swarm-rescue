@@ -57,7 +57,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
-        self.debug_roamer = False
+        self.debug_roamer = True
         self.debug_controller = False 
         self.debug_lidar = False
         

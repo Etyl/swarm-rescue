@@ -259,25 +259,23 @@ class Roamer:
         best_frontier_idx = 0
         best_count = 0
 
-        print('SELECTING NEXT FRONTIER')
+        print('===============SELECTING NEXT FRONTIER===============')
 
         for idx, frontier in enumerate(frontiers):
-
-            # Calculate the center of the frontier
-            frontier_center = (
-                sum(point[0] for point in frontier) / len(frontier),
-                sum(point[1] for point in frontier) / len(frontier)
-            )
 
             # Get the unexplored points connected to the frontier
             count = frontierCount[idx]
 
-            # Calculate the distance from the robot to the center of the frontier
+            frontier_center = (
+                sum(point[0] for point in frontier) / len(frontier),
+                sum(point[1] for point in frontier) / len(frontier)
+            )
+            
             distance = self.get_path_length(frontier_center)
 
-            print(f"count: {count} - distance: {distance}")
+            print(count," --- ", distance)
 
-            if count > best_count:
+            if count > best_count and (best_distance < 800 or best_count==0) and distance < 800 :
                 best_count = count
                 best_frontier_idx = idx
                 best_distance = distance
@@ -285,7 +283,7 @@ class Roamer:
             
             if count < best_count:
                 continue
-
+            
             if distance < best_distance:
                 best_distance = distance
                 best_frontier_idx = idx
@@ -351,8 +349,10 @@ class Roamer:
         for x in range(x_max_grid):
             for y in range(y_max_grid):
                 img[x][y] = color_map[grid_map[x, y]]
-                if (x, y) in self.frontiers[0]:
-                    img[x][y] = (0, 255, 0)
+                
+        for frontier in self.frontiers:
+            for x, y in frontier:
+                img[x][y] = (0, 255, 0)
 
         # Convert coordinates to integers and assign blue color to the path
         # for coord in path:
