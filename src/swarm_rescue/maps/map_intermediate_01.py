@@ -21,7 +21,7 @@ class MyMapIntermediate01(MapAbstract):
 
     def __init__(self, zones_config: ZonesConfig = ()):
         super().__init__(zones_config)
-        self._time_step_limit = 2000
+        self._time_step_limit = 1000
         self._real_time_limit = 120
 
         # PARAMETERS MAP

@@ -152,7 +152,6 @@ class RoamerController(StateMachine):
             self.none_target_count += 1
 
             if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
-                print("Current frontiers threshold : ", self.frontiers_threshold)
                 self.frontiers_threshold = max(1, self.frontiers_threshold - 1)
             return
         
