@@ -146,6 +146,14 @@ class RoamerController(StateMachine):
 
         self.drone.path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
 
+        # if need to wait
+        if self.target == -1:
+            self.command = {"forward": 0.0,
+                            "lateral": 0.0,
+                            "rotation": 0.1,
+                            "grasper": 0}
+            return
+
         # if no target found
         if self.target is None:
             if self.debug_mode: print("No target found")
@@ -258,7 +266,7 @@ class Roamer:
         best_frontier_idx = 0
         best_count = 0
 
-        print('===============SELECTING NEXT FRONTIER===============')
+        #print('===============SELECTING NEXT FRONTIER===============')
 
         for idx, frontier in enumerate(frontiers):
 
@@ -272,7 +280,7 @@ class Roamer:
             
             distance = self.get_path_length(frontier_center)
 
-            print(count," --- ", distance)
+            #print(count," --- ", distance)
 
             if count > best_count and (best_distance < 800 or best_count==0) and distance < 800 :
                 best_count = count
@@ -294,7 +302,10 @@ class Roamer:
             int(sum(point[1] for point in chosen_frontier) / len(chosen_frontier))
         )
 
-        print(f"best_count: {best_count} - best_distance: {best_distance}")
+        # print(f"best_count: {best_count} - best_distance: {best_distance}")
+
+        if best_distance <= 20:
+            return None
 
         if self.debug_mode: print("[Roamer] Found point : ", chosen_frontier_center)
 
@@ -482,6 +493,9 @@ class Roamer:
         # TODO change implementation
         if target is None:
             return [], None
+        
+        if target == -1:
+            return [], -1
         
         if np.linalg.norm(self.drone.get_position() - self.drone.map.grid_to_world(target)) < 50:
             return [], 0
