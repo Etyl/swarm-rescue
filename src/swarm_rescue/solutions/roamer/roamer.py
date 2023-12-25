@@ -20,6 +20,8 @@ import cv2
 # import asyncio
 # import threading
 
+FRONTIER_SELECTION_SIZE = 4
+
 class RoamerController(StateMachine):
 
     # maximum number of times the drone can be in the same position
@@ -266,22 +268,59 @@ class Roamer:
         best_frontier_idx = 0
         best_count = 0
 
-        #print('===============SELECTING NEXT FRONTIER===============')
-
+        max_distance = np.inf
+        selected_frontiers_id = []
+        selected_frontiers_distance = []
+        
+        # select the closest frontiers
         for idx, frontier in enumerate(frontiers):
-
-            # Get the unexplored points connected to the frontier
-            count = frontierCount[idx]
-
+            
             frontier_center = (
                 sum(point[0] for point in frontier) / len(frontier),
                 sum(point[1] for point in frontier) / len(frontier)
             )
             
+            distance = np.linalg.norm(np.array(frontier_center) - np.array(drone_position_grid))
+            
+            if len(selected_frontiers_id) < FRONTIER_SELECTION_SIZE :
+                selected_frontiers_id.append(idx)
+                selected_frontiers_distance.append(distance)
+                continue
+            elif distance < max(selected_frontiers_distance):
+                max_idx = selected_frontiers_distance.index(max(selected_frontiers_distance))
+                selected_frontiers_id[max_idx] = idx
+                selected_frontiers_distance[max_idx] = distance
+                continue
+        
+        # calculate the path length for each selected frontier
+        for idx in selected_frontiers_id:
+            frontier = frontiers[idx]
+            frontier_center = (
+                sum(point[0] for point in frontier) / len(frontier),
+                sum(point[1] for point in frontier) / len(frontier)
+            )
+            distance = self.get_path_length(frontier_center)
+            selected_frontiers_distance[idx] = distance
+
+        # PARAMS : FRONTIER COUNT, DISTANCE TO FRONTIER CENTER, FRONTIER SIZE
+        for idx in selected_frontiers_id:
+            
+            frontier = frontiers[idx]
+
+            # Get the unexplored points connected to the frontier
+            count = frontierCount[idx]
+            frontier_size = len(frontier)
+
+            frontier_center = (
+                sum(point[0] for point in frontier) / len(frontier),
+                sum(point[1] for point in frontier) / len(frontier)
+            )
+
+
+            # TODO first calculate norme2 length and then calculate the path length if needed (close to the target)
             distance = self.get_path_length(frontier_center)
 
             #print(count," --- ", distance)
-
             if count > best_count and (best_distance < 800 or best_count==0) and distance < 800 :
                 best_count = count
                 best_frontier_idx = idx
