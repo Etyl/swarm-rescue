@@ -1,6 +1,7 @@
 import gc
 from typing import Tuple
 import multiprocessing
+import numpy as np
 
 from spg_overlay.entities.sensor_disablers import ZoneType
 from spg_overlay.utils.constants import DRONE_INITIAL_HEALTH
@@ -129,24 +130,20 @@ class Launcher:
                                                             rescued_all_time_step)
             (round_score, percent_rescued, score_time_step) = result_score
 
-            print(
-                f"\n\t\trescued nb: {int(rescued_number)}/{self.number_wounded_persons}, "
-                f"explor. score: {score_exploration:.1f}%, "
-                f"real time elapsed: {real_time_elapsed:.0f}s/{self.real_time_limit}s, "
-                f"elapse time: {elapsed_time_step}/{self.time_step_limit} steps, "
-                f"time to rescue all: {rescued_all_time_step} steps."
-                f"\n\t\tpercent of drones destroyed: {percent_drones_destroyed:.1f} %, "
-                f"mean drones health: {mean_drones_health:.1f}/{DRONE_INITIAL_HEALTH}."
-                f"\n\t\tround score: {round_score:.1f}%, "
-                f"frequency: {elapsed_time_step / real_time_elapsed:.2f} steps/s.")
             if real_time_limit_reached:
-                print(f"\t\tThe real time limit of {self.real_time_limit}s is reached first.")
+                return None
+            
+            return (round_score, score_exploration, rescued_number/self.number_wounded_persons, rescued_all_time_step, mean_drones_health)
 
-                
-
-
+            
 if __name__ == "__main__":
     gc.disable()
     launcher = Launcher()
     pool = multiprocessing.Pool(4)
-    pool.map(launcher.evaluate_single_drone, range(4))
+    results = pool.map(launcher.evaluate_single_drone, range(4))
+
+    results_avg = np.mean(results, axis=0)
+    print("Score: ", results_avg[0])
+    print("Exploration: ", results_avg[1])
+    print("Rescued: ", results_avg[2])
+    print("Rescue time: ", results_avg[3])
