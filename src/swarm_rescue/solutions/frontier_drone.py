@@ -57,7 +57,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
-        self.debug_roamer = True
+        self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
         
@@ -506,6 +506,7 @@ class FrontierDrone(DroneAbstract):
             return min_angle, min_dist
         return None
     
+    # TODO : update confidence map using the velocity
     def update_mapping(self):
         """
         updates the map
@@ -513,8 +514,8 @@ class FrontierDrone(DroneAbstract):
         detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
         max_vel_angle = 0.08
-        if abs(self.measured_angular_velocity()) < max_vel_angle:
-            self.map.update(self.estimated_pose, detection_semantic)
+        #if abs(self.measured_angular_velocity()) < max_vel_angle:
+        self.map.update(self.estimated_pose, detection_semantic)
 
 
     def draw_top_layer(self):

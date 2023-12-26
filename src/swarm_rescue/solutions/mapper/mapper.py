@@ -92,10 +92,43 @@ class Map:
         """
         displays the map
         """
-        #img = self.map_to_image()
+        x_max_grid, y_max_grid = self.map.shape
+
+        # Define color map
+        color_map = {
+            Zone.OBSTACLE: (50, 100, 200),
+            Zone.EMPTY: (255, 255, 255),
+            Zone.WOUNDED: (0, 0, 255),
+            Zone.RESCUE_CENTER: (255, 255, 0),
+            Zone.INEXPLORED: (0, 0, 0),
+            1: (255, 255, 255),  # Color for points with value 1 (white)
+            1000: (139, 69, 19)  # Color for points with value 1000 (brown)
+        }
+
+        img = np.zeros((x_max_grid, y_max_grid, 3), np.uint8)
+
+        # Assign colors to each point based on the color map
+        for x in range(x_max_grid):
+            for y in range(y_max_grid):
+                img[x][y] = color_map[self[x, y]]
+
+
+        # Convert coordinates to integers and assign blue color to the path
+        # for coord in path:
+        #     x, y = map(int, coord)
+        #     img[x, y] = (0, 0, 255)
+
+        # Zoom image
+        img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
+
+        # Display the image
+        cv2.imshow("mapper_debug" + str(id), np.transpose(img, (1, 0, 2)))
+        cv2.waitKey(1)
+
+        """
         img = cv2.resize(self.confidence_map, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
         cv2.imshow("map", img.T)
-        cv2.waitKey(1)
+        cv2.waitKey(1)"""
     
     def world_to_grid(self, pos: Pose):
         """
