@@ -314,7 +314,7 @@ class Roamer:
         frontiers_size = frontiers_size / np.max(frontiers_size)
 
         # score
-        score = 2*(1-selected_frontiers_distance) + frontier_count + frontiers_size
+        score = 2*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size
 
         # select the best frontier
         best_frontier_idx = np.argmax(score)
