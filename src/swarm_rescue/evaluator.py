@@ -156,7 +156,7 @@ if __name__ == "__main__":
     evaluator = Evaluator()
     pool = multiprocessing.Pool(4)
     t0 = time.time()
-    results = pool.map(evaluator.evaluate_single_drone, range(16))
+    results = pool.map(evaluator.evaluate_single_drone, range(4))
     t = time.time() - t0
 
     results_avg = np.mean(results, axis=0)

@@ -258,7 +258,7 @@ class Roamer:
         frontiers = fd.getFrontiers()
         self.frontiers = frontiers
         
-        frontierCount = fd.getFrontiersCount()
+        frontier_count = fd.getFrontiersCount()
 
         if not frontiers:
             return None  # No frontiers found
@@ -293,46 +293,31 @@ class Roamer:
                 continue
         
         # calculate the path length for each selected frontier
-        for idx in selected_frontiers_id:
+        for id,idx in enumerate(selected_frontiers_id):
             frontier = frontiers[idx]
             frontier_center = (
                 sum(point[0] for point in frontier) / len(frontier),
                 sum(point[1] for point in frontier) / len(frontier)
             )
             distance = self.get_path_length(frontier_center)
-            selected_frontiers_distance[idx] = distance
+            selected_frontiers_distance[id] = distance
 
-        # PARAMS : FRONTIER COUNT, DISTANCE TO FRONTIER CENTER, FRONTIER SIZE
-        for idx in selected_frontiers_id:
-            
-            frontier = frontiers[idx]
+        # parameters
+        frontiers = [frontiers[idx] for idx in selected_frontiers_id]
+        frontier_count = np.array([frontier_count[idx] for idx in selected_frontiers_id])
+        selected_frontiers_distance = np.array(selected_frontiers_distance)
+        frontiers_size = np.array([len(frontier) for frontier in frontiers])
+        
+        # normalize
+        frontier_count = frontier_count / np.max(frontier_count)
+        selected_frontiers_distance = selected_frontiers_distance / np.max(selected_frontiers_distance)
+        frontiers_size = frontiers_size / np.max(frontiers_size)
 
-            # Get the unexplored points connected to the frontier
-            count = frontierCount[idx]
-            frontier_size = len(frontier)
+        # score
+        score = 2*(1-selected_frontiers_distance) + frontier_count + frontiers_size
 
-            frontier_center = (
-                sum(point[0] for point in frontier) / len(frontier),
-                sum(point[1] for point in frontier) / len(frontier)
-            )
-
-
-            # TODO first calculate norme2 length and then calculate the path length if needed (close to the target)
-            distance = self.get_path_length(frontier_center)
-
-            #print(count," --- ", distance)
-            if count > best_count and (best_distance < 800 or best_count==0) and distance < 800 :
-                best_count = count
-                best_frontier_idx = idx
-                best_distance = distance
-                continue
-            
-            if count < best_count:
-                continue
-            
-            if distance < best_distance:
-                best_distance = distance
-                best_frontier_idx = idx
+        # select the best frontier
+        best_frontier_idx = np.argmax(score)
 
         # Return the center and the points of the chosen frontier
         chosen_frontier = frontiers[best_frontier_idx]
@@ -342,9 +327,6 @@ class Roamer:
         )
 
         # print(f"best_count: {best_count} - best_distance: {best_distance}")
-
-        if best_distance <= 20:
-            return None
 
         if self.debug_mode: print("[Roamer] Found point : ", chosen_frontier_center)
 
