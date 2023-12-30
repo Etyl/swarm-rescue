@@ -56,7 +56,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_path = False # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
-        self.debug_map = False
+        self.debug_map = True
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
@@ -176,7 +176,7 @@ class FrontierDrone(DroneAbstract):
                 point = self.map.world_to_grid(point)
                 if point[0] < 0 or point[0] >= self.map.x_max_grid or point[1] < 0 or point[1] >= self.map.y_max_grid:
                     continue
-                value -= self.map.confidence_map[point[0],point[1]]
+                value -= self.map.confidence_wall_map[int(point[0]),int(point[1])]
             return value
         
         mindx, mindy, mindangle = 0,0,0
