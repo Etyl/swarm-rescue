@@ -30,12 +30,12 @@ class Zone(Enum):
 
 class Map:
     def __init__(self, area_world, resolution, lidar, debug_mode=False):
-        
+
         self.resolution = resolution
         self.debug_mode = debug_mode
         self.x_max_grid: int = int(area_world[0] / self.resolution + 0.5)
         self.y_max_grid: int = int(area_world[1] / self.resolution + 0.5)
-        
+
         self.map = np.full((self.x_max_grid, self.y_max_grid), Zone.INEXPLORED)
 
         self.mappers = {
@@ -50,11 +50,11 @@ class Map:
     def __setitem__(self, pos, zone):
         x,y = pos
         self.map[x][y] = zone
-        
+
     def __getitem__(self, pos):
         x,y = pos
         return self.map[x][y]
-    
+
     def update(self, pose: Pose, semantic_lidar):
 
         for zone, mapper in self.mappers.items():
@@ -84,7 +84,7 @@ class Map:
             Zone.RESCUE_CENTER: (255, 255, 0),
             Zone.INEXPLORED: (0, 0, 0)
         }
-        
+
         img = np.zeros((self.x_max_grid, self.y_max_grid, 3), np.uint8)
         for x in range(self.x_max_grid):
             for y in range(self.y_max_grid):
@@ -130,11 +130,11 @@ class Map:
         # cv2.imshow("mapper_debug" + str(id), np.transpose(img, (1, 0, 2)))
         # cv2.waitKey(1)
 
-        
+
         img = cv2.resize(self.confidence_map, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST) / CONFIDENCE_THRESHOLD * 255
         cv2.imshow("map", img.T)
         cv2.waitKey(1)
-    
+
     def world_to_grid(self, pos: Pose):
         """
         converts world coordinates to grid coordinates
@@ -142,8 +142,8 @@ class Map:
         y =  self.y_max_grid - int(pos[1] / self.resolution + self.y_max_grid / 2)
         x = int(pos[0] / self.resolution + self.x_max_grid / 2)
         return np.array([x, y])
-    
-    def grid_to_world(self, pos: Pose):
+
+    def grid_to_world(self, pos):
         """
         converts grid coordinates to world coordinates
         """
@@ -164,7 +164,7 @@ class Map:
 
         # plt.imshow(obstacle_grid)
         # plt.savefig("./map.png")
-        
+
         zoom_factor = 3
 
         if zoom_factor != 1:
@@ -176,7 +176,7 @@ class Map:
         adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
         grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]
-       
+
         grid_path = pathfinder(obstacle_grid, grid_start, grid_end)
 
         path = [self.grid_to_world([pos[0] / zoom_factor, pos[1] / zoom_factor]) for pos in grid_path]
@@ -184,6 +184,18 @@ class Map:
         path.reverse()
         return path
 
+    def merge_maps(self, maps):
+        """
+        merges the maps
+        """
+        for zone, _ in self.mappers.items():
+            for map in maps:
+                mask = map.confidence_map > self.confidence_map
+                self.mappers[zone].grid = np.where(mask, map.mapper[zone].grid, self.mappers[zone].grid)
+        for map in maps:
+            mask = map.confidence_map > self.confidence_map
+            self.confidence_map = np.clip(self.confidence_map + map.confidence_map, 0, CONFIDENCE_THRESHOLD)
+            self.confidence_wall_map = np.where(mask, map.confidence_wall_map, self.confidence_wall_map)
 
 
 
@@ -220,7 +232,7 @@ class Mapper(Grid):
     def update_grid(self, pose: Pose, semantic_lidar):
         """
         Updates the Bayesian map with new observations from LIDAR and semantic LIDAR.
-        
+
         Args:
         - pose: Corrected pose in world coordinates
         - semantic_lidar: Semantic LIDAR data
@@ -270,7 +282,7 @@ class Mapper(Grid):
 
         # Mark the current position of the drone as free
         self.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
-        
+
         # Apply threshold values and update the grid
         self.grid = np.clip(self.grid, THRESHOLD_MIN, THRESHOLD_MAX)
         self.grid[self.lock_grid] = self.buffer[self.lock_grid]
@@ -299,7 +311,7 @@ class Mapper(Grid):
         Returns the confidence wall map of the map
         """
         return self.confidence_wall_map
-    
+
     def get_confidence_map(self):
         """
         Returns the confidence map of the map

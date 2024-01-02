@@ -137,6 +137,7 @@ class FrontierDrone(DroneAbstract):
         data.angle = self.get_angle()
         data.wounded_found = self.wounded_found
         data.wounded_target = self.wounded_target
+        data.map = self.map
         return data
 
     def get_position(self):
