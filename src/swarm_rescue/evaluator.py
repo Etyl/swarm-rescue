@@ -20,26 +20,25 @@ from maps.map_medium_02 import MyMapMedium02
 from solutions.my_drone_eval import MyDroneEval
 
 
-"""eval_config = EvalConfig(map_type=MyMapIntermediate01, nb_rounds=1)
-        self.eval_plan.add(eval_config=eval_config)
-
-        eval_config = EvalConfig(map_type=MyMapIntermediate02)
-        self.eval_plan.add(eval_config=eval_config)
-
-        zones_config: ZonesConfig = ()
-        eval_config = EvalConfig(map_type=MyMapMedium01, zones_config=zones_config, nb_rounds=1, config_weight=1)
-        self.eval_plan.add(eval_config=eval_config)
-
-        zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
-        eval_config = EvalConfig(map_type=MyMapMedium01, zones_config=zones_config, nb_rounds=1, config_weight=1)
-        self.eval_plan.add(eval_config=eval_config)
-
-        zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
-        eval_config = EvalConfig(map_type=MyMapMedium02, zones_config=zones_config, nb_rounds=1, config_weight=1)
-        self.eval_plan.add(eval_config=eval_config)
 """
+eval_config = EvalConfig(map_type=MyMapIntermediate01, nb_rounds=1)
+self.eval_plan.add(eval_config=eval_config)
 
+eval_config = EvalConfig(map_type=MyMapIntermediate02)
+self.eval_plan.add(eval_config=eval_config)
 
+zones_config: ZonesConfig = ()
+eval_config = EvalConfig(map_type=MyMapMedium01, zones_config=zones_config, nb_rounds=1, config_weight=1)
+self.eval_plan.add(eval_config=eval_config)
+
+zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
+eval_config = EvalConfig(map_type=MyMapMedium01, zones_config=zones_config, nb_rounds=1, config_weight=1)
+self.eval_plan.add(eval_config=eval_config)
+
+zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
+eval_config = EvalConfig(map_type=MyMapMedium02, zones_config=zones_config, nb_rounds=1, config_weight=1)
+self.eval_plan.add(eval_config=eval_config)
+"""
 
 
 class MyDrone(MyDroneEval):
@@ -116,7 +115,7 @@ class Evaluator:
                 my_gui.real_time_elapsed,
                 my_gui.real_time_limit_reached)
 
-    def evaluate_single_drone(self, id: int = 0):
+    def evaluate_single_drone(self,results, id):
         gc.disable()
 
         """
@@ -149,20 +148,32 @@ class Evaluator:
         if real_time_limit_reached:
             return None
         
-        return (round_score, score_exploration, rescued_number/number_wounded_persons, rescued_all_time_step, mean_drones_health, elapsed_time_step / real_time_elapsed)
+        results[id] = (round_score, score_exploration, rescued_number/number_wounded_persons, rescued_all_time_step, mean_drones_health, elapsed_time_step / real_time_elapsed)
+        
+
 
 def evaluate(number_processes: int = 8):
+    manager = multiprocessing.Manager()
+    return_dict = manager.dict()
 
     evaluator = Evaluator()
-    pool = multiprocessing.Pool(4)
-    results = pool.map(evaluator.evaluate_single_drone, range(number_processes))
 
-    results = [results[i] for i in range(len(results)) if results[i] is not None]
-    results_avg = np.mean(results, axis=0)
+    jobs = []
+    for i in range(number_processes//4):
+        for j in range(4):
+            proc = multiprocessing.Process(target=evaluator.evaluate_single_drone, args=(return_dict,4*i+j,))
+            jobs.append(proc)
+            proc.start()
+    
+        for proc in jobs:
+            proc.join()
+
+    results_avg = np.mean(list(return_dict.values()), axis=0)
     results_avg[0] /= 100
     results_avg[1] /= 100
 
     return results_avg
+
 
 def main() -> None:
 
@@ -173,7 +184,7 @@ def main() -> None:
     print(f"Score: {results_avg[0]:.3f}")
     print(f"Exploration: {results_avg[1]:.3f}")
     print(f"Rescued: {results_avg[2]:.3f}")
-    print("Rescue time: ", int(results_avg[3]))
+    print(f"Rescue time: {int(results_avg[3])}")
     print(f"Total time: {t:.1f}")
 
             
