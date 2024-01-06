@@ -151,21 +151,30 @@ class Evaluator:
         
         return (round_score, score_exploration, rescued_number/number_wounded_persons, rescued_all_time_step, mean_drones_health, elapsed_time_step / real_time_elapsed)
 
-def main() -> None:
+def evaluate(number_processes: int = 8):
+
     evaluator = Evaluator()
     pool = multiprocessing.Pool(4)
-    t0 = time.time()
-    results = pool.map(evaluator.evaluate_single_drone, range(16))
-    t = time.time() - t0
+    results = pool.map(evaluator.evaluate_single_drone, range(number_processes))
 
     results = [results[i] for i in range(len(results)) if results[i] is not None]
     results_avg = np.mean(results, axis=0)
+    results_avg[0] /= 100
+    results_avg[1] /= 100
 
-    print(f"Score: {results_avg[0]:.1f}")
-    print(f"Exploration: {results_avg[1]:.1f}")
-    print("Rescued: ", results_avg[2])
+    return results_avg
+
+def main() -> None:
+
+    t0 = time.perf_counter()
+    results_avg = evaluate(8)
+    t = time.perf_counter() - t0
+
+    print(f"Score: {results_avg[0]:.3f}")
+    print(f"Exploration: {results_avg[1]:.3f}")
+    print(f"Rescued: {results_avg[2]:.3f}")
     print("Rescue time: ", int(results_avg[3]))
-    print(f"Total time: {t:.f}")
+    print(f"Total time: {t:.1f}")
 
             
 if __name__ == "__main__":
