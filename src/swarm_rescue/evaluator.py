@@ -160,16 +160,29 @@ class Evaluator:
         results[id] = (round_score, score_exploration, rescued_number/number_wounded_persons, rescued_all_time_step)
   
 
-def evaluate(number_processes: int = 16):
+def evaluate(total_processes: int = 16, number_processes: int = 4) -> 'list[float]':
+    """
+    Evaluate the drone on the map multiple times and return the average score.
+    Args:
+        total_processes: The total number of processes to run.
+        number_processes: The number of processes to run in parallel.
+    Returns:
+        results_avg: The score of the drone.
+            results_avg[0]: The score of the drone.
+            results_avg[1]: The exploration score.
+            results_avg[2]: The ratio of wounded persons rescued.
+            results_avg[3]: The time to rescue the wounded persons.
+            results_avg[4]: The process success rate.
+    """
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
 
     evaluator = Evaluator()
 
     jobs = []
-    for i in range(number_processes//4):
-        for j in range(4):
-            proc = multiprocessing.Process(target=evaluator.evaluate_single_drone, args=(return_dict,4*i+j,))
+    for i in range(total_processes//number_processes):
+        for j in range(number_processes):
+            proc = multiprocessing.Process(target=evaluator.evaluate_single_drone, args=(return_dict,number_processes*i+j,))
             jobs.append(proc)
             proc.start()
     
@@ -180,7 +193,7 @@ def evaluate(number_processes: int = 16):
     results_avg[0] /= 100
     results_avg[1] /= 100
     results_avg = list(results_avg)
-    results_avg.append(len(return_dict.values())/(number_processes-number_processes%4))
+    results_avg.append(len(return_dict.values())/(total_processes-total_processes%number_processes))
 
     return results_avg
 
@@ -188,7 +201,7 @@ def evaluate(number_processes: int = 16):
 def main() -> None:
 
     t0 = time.perf_counter()
-    results_avg = evaluate(8)
+    results_avg = evaluate(16)
     t = time.perf_counter() - t0
 
     print(f"Score: {results_avg[0]:.3f}")
