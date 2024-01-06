@@ -45,6 +45,14 @@ class MyDrone(MyDroneEval):
     pass
 
 
+def multiprocessing_func(func):
+    def wrapper(*args, **kwargs):
+        try :
+            func(*args, **kwargs)
+        except :
+            print("Error: function failed")
+    return wrapper     
+
 class Evaluator:
     """
     The Launcher class is responsible for running a simulation of drone rescue sessions. It creates an instance of the
@@ -115,6 +123,7 @@ class Evaluator:
                 my_gui.real_time_elapsed,
                 my_gui.real_time_limit_reached)
 
+    @multiprocessing_func
     def evaluate_single_drone(self,results, id):
         gc.disable()
 
@@ -148,11 +157,10 @@ class Evaluator:
         if real_time_limit_reached:
             return None
         
-        results[id] = (round_score, score_exploration, rescued_number/number_wounded_persons, rescued_all_time_step, mean_drones_health, elapsed_time_step / real_time_elapsed)
-        
+        results[id] = (round_score, score_exploration, rescued_number/number_wounded_persons, rescued_all_time_step)
+  
 
-
-def evaluate(number_processes: int = 8):
+def evaluate(number_processes: int = 16):
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
 
@@ -168,9 +176,11 @@ def evaluate(number_processes: int = 8):
         for proc in jobs:
             proc.join()
 
-    results_avg = np.mean(list(return_dict.values()), axis=0)
+    results_avg = np.mean(return_dict.values(), axis=0)
     results_avg[0] /= 100
     results_avg[1] /= 100
+    results_avg = list(results_avg)
+    results_avg.append(len(return_dict.values())/(number_processes-number_processes%4))
 
     return results_avg
 
@@ -185,6 +195,7 @@ def main() -> None:
     print(f"Exploration: {results_avg[1]:.3f}")
     print(f"Rescued: {results_avg[2]:.3f}")
     print(f"Rescue time: {int(results_avg[3])}")
+    print(f"Process success rate: {results_avg[4]:.3f}")
     print(f"Total time: {t:.1f}")
 
             
