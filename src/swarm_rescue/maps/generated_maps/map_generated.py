@@ -47,9 +47,11 @@ class GeneratedMap(MapAbstract):
         self._wounded_persons: List[WoundedPerson] = []
 
         # POSITIONS OF THE DRONES
-        self._number_drones = 10
+        self._number_drones = 1
         # They are positioned in a square whose side size depends on the total number of drones.
-        start_area_drones = (439.0, 195)
+        start_area_drones = list(self._rescue_center_pos[0])
+        start_area_drones[0] = (start_area_drones[0] - 50)
+        start_area_drones = tuple(start_area_drones)
         nb_per_side = math.ceil(math.sqrt(float(self._number_drones)))
         dist_inter_drone = 40.0
         # print("nb_per_side", nb_per_side)

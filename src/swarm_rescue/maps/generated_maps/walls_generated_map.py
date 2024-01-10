@@ -6,253 +6,50 @@ This tool permits to create this kind of file by providing it an image of the ma
 from spg_overlay.entities.normal_wall import NormalWall, NormalBox
 
 
-# Dimension of the map : (1113, 750)
+# Dimension of the map : (1000, 750)
 # Dimension factor : 1.0
 def add_boxes(playground):
-    # box 0
-    box = NormalBox(up_left_point=(-556, -222),
-                    width=433, height=153)
-    playground.add(box, box.wall_coordinates)
-
-    # box 1
-    box = NormalBox(up_left_point=(6, 69),
-                    width=130, height=100)
-    playground.add(box, box.wall_coordinates)
-
-    # box 2
-    box = NormalBox(up_left_point=(-556, 375),
-                    width=434, height=155)
-    playground.add(box, box.wall_coordinates)
+    pass
 
 
 def add_walls(playground):
-    # vertical wall 0
-    wall = NormalWall(pos_start=(-128, 364),
-                      pos_end=(-128, 222))
+    # oblique wall 0
+    wall = NormalWall(pos_start=(-130, 379),
+                      pos_end=(-119, -168))
     playground.add(wall, wall.wall_coordinates)
 
-    # horizontal wall 1
-    wall = NormalWall(pos_start=(-402, 226),
-                      pos_end=(-128, 226))
+    # oblique wall 1
+    wall = NormalWall(pos_start=(-118, 379),
+                      pos_end=(-107, -177))
     playground.add(wall, wall.wall_coordinates)
 
     # vertical wall 2
-    wall = NormalWall(pos_start=(-399, 228),
-                      pos_end=(-399, -38))
+    wall = NormalWall(pos_start=(-349, -159),
+                      pos_end=(-349, -177))
     playground.add(wall, wall.wall_coordinates)
 
     # horizontal wall 3
-    wall = NormalWall(pos_start=(-128, 361),
-                      pos_end=(550, 361))
+    wall = NormalWall(pos_start=(-349, -163),
+                      pos_end=(-119, -163))
     playground.add(wall, wall.wall_coordinates)
 
     # vertical wall 4
-    wall = NormalWall(pos_start=(546, 363),
-                      pos_end=(546, -366))
+    wall = NormalWall(pos_start=(58, -163),
+                      pos_end=(58, -181))
     playground.add(wall, wall.wall_coordinates)
 
-    # vertical wall 5
-    wall = NormalWall(pos_start=(148, 363),
-                      pos_end=(148, 232))
+    # horizontal wall 5
+    wall = NormalWall(pos_start=(58, -166),
+                      pos_end=(503, -166))
     playground.add(wall, wall.wall_coordinates)
 
-    # vertical wall 6
-    wall = NormalWall(pos_start=(150, 363),
-                      pos_end=(150, 232))
+    # horizontal wall 6
+    wall = NormalWall(pos_start=(-352, -174),
+                      pos_end=(-110, -174))
     playground.add(wall, wall.wall_coordinates)
 
-    # vertical wall 7
-    wall = NormalWall(pos_start=(336, 363),
-                      pos_end=(336, 255))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 8
-    wall = NormalWall(pos_start=(338, 363),
-                      pos_end=(338, 255))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 9
-    wall = NormalWall(pos_start=(-543, 229),
-                      pos_end=(-543, -228))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 10
-    wall = NormalWall(pos_start=(-542, 226),
-                      pos_end=(-394, 226))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 11
-    wall = NormalWall(pos_start=(-401, 228),
-                      pos_end=(-401, -38))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 12
-    wall = NormalWall(pos_start=(148, 163),
-                      pos_end=(148, 133))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 13
-    wall = NormalWall(pos_start=(146, 137),
-                      pos_end=(340, 137))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 14
-    wall = NormalWall(pos_start=(335, 139),
-                      pos_end=(335, -111))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 15
-    wall = NormalWall(pos_start=(150, 163),
-                      pos_end=(150, 135))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 16
-    wall = NormalWall(pos_start=(148, 139),
-                      pos_end=(342, 139))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 17
-    wall = NormalWall(pos_start=(337, 141),
-                      pos_end=(337, -113))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 18
-    wall = NormalWall(pos_start=(-302, 140),
-                      pos_end=(-302, 95))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 19
-    wall = NormalWall(pos_start=(-304, 136),
-                      pos_end=(-124, 136))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 20
-    wall = NormalWall(pos_start=(-130, -107),
-                      pos_end=(201, -107))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 21
-    wall = NormalWall(pos_start=(-300, 138),
-                      pos_end=(-300, 95))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 22
-    wall = NormalWall(pos_start=(-302, 134),
-                      pos_end=(-126, 134))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 23
-    wall = NormalWall(pos_start=(-130, 136),
-                      pos_end=(-130, -365))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 24
-    wall = NormalWall(pos_start=(-132, -362),
-                      pos_end=(550, -362))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 25
-    wall = NormalWall(pos_start=(-440, 114),
-                      pos_end=(-398, 114))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 26
-    wall = NormalWall(pos_start=(-546, 114),
-                      pos_end=(-522, 114))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 27
-    wall = NormalWall(pos_start=(-546, 112),
-                      pos_end=(-524, 112))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 28
-    wall = NormalWall(pos_start=(-438, 112),
-                      pos_end=(-398, 112))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 29
-    wall = NormalWall(pos_start=(9, 70),
-                      pos_end=(9, -29))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 30
-    wall = NormalWall(pos_start=(10, 67),
-                      pos_end=(135, 67))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 31
-    wall = NormalWall(pos_start=(130, 69),
-                      pos_end=(130, -29))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 32
-    wall = NormalWall(pos_start=(-302, 14),
-                      pos_end=(-302, -228))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 33
-    wall = NormalWall(pos_start=(-300, 14),
-                      pos_end=(-300, -228))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 34
-    wall = NormalWall(pos_start=(6, -25),
-                      pos_end=(134, -25))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 35
-    wall = NormalWall(pos_start=(-128, 138),
-                      pos_end=(-128, -228))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 36
-    wall = NormalWall(pos_start=(273, -107),
-                      pos_end=(338, -107))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 37
-    wall = NormalWall(pos_start=(275, -109),
-                      pos_end=(340, -109))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 38
-    wall = NormalWall(pos_start=(-130, -109),
-                      pos_end=(200, -109))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 39
-    wall = NormalWall(pos_start=(34, -106),
-                      pos_end=(34, -280))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 40
-    wall = NormalWall(pos_start=(36, -107),
-                      pos_end=(36, -280))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 41
-    wall = NormalWall(pos_start=(-401, -114),
-                      pos_end=(-401, -157))
-    playground.add(wall, wall.wall_coordinates)
-
-    # vertical wall 42
-    wall = NormalWall(pos_start=(-399, -114),
-                      pos_end=(-399, -157))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 43
-    wall = NormalWall(pos_start=(-545, -142),
-                      pos_end=(-398, -142))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 44
-    wall = NormalWall(pos_start=(-546, -144),
-                      pos_end=(-398, -144))
-    playground.add(wall, wall.wall_coordinates)
-
-    # horizontal wall 45
-    wall = NormalWall(pos_start=(-546, -224),
-                      pos_end=(-128, -224))
+    # horizontal wall 7
+    wall = NormalWall(pos_start=(55, -178),
+                      pos_end=(503, -178))
     playground.add(wall, wall.wall_coordinates)
 

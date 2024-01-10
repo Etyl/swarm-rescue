@@ -398,9 +398,11 @@ class ImageToMap:
         print("nombre de lignes =", len(self.lines))
 
 
-img_path = "../../../map_data/map_medium_02_color.png"
-should_auto_resized = False
-# img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-img = cv2.imread(img_path)
-image_to_map = ImageToMap(image_source=img, auto_resized=should_auto_resized)
-image_to_map.launch()
+
+if __name__ == "__main__":
+    img_path = "../../../map_data/map_custom01_color.png"
+    should_auto_resized = False
+    # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(img_path)
+    image_to_map = ImageToMap(image_source=img, auto_resized=should_auto_resized)
+    image_to_map.launch()
