@@ -388,8 +388,7 @@ class ImageToMap:
         print("nombre de lignes =", len(self.lines))
 
 
-# img_path = "/home/battesti/projetCompetDronesDGA/private-swarm-rescue/map_data/map_complete_map_2.png"
-img_path = "/home/battesti/projetCompetDronesDGA/private-swarm-rescue/map_data/map_medium_02_color.png"
+img_path = "../../../map_data/map_medium_02_color.png"
 should_auto_resized = False
 # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
 img = cv2.imread(img_path)
