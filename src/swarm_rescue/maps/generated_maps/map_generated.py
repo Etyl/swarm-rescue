@@ -16,7 +16,7 @@ from spg_overlay.reporting.evaluation import ZonesConfig
 from spg_overlay.utils.misc_data import MiscData
 
 from .walls_generated_map import add_walls, add_boxes
-from .data_generated_map import entities
+from .data_generated_map import data
 
 
 class GeneratedMap(MapAbstract):
@@ -27,10 +27,10 @@ class GeneratedMap(MapAbstract):
         self._real_time_limit = 720  # In seconds
 
         # PARAMETERS MAP
-        self._size_area = entities["size_area"]
+        self._size_area = data["size_area"]
 
-        self._rescue_center = entities["rescue_center"]
-        self._rescue_center_pos = entities["rescue_center_pos"]
+        self._rescue_center = data["rescue_center"]
+        self._rescue_center_pos = data["rescue_center_pos"]
 
         self._no_com_zone = NoComZone(size=(414, 254))
         self._no_com_zone_pos = ((-332, 95), 0)
@@ -41,7 +41,7 @@ class GeneratedMap(MapAbstract):
         self._kill_zone = KillZone(size=(95, 83))
         self._kill_zone_pos = ((-59, 22), 0)
 
-        self._wounded_persons_pos = entities["wounded_persons_pos"]
+        self._wounded_persons_pos = data["wounded_persons_pos"]
 
         self._number_wounded_persons = len(self._wounded_persons_pos)
         self._wounded_persons: List[WoundedPerson] = []
