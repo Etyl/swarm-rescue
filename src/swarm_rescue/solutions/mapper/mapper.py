@@ -1,16 +1,14 @@
 from enum import Enum
-from solutions.pathfinder.pathfinder import *
 import numpy as np
 import math
 import cv2
-from spg.agent.sensor.sensor import Sensor
 
+from spg.agent.sensor.sensor import Sensor
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from spg_overlay.utils.pose import Pose
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
-
-from solutions.mapper.utils import Grid, world_to_grid, grid_to_world
-
+from solutions.mapper.utils import Grid
+from solutions.pathfinder.pathfinder import *
 
 EVERY_N = 1
 LIDAR_DIST_CLIP = 40.0
@@ -58,7 +56,7 @@ class Map():
         lidar_dist = drone_lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = drone_lidar.ray_angles[::EVERY_N].copy()
 
-        world_points = np.array([(pose.position[0] + d*math.cos(a + pose.orientation), pose.position[1] + d*math.sin(a + pose.orientation)) for d, a in zip(lidar_dist, lidar_angles)])
+        world_points = np.column_stack((pose.position[0] + np.multiply(lidar_dist, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist, np.sin(lidar_angles + pose.orientation))))
 
         for x, y in world_points:
             self.confidence_grid.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
@@ -82,7 +80,8 @@ class Map():
         
         lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), max_range)
 
-        world_points_free = np.array([(pose.position[0] + d*math.cos(a + pose.orientation), pose.position[1] + d*math.sin(a + pose.orientation)) for d, a in zip(lidar_dist_clip, lidar_angles)])
+        world_points_free = np.column_stack((pose.position[0] + np.multiply(lidar_dist_clip, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_clip, np.sin(lidar_angles + pose.orientation))))
+
 
         for x, y in world_points_free:
             self.occupancy_grid.add_value_along_line(pose.position[0], pose.position[1], x, y, EMPTY_ZONE_VALUE)
@@ -90,7 +89,7 @@ class Map():
         lidar_dist_hit = lidar_dist[lidar_dist < max_range]
         lidar_angles_hit = lidar_angles[lidar_dist < max_range]
 
-        world_points_hit = np.array([(pose.position[0] + d*math.cos(a + pose.orientation), pose.position[1] + d*math.sin(a + pose.orientation)) for d, a in zip(lidar_dist_hit, lidar_angles_hit)])
+        world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
 
         self.occupancy_grid.grid = np.where(boundary_mask, buffer, self.occupancy_grid.grid)
         self.occupancy_grid.add_points(world_points_hit[:,0], world_points_hit[:,1], OBSTACLE_ZONE_VALUE)
