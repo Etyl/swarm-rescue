@@ -56,7 +56,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_path = False # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
-        self.debug_map = True
+        self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
@@ -70,7 +70,8 @@ class FrontierDrone(DroneAbstract):
                         "rotation": 0.0,
                         "grasper": 0}
 
-        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
+        #self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
+        self.map = Map(area_world=self.size_area, resolution=8, debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
@@ -166,7 +167,6 @@ class FrontierDrone(DroneAbstract):
         for k in range(len(lidar_dists)):
             if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
                 measures.append([lidar_dists[k], lidar_angles[k]])
-
         def Q(x):
             [posX, posY, angle] = x
             value = 0
@@ -516,7 +516,12 @@ class FrontierDrone(DroneAbstract):
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
         max_vel_angle = 0.08
         #if abs(self.measured_angular_velocity()) < max_vel_angle:
-        self.map.update(self.estimated_pose, detection_semantic)
+        self.map.update(self.estimated_pose, self.lidar())
+
+        # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
+        # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
+        # self.newmap.update_map()
+        # self.newmap.display_map()
 
 
     def draw_top_layer(self):

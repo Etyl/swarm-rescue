@@ -226,7 +226,6 @@ class Roamer:
     def __init__(self, drone: DroneAbstract, map: Map, debug_mode: bool = False):
         self.drone = drone
         self.map = map
-        self.map_matrix = map.map # the map with the Zones values
         self.debug_mode = debug_mode
     
     def print_num_map(self, map, output_file='output.txt'):
@@ -247,7 +246,8 @@ class Roamer:
         Find the closest unexplored target from the drone's curretn position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
-        map_matrix_copy = self.map_matrix.copy() # copy map (to not modify the original)
+        map_matrix_copy = self.map.get_map_matrix().copy() # copy map (to not modify the original)
+  
         map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int (for the Frontier Explorer algorithms)
         drone_position = self.drone.get_position()
 
@@ -338,7 +338,7 @@ class Roamer:
         returns the map as an image
         debuggin purposes
         """
-        x_max_grid, y_max_grid = self.map_matrix.shape
+        x_max_grid, y_max_grid = self.map.get_map_matrix().shape
         
         color_map = {
             Zone.OBSTACLE: (50, 100, 200),
@@ -361,7 +361,7 @@ class Roamer:
         """
         Display the map with points 1 in white, points 1000 in brown, and the path in blue.
         """
-        x_max_grid, y_max_grid = self.map_matrix.shape
+        x_max_grid, y_max_grid = self.map.get_map_matrix().shape
 
         # Define color map
         color_map = {
@@ -522,6 +522,7 @@ class Roamer:
             return [], 0
 
         path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
+
         
         # TODO change implementation
         if path is None:
@@ -529,6 +530,6 @@ class Roamer:
         
         if self.debug_mode: 
             print("[Roamer] Path found : ", path)
-            self.display_map_with_path(self.map_matrix, path, 5)
+            self.display_map_with_path(self.map.get_map_matrix(), path, 5)
 
         return path, target
