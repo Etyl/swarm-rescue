@@ -10,6 +10,8 @@ import arcade
 from collections import deque 
 from statemachine import exceptions
 
+import time
+
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
 from spg_overlay.utils.utils import circular_mean, normalize_angle
@@ -71,7 +73,7 @@ class FrontierDrone(DroneAbstract):
                         "grasper": 0}
 
         #self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
-        self.map = Map(area_world=self.size_area, resolution=8, debug_mode=True)
+        self.map = Map(area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
@@ -512,12 +514,15 @@ class FrontierDrone(DroneAbstract):
         """
         updates the map
         """
+        t1 = time.process_time()
         detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
         max_vel_angle = 0.08
-        #if abs(self.measured_angular_velocity()) < max_vel_angle:
-        self.map.update(self.estimated_pose, self.lidar())
+        if abs(self.measured_angular_velocity()) < max_vel_angle:
+            self.map.update(self.estimated_pose)
+        t2 = time.process_time()
 
+        print("Time to update map in (ms) : ", (t2-t1)*1000)
         # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_map()

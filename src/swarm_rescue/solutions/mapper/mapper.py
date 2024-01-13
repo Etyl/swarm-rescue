@@ -29,9 +29,10 @@ class Zone(Enum):
     INEXPLORED = -1
 
 class Map():
-    def __init__(self, area_world, resolution, debug_mode=False):
+    def __init__(self, area_world, drone_lidar, resolution, debug_mode=False):
         self.resolution = resolution
         self.debug_mode = debug_mode
+        self.drone_lidar = drone_lidar
 
         self.area_world = area_world
 
@@ -49,12 +50,12 @@ class Map():
         self.no_gps_zones = []
         self.wounded_persons = []
     
-    def update_confidence_grid(self, pose, drone_lidar: Sensor):
+    def update_confidence_grid(self, pose):
         """
         Update confidence grid with drone's semantic sensor data
         """
-        lidar_dist = drone_lidar.get_sensor_values()[::EVERY_N].copy()
-        lidar_angles = drone_lidar.ray_angles[::EVERY_N].copy()
+        lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
+        lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
 
         world_points = np.column_stack((pose.position[0] + np.multiply(lidar_dist, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist, np.sin(lidar_angles + pose.orientation))))
 
@@ -65,7 +66,7 @@ class Map():
 
         #self.confidence_grid.display(pose)
 
-    def update_occupancy_grid(self, pose, drone_lidar: Sensor):
+    def update_occupancy_grid(self, pose):
         """
         Update occupancy grid with drone's semantic sensor data
         """
@@ -73,8 +74,8 @@ class Map():
         boundary_mask = np.logical_or(self.occupancy_grid.grid == THRESHOLD_MIN, self.occupancy_grid.grid == THRESHOLD_MAX)
         buffer = self.occupancy_grid.grid.copy()
 
-        lidar_dist = drone_lidar.get_sensor_values()[::EVERY_N].copy()
-        lidar_angles = drone_lidar.ray_angles[::EVERY_N].copy()
+        lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
+        lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
 
         max_range = 0.9 * MAX_RANGE_LIDAR_SENSOR
         
@@ -178,12 +179,12 @@ class Map():
     def get_height(self):
         return self.height
     
-    def update(self, pose, drone_lidar: Sensor):
+    def update(self, pose):
         """
         Update the map
         """
-        self.update_confidence_grid(pose, drone_lidar)
-        self.update_occupancy_grid(pose, drone_lidar)
+        self.update_confidence_grid(pose)
+        self.update_occupancy_grid(pose)
         self.update_map()
     
     def shortest_path(self, start: Pose, end: Pose):
