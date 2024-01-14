@@ -73,7 +73,7 @@ class FrontierDrone(DroneAbstract):
                         "grasper": 0}
 
         #self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
-        self.map = Map(area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, debug_mode=True)
+        self.map = Map(area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, identifier=self.identifier, debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
@@ -278,6 +278,7 @@ class FrontierDrone(DroneAbstract):
                 self.drone_list[k] = drone_data
                 return
         self.drone_list.append(drone_data)
+
 
     def process_communicator(self):
         """
@@ -514,19 +515,24 @@ class FrontierDrone(DroneAbstract):
         """
         updates the map
         """
-        t1 = time.process_time()
+        #t1 = time.process_time()
         detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
         max_vel_angle = 0.08
         if abs(self.measured_angular_velocity()) < max_vel_angle:
             self.map.update(self.estimated_pose)
-        t2 = time.process_time()
+        #t2 = time.process_time()
 
-        print("Time to update map in (ms) : ", (t2-t1)*1000)
+        #print("Time to update map in (ms) : ", (t2-t1)*1000)
         # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_map()
         # self.newmap.display_map()
+            
+        for other_drone in self.drone_list:
+            if other_drone.id == self.identifier: continue
+            print("merging map")
+            self.map.merge(other_drone.map)
 
 
     def draw_top_layer(self):

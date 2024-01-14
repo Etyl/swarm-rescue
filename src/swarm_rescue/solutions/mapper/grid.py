@@ -1,48 +1,8 @@
-from spg_overlay.utils.pose import Pose
-
 import math
-
-import cv2
 import numpy as np
+import cv2
 
-def world_to_grid(x_world, y_world, size_area_world, resolution):
-    """
-    Convert from world coordinates to map coordinates (i.e. cell index in the grid map)
-    x_world, y_world : list of x and y coordinates in m
-    """
-
-    x_grid = (x_world + size_area_world[0] / 2) / resolution
-    y_grid = (-y_world + size_area_world[1] / 2) / resolution
-
-    if isinstance(x_grid, float):
-        x_grid = int(x_grid)
-        y_grid = int(y_grid)
-    elif isinstance(x_grid, np.ndarray):
-        x_grid = x_grid.astype(int)
-        y_grid = y_grid.astype(int)
-
-    return x_grid, y_grid
-
-def grid_to_world(x_grid, y_grid, size_area_world, resolution):
-    """
-    Convert from map coordinates to world coordinates
-    x_grid, y_grid : list of x and y coordinates in cell numbers (~pixels)
-    """
-    if isinstance(x_grid, int):
-        x_grid = float(x_grid)
-        y_grid = float(y_grid)
-    elif isinstance(x_grid, np.ndarray):
-        x_grid = x_grid.astype(float)
-        y_grid = y_grid.astype(float)
-
-    x_world = -size_area_world[0] / 2 + x_grid * resolution
-    y_world = size_area_world[1] / 2 - y_grid * resolution
-
-    if isinstance(x_world, np.ndarray):
-        x_world = x_world.astype(float)
-        y_world = y_world.astype(float)
-
-    return x_world, y_world
+from spg_overlay.utils.pose import Pose
 
 class Grid:
     """Simple grid"""
@@ -169,34 +129,6 @@ class Grid:
             y_px = y_px[select]
             self.grid[x_px, y_px] += val
 
-    def display(self, robot_pose: Pose, title="grid"):
-        """
-        Screen display of grid and robot pose,
-        using opencv (faster than the matplotlib version)
-        robot_pose : [x, y, theta] nparray, corrected robot pose
-        """
-        img = self.grid.T
-        img = img - img.min()
-        img = img / img.max() * 255
-        img = np.uint8(img)
-        img_color = cv2.applyColorMap(src=img, colormap=cv2.COLORMAP_JET)
-
-        # upscale to display
-        img_color = cv2.resize(img_color, (img_color.shape[1] * self.resolution, img_color.shape[0] * self.resolution), interpolation=cv2.INTER_NEAREST)
-
-        pt2_x = robot_pose.position[0] + np.cos(robot_pose.orientation) * 20
-        pt2_y = robot_pose.position[1] + np.sin(robot_pose.orientation) * 20
-        pt2_x, pt2_y = self._conv_world_to_grid(pt2_x, pt2_y)
-
-        pt1_x, pt1_y = self._conv_world_to_grid(robot_pose.position[0], robot_pose.position[1])
-
-        pt1 = (int(pt1_x * self.resolution), int(pt1_y * self.resolution))
-        pt2 = (int(pt2_x * self.resolution), int(pt2_y * self.resolution))
-        cv2.arrowedLine(img=img_color, pt1=pt1, pt2=pt2,
-                        color=(0, 0, 255), thickness=2)
-        cv2.imshow(title, img_color)
-        cv2.waitKey(1)
-
     def add_value_along_line_confidence(self, x_0: float, y_0: float, x_1: float, y_1: float, val):
         """
         Add a value to a line of points using Bresenham algorithm, input in world coordinates
@@ -255,3 +187,30 @@ class Grid:
 
             self.grid[x, y] += added_value
 
+    def display(self, robot_pose: Pose, title="grid"):
+        """
+        Screen display of grid and robot pose,
+        using opencv (faster than the matplotlib version)
+        robot_pose : [x, y, theta] nparray, corrected robot pose
+        """
+        img = self.grid.T
+        img = img - img.min()
+        img = img / img.max() * 255
+        img = np.uint8(img)
+        img_color = cv2.applyColorMap(src=img, colormap=cv2.COLORMAP_JET)
+
+        # resize image
+        img_color = cv2.resize(img_color, (0, 0), fx=self.resolution//2, fy=self.resolution//2, interpolation=cv2.INTER_NEAREST)
+
+        pt2_x = robot_pose.position[0] + np.cos(robot_pose.orientation) * 20
+        pt2_y = robot_pose.position[1] + np.sin(robot_pose.orientation) * 20
+        pt2_x, pt2_y = self._conv_world_to_grid(pt2_x, pt2_y)
+
+        pt1_x, pt1_y = self._conv_world_to_grid(robot_pose.position[0], robot_pose.position[1])
+
+        pt1 = (int(pt1_x * self.resolution//2), int(pt1_y * self.resolution//2))
+        pt2 = (int(pt2_x * self.resolution//2), int(pt2_y * self.resolution//2))
+        cv2.arrowedLine(img=img_color, pt1=pt1, pt2=pt2,
+                        color=(0, 0, 255), thickness=2)
+        cv2.imshow(title, img_color)
+        cv2.waitKey(1)

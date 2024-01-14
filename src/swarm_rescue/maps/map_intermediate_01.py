@@ -33,12 +33,12 @@ class MyMapIntermediate01(MapAbstract):
         self._no_gps_zone = NoGpsZone(size=(400, 500))
         self._no_gps_zone_pos = ((-190, 0), 0)
 
-        self._wounded_persons_pos = [(-310, -180)]
+        self._wounded_persons_pos = []
         self._number_wounded_persons = len(self._wounded_persons_pos)
         self._wounded_persons: List[WoundedPerson] = []
 
         orient = random.uniform(-math.pi, math.pi)
-        self._drones_pos = [((295, 118), orient)]
+        self._drones_pos = [((295, 118), orient), ((-295, 120), orient)]
         self._number_drones = len(self._drones_pos)
         self._drones: List[DroneAbstract] = []
 

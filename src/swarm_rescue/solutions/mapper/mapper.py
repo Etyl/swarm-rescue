@@ -1,13 +1,10 @@
 from enum import Enum
 import numpy as np
-import math
 import cv2
 
-from spg.agent.sensor.sensor import Sensor
-from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from spg_overlay.utils.pose import Pose
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
-from solutions.mapper.utils import Grid
+from solutions.mapper.grid import Grid
 from solutions.pathfinder.pathfinder import *
 
 EVERY_N = 1
@@ -29,10 +26,11 @@ class Zone(Enum):
     INEXPLORED = -1
 
 class Map():
-    def __init__(self, area_world, drone_lidar, resolution, debug_mode=False):
+    def __init__(self, area_world, drone_lidar, resolution, identifier, debug_mode=False):
         self.resolution = resolution
         self.debug_mode = debug_mode
         self.drone_lidar = drone_lidar
+        self.drone_id = identifier
 
         self.area_world = area_world
 
@@ -64,7 +62,7 @@ class Map():
 
         self.confidence_grid.grid = np.clip(self.confidence_grid.grid, 0, CONFIDENCE_THRESHOLD)
 
-        #self.confidence_grid.display(pose)
+        #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(self.drone_id))
 
     def update_occupancy_grid(self, pose):
         """
@@ -95,14 +93,13 @@ class Map():
         self.occupancy_grid.grid = np.where(boundary_mask, buffer, self.occupancy_grid.grid)
         self.occupancy_grid.add_points(world_points_hit[:,0], world_points_hit[:,1], OBSTACLE_ZONE_VALUE)
         # Mark the current position of the drone as free
-        #self.occupancy_grid.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
+        self.occupancy_grid.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
 
         self.occupancy_grid.grid = np.clip(self.occupancy_grid.grid, THRESHOLD_MIN, THRESHOLD_MAX)
         self.binary_occupancy_grid = np.where(self.occupancy_grid.grid > 0, 1, -1)
 
         #self.filter_occupancy_grid()
-
-        #self.occupancy_grid.display(pose)
+        self.occupancy_grid.display(pose, title="Occupancy grid of drone {}".format(self.drone_id))
     
     def filter_occupancy_grid(self):
         """
@@ -186,6 +183,17 @@ class Map():
         self.update_confidence_grid(pose)
         self.update_occupancy_grid(pose)
         self.update_map()
+
+    def merge(self, other_map):
+        """
+        Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
+        """
+        #save confidence grid to image
+        cv2.imwrite("./confidence_grid_1.png", self.confidence_grid.grid * 255 / CONFIDENCE_THRESHOLD)
+        cv2.imwrite("./confidence_grid_2.png", other_map.confidence_grid.grid * 255 / CONFIDENCE_THRESHOLD)
+        self.occupancy_grid.grid = np.where(self.confidence_grid.grid > other_map.confidence_grid.grid, self.occupancy_grid.grid, other_map.occupancy_grid.grid)
+        self.confidence_grid.grid = np.maximum(self.confidence_grid.grid, other_map.confidence_grid.grid)
+        self.update_map()
     
     def shortest_path(self, start: Pose, end: Pose):
         """
@@ -208,6 +216,8 @@ class Map():
             # erosion
             kernel = np.ones((2,2),np.uint8)
             obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
+        # save obstacle grid as image
+        cv2.imwrite("./map.png", obstacle_grid * 255)
 
         adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
@@ -215,6 +225,8 @@ class Map():
 
         grid_path = pathfinder(obstacle_grid, grid_start, grid_end)
 
+        if grid_path is None:
+            return None
         path = [self.grid_to_world([pos[0] / zoom_factor, pos[1] / zoom_factor]) for pos in grid_path]
 
         path.reverse()
