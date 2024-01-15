@@ -60,8 +60,7 @@ class Map():
         for x, y in world_points:
             self.confidence_grid.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 
-        self.confidence_grid.grid = np.clip(self.confidence_grid.grid, 0, CONFIDENCE_THRESHOLD)
-
+        self.confidence_grid.set_grid(np.clip(self.confidence_grid.get_grid(), 0, CONFIDENCE_THRESHOLD))
         #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(self.drone_id))
 
     def update_occupancy_grid(self, pose):
@@ -69,8 +68,8 @@ class Map():
         Update occupancy grid with drone's semantic sensor data
         """
          # Save values at the boundaries
-        boundary_mask = np.logical_or(self.occupancy_grid.grid == THRESHOLD_MIN, self.occupancy_grid.grid == THRESHOLD_MAX)
-        buffer = self.occupancy_grid.grid.copy()
+        boundary_mask = np.logical_or(self.occupancy_grid.get_grid() == THRESHOLD_MIN, self.occupancy_grid.get_grid() == THRESHOLD_MAX)
+        buffer = self.occupancy_grid.get_grid().copy()
 
         lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
@@ -90,13 +89,13 @@ class Map():
 
         world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
 
-        self.occupancy_grid.grid = np.where(boundary_mask, buffer, self.occupancy_grid.grid)
+        self.occupancy_grid.set_grid(np.where(boundary_mask, buffer, self.occupancy_grid.get_grid()))
         self.occupancy_grid.add_points(world_points_hit[:,0], world_points_hit[:,1], OBSTACLE_ZONE_VALUE)
         # Mark the current position of the drone as free
-        self.occupancy_grid.add_points(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
+        self.occupancy_grid.add_point(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
 
-        self.occupancy_grid.grid = np.clip(self.occupancy_grid.grid, THRESHOLD_MIN, THRESHOLD_MAX)
-        self.binary_occupancy_grid = np.where(self.occupancy_grid.grid > 0, 1, -1)
+        self.occupancy_grid.set_grid(np.clip(self.occupancy_grid.get_grid(), THRESHOLD_MIN, THRESHOLD_MAX))
+        self.binary_occupancy_grid = np.where(self.occupancy_grid.get_grid() > 0, 1, -1)
 
         #self.filter_occupancy_grid()
         self.occupancy_grid.display(pose, title="Occupancy grid of drone {}".format(self.drone_id))
@@ -112,9 +111,9 @@ class Map():
         """
         Update the map with the occupancy grid and the confidence grid
         """
-        #self.map = np.where(self.confidence_grid.grid > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
-        self.map = np.where(self.occupancy_grid.grid > 0, Zone.OBSTACLE, self.map)
-        self.map = np.where(self.occupancy_grid.grid < 0, Zone.EMPTY, self.map)
+        #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
+        self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
+        self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
 
     def __setitem__(self, pos, zone):
         x,y = pos
@@ -184,15 +183,15 @@ class Map():
         self.update_occupancy_grid(pose)
         self.update_map()
 
-    def merge(self, other_map):
+    def merge(self, other_map : "Map"):
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
         #save confidence grid to image
-        cv2.imwrite("./confidence_grid_1.png", self.confidence_grid.grid * 255 / CONFIDENCE_THRESHOLD)
-        cv2.imwrite("./confidence_grid_2.png", other_map.confidence_grid.grid * 255 / CONFIDENCE_THRESHOLD)
-        self.occupancy_grid.grid = np.where(self.confidence_grid.grid > other_map.confidence_grid.grid, self.occupancy_grid.grid, other_map.occupancy_grid.grid)
-        self.confidence_grid.grid = np.maximum(self.confidence_grid.grid, other_map.confidence_grid.grid)
+        cv2.imwrite("./confidence_grid_1.png", self.confidence_grid.get_grid() * 255 / CONFIDENCE_THRESHOLD)
+        cv2.imwrite("./confidence_grid_2.png", other_map.confidence_grid.get_grid() * 255 / CONFIDENCE_THRESHOLD)
+        self.occupancy_grid.set_grid(np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(), self.occupancy_grid.get_grid(), other_map.occupancy_grid.get_grid()))
+        self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         self.update_map()
     
     def shortest_path(self, start: Pose, end: Pose):

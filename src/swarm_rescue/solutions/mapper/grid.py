@@ -8,7 +8,7 @@ class Grid:
     """Simple grid"""
 
     def __init__(self,
-                 size_area_world,
+                 size_area_world : tuple,
                  resolution: float):
         self.size_area_world = size_area_world
         self.resolution = resolution
@@ -18,7 +18,7 @@ class Grid:
 
         self.grid = np.zeros((self.x_max_grid, self.y_max_grid))
 
-    def _conv_world_to_grid(self, x_world, y_world):
+    def _conv_world_to_grid_v(self, x_world : np.ndarray, y_world : np.ndarray):
         """
         Convert from world coordinates to map coordinates (i.e. cell index in the grid map)
         x_world, y_world : list of x and y coordinates in m
@@ -27,33 +27,51 @@ class Grid:
         x_grid = (x_world + self.size_area_world[0] / 2) / self.resolution
         y_grid = (-y_world + self.size_area_world[1] / 2) / self.resolution
 
-        if isinstance(x_grid, float):
-            x_grid = int(x_grid)
-            y_grid = int(y_grid)
-        elif isinstance(x_grid, np.ndarray):
-            x_grid = x_grid.astype(int)
-            y_grid = y_grid.astype(int)
+        x_grid = x_grid.astype(int)
+        y_grid = y_grid.astype(int)
+
+        return x_grid, y_grid
+    
+    def _conv_world_to_grid(self, x_world : float, y_world : float):
+        """
+        Convert from world coordinates to map coordinates (i.e. cell index in the grid map)
+        x_world, y_world : float of x and y coordinates in m
+        """
+
+        x_grid = (x_world + self.size_area_world[0] / 2) / self.resolution
+        y_grid = (-y_world + self.size_area_world[1] / 2) / self.resolution
+
+        x_grid = int(x_grid)
+        y_grid = int(y_grid)
+
 
         return x_grid, y_grid
 
-    def _conv_grid_to_world(self, x_grid, y_grid):
+    def _conv_grid_to_world_v(self, x_grid : np.ndarray, y_grid : np.ndarray):
         """
         Convert from map coordinates to world coordinates
         x_grid, y_grid : list of x and y coordinates in cell numbers (~pixels)
         """
-        if isinstance(x_grid, int):
-            x_grid = float(x_grid)
-            y_grid = float(y_grid)
-        elif isinstance(x_grid, np.ndarray):
-            x_grid = x_grid.astype(float)
-            y_grid = y_grid.astype(float)
+ 
+        x_grid = x_grid.astype(float)
+        y_grid = y_grid.astype(float)
 
         x_world = -self.size_area_world[0] / 2 + x_grid * self.resolution
         y_world = self.size_area_world[1] / 2 - y_grid * self.resolution
 
-        if isinstance(x_world, np.ndarray):
-            x_world = x_world.astype(float)
-            y_world = y_world.astype(float)
+        x_world = x_world.astype(float)
+        y_world = y_world.astype(float)
+
+        return x_world, y_world
+    
+    def _conv_grid_to_world(self, x_grid : int, y_grid : int):
+        """
+        Convert from map coordinates to world coordinates
+        x_grid, y_grid : int of x and y coordinates in cell numbers (~pixels)
+        """
+ 
+        x_world = -self.size_area_world[0] / 2 + x_grid * self.resolution
+        y_world = self.size_area_world[1] / 2 - y_grid * self.resolution
 
         return x_world, y_world
 
@@ -110,23 +128,30 @@ class Grid:
         # add value to the points
         self.grid[points[0], points[1]] += val
 
-    def add_points(self, points_x, points_y, val):
+    def add_points(self, points_x : np.ndarray, points_y : np.ndarray, val):
         """
         Add a value to an array of points, input coordinates in meters
         points_x, points_y :  list of x and y coordinates in m
         val :  value to add to the cells of the points
         """
 
-        x_px, y_px = self._conv_world_to_grid(points_x, points_y)
+        x_px, y_px = self._conv_world_to_grid_v(points_x, points_y)
 
-        if isinstance(points_x, int):
-            if 0 <= x_px < self.x_max_grid and 0 <= y_px < self.y_max_grid:
-                self.grid[x_px, y_px] += val
-        elif isinstance(points_x, np.ndarray):
-            select = np.logical_and(np.logical_and(x_px >= 0, x_px < self.x_max_grid),
-                                    np.logical_and(y_px >= 0, y_px < self.y_max_grid))
-            x_px = x_px[select]
-            y_px = y_px[select]
+        select = np.logical_and(np.logical_and(x_px >= 0, x_px < self.x_max_grid),
+                                np.logical_and(y_px >= 0, y_px < self.y_max_grid))
+        x_px = x_px[select]
+        y_px = y_px[select]
+        self.grid[x_px, y_px] += val
+
+    def add_point(self, x : float, y : float, val):
+        """
+        Add a value to a point, input coordinates in meters
+        x, y :  x and y coordinates in m
+        val :  value to add to the cell of the point
+        """
+        x_px, y_px = self._conv_world_to_grid(x, y)
+
+        if 0 <= x_px < self.x_max_grid and 0 <= y_px < self.y_max_grid:
             self.grid[x_px, y_px] += val
 
     def add_value_along_line_confidence(self, x_0: float, y_0: float, x_1: float, y_1: float, val):
@@ -186,6 +211,12 @@ class Grid:
             added_value = val / max(1, dist_from_start)  # Variation en fonction de la distance
 
             self.grid[x, y] += added_value
+
+    def get_grid(self):
+        return self.grid
+    
+    def set_grid(self, grid):
+        self.grid = grid
 
     def display(self, robot_pose: Pose, title="grid"):
         """

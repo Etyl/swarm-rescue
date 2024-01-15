@@ -8,7 +8,7 @@ from spg_overlay.utils.pose import Pose
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
 
 from solutions.pathfinder.pathfinder import *
-from solutions.mapper.utils import Grid
+from swarm_rescue.solutions.mapper.grid import Grid
 
 EVERY_N = 1
 LIDAR_DIST_CLIP = 40.0
