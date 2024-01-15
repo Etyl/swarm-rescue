@@ -6,7 +6,7 @@
         "depends": [],
         "name": "grid_c",
         "sources": [
-            "src/swarm_rescue/solutions/mapper/grid_c.pyx"
+            "src/swarm_rescue/solutions/mapper/src/grid_c.pyx"
         ]
     },
     "module_name": "grid_c"
@@ -1497,7 +1497,7 @@ static const char *__pyx_filename;
 /* #### Code section: filename_table ### */
 
 static const char *__pyx_f[] = {
-  "src/swarm_rescue/solutions/mapper/grid_c.pyx",
+  "src/swarm_rescue/solutions/mapper/src/grid_c.pyx",
   "<stringsource>",
   "__init__.cython-30.pxd",
   "type.pxd",
@@ -3448,7 +3448,7 @@ static const char __pyx_k_Unable_to_convert_item_to_object[] = "Unable to conver
 static const char __pyx_k_got_differing_extents_in_dimensi[] = "got differing extents in dimension ";
 static const char __pyx_k_no_default___reduce___due_to_non[] = "no default __reduce__ due to non-trivial __cinit__";
 static const char __pyx_k_numpy_core_umath_failed_to_impor[] = "numpy.core.umath failed to import";
-static const char __pyx_k_src_swarm_rescue_solutions_mappe[] = "src/swarm_rescue/solutions/mapper/grid_c.pyx";
+static const char __pyx_k_src_swarm_rescue_solutions_mappe[] = "src/swarm_rescue/solutions/mapper/src/grid_c.pyx";
 static const char __pyx_k_unable_to_allocate_shape_and_str[] = "unable to allocate shape and strides.";
 /* #### Code section: decls ### */
 static int __pyx_array___pyx_pf_15View_dot_MemoryView_5array___cinit__(struct __pyx_array_obj *__pyx_v_self, PyObject *__pyx_v_shape, Py_ssize_t __pyx_v_itemsize, PyObject *__pyx_v_format, PyObject *__pyx_v_mode, int __pyx_v_allocate_buffer); /* proto */

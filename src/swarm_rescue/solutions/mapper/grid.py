@@ -1,1 +1,1 @@
-from solutions.mapper.grid_c import Grid
+from solutions.mapper.src.grid_c import Grid
