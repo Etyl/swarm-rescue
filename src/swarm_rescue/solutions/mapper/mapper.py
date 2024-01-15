@@ -4,18 +4,21 @@ import cv2
 
 from spg_overlay.utils.pose import Pose
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
+#from solutions.mapper.grid_old import Grid
 from solutions.mapper.grid import Grid
+
 from solutions.pathfinder.pathfinder import *
+from solutions.mapper.utils import display_grid
 
 EVERY_N = 1
 LIDAR_DIST_CLIP = 40.0
-EMPTY_ZONE_VALUE = -0.602
+EMPTY_ZONE_VALUE = -1
 OBSTACLE_ZONE_VALUE = 2
 FREE_ZONE_VALUE = -8
 THRESHOLD_MIN = -40
 THRESHOLD_MAX = 40
-CONFIDENCE_VALUE = 20
-CONFIDENCE_THRESHOLD = 100
+CONFIDENCE_VALUE = 500
+CONFIDENCE_THRESHOLD = 1000
 CONFIDENCE_THRESHOLD_MIN = 0
 
 class Zone(Enum):
@@ -62,6 +65,7 @@ class Map():
 
         self.confidence_grid.set_grid(np.clip(self.confidence_grid.get_grid(), 0, CONFIDENCE_THRESHOLD))
         #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(self.drone_id))
+        #display_grid(self.confidence_grid, pose, title="Confidence grid of drone {}".format(self.drone_id))
 
     def update_occupancy_grid(self, pose):
         """
@@ -87,18 +91,19 @@ class Map():
         lidar_dist_hit = lidar_dist[lidar_dist < max_range]
         lidar_angles_hit = lidar_angles[lidar_dist < max_range]
 
-        world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
+        world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation)))).astype(int)
 
         self.occupancy_grid.set_grid(np.where(boundary_mask, buffer, self.occupancy_grid.get_grid()))
         self.occupancy_grid.add_points(world_points_hit[:,0], world_points_hit[:,1], OBSTACLE_ZONE_VALUE)
         # Mark the current position of the drone as free
-        self.occupancy_grid.add_point(pose.position[0], pose.position[1], FREE_ZONE_VALUE)
+        self.occupancy_grid.add_point(int(pose.position[0]), int(pose.position[1]), FREE_ZONE_VALUE)
 
         self.occupancy_grid.set_grid(np.clip(self.occupancy_grid.get_grid(), THRESHOLD_MIN, THRESHOLD_MAX))
         self.binary_occupancy_grid = np.where(self.occupancy_grid.get_grid() > 0, 1, -1)
 
         #self.filter_occupancy_grid()
-        self.occupancy_grid.display(pose, title="Occupancy grid of drone {}".format(self.drone_id))
+        #self.occupancy_grid.display(pose, title="Occupancy grid of drone {}".format(self.drone_id))
+        #display_grid(self.occupancy_grid, pose, title="Occupancy grid of drone {}".format(self.drone_id))
     
     def filter_occupancy_grid(self):
         """
@@ -114,6 +119,7 @@ class Map():
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
+        #self.display_map()
 
     def __setitem__(self, pos, zone):
         x,y = pos
@@ -187,9 +193,6 @@ class Map():
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
-        #save confidence grid to image
-        cv2.imwrite("./confidence_grid_1.png", self.confidence_grid.get_grid() * 255 / CONFIDENCE_THRESHOLD)
-        cv2.imwrite("./confidence_grid_2.png", other_map.confidence_grid.get_grid() * 255 / CONFIDENCE_THRESHOLD)
         self.occupancy_grid.set_grid(np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(), self.occupancy_grid.get_grid(), other_map.occupancy_grid.get_grid()))
         self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         self.update_map()
@@ -230,4 +233,3 @@ class Map():
 
         path.reverse()
         return path
-

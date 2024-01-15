@@ -7,4 +7,4 @@ setup(
     include_dirs=[numpy.get_include()]
 )
 
-# $ python setup.py build_ext --inplace
+# $ python setup.py build_ext --inplace --build-lib /path/to/output_directory

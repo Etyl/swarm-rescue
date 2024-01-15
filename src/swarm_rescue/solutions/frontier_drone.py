@@ -177,9 +177,9 @@ class FrontierDrone(DroneAbstract):
                 point[0] = starting_pos[0] + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle)
                 point[1] = starting_pos[1] + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle)
                 point = self.map.world_to_grid(point)
-                if point[0] < 0 or point[0] >= self.map.x_max_grid or point[1] < 0 or point[1] >= self.map.y_max_grid:
+                if point[0] < 0 or point[0] >= self.map.width or point[1] < 0 or point[1] >= self.map.height:
                     continue
-                value -= self.map.confidence_wall_map[int(point[0]),int(point[1])]
+                value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
             return value
         
         mindx, mindy, mindangle = 0,0,0
@@ -515,13 +515,13 @@ class FrontierDrone(DroneAbstract):
         """
         updates the map
         """
-        #t1 = time.process_time()
+       # t1 = time.process_time()
         detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
-        max_vel_angle = 0.08
-        if abs(self.measured_angular_velocity()) < max_vel_angle:
-            self.map.update(self.estimated_pose)
-        #t2 = time.process_time()
+        # max_vel_angle = 0.08
+        # if abs(self.measured_angular_velocity()) < max_vel_angle:
+        self.map.update(self.estimated_pose)
+       # t2 = time.process_time()
 
         #print("Time to update map in (ms) : ", (t2-t1)*1000)
         # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
@@ -531,7 +531,6 @@ class FrontierDrone(DroneAbstract):
             
         for other_drone in self.drone_list:
             if other_drone.id == self.identifier: continue
-            print("merging map")
             self.map.merge(other_drone.map)
 
 
