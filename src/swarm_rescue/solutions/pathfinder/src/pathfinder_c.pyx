@@ -245,7 +245,10 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=ro
             path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
        
     if save_images:
-        plt.imshow(np.stack((map_border, map_border, map_border), axis=2).astype(np.float32))
+        img_border = map_border.astype(np.float32).copy()
+        img_border[img_border==np.inf] = robot_radius
+        img_border /= robot_radius
+        plt.imshow(np.stack((img_border, img_border, img_border), axis=2).astype(np.float32))
         plt.savefig("./border.png")
         map = np.stack((map, map, map), axis=2)
 
