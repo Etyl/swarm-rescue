@@ -206,7 +206,8 @@ class Map():
         Returns:
             - path: list of positions (world coordinates)
         """
-        obstacle_grid = (self.binary_occupancy_grid == -1).astype(np.uint8)
+        # self.binary_occupancy_grid = 1 if obstacle or unexplored, 0 if free
+        obstacle_grid = np.where(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.INEXPLORED), 2, 0).astype(np.uint8)
 
         # plt.imshow(obstacle_grid)
         # plt.savefig("./map.png")
@@ -219,13 +220,13 @@ class Map():
             kernel = np.ones((2,2),np.uint8)
             obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
         # save obstacle grid as image
-        cv2.imwrite("./map.png", obstacle_grid * 255)
+        #cv2.imwrite("./map.png", obstacle_grid * 255)
 
         adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
         grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]
 
-        grid_path = pathfinder(2*(1-obstacle_grid), grid_start, grid_end)
+        grid_path = pathfinder(obstacle_grid, grid_start, grid_end)
 
         if grid_path is None:
             return None
