@@ -9,10 +9,11 @@ pip install -r requirements.txt
 ```
 
 ### Building the pathfinder:
-    
+
+Execute the builder.py file.
+
 ```bash
-cd ./pathfinder
-python setup.py build_ext --inplace
+python builder.py
 ```	
 
 ## Frontier Drone
