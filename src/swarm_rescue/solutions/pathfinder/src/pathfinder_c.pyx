@@ -12,11 +12,10 @@ cnp.import_array()
 DTYPE = np.int64
 ctypedef cnp.int64_t DTYPE_t
 
- robot_radius = 15
 SUB_SEGMENT_SIZE = 10 # the number of segment to divide each path segment into
 PATH_REFINEMENTS = 3 # number of times to refine the path
-save_images = True
-debug_mode = True
+save_images = False
+debug_mode = False
 output = "./solve"
 
 
@@ -48,9 +47,15 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
         roll_map[roll_map>0.5] = 1
         new_map += roll_map
 
-    # new_map[map > 1.5] = np.inf
-    # new_map += map*robot_radius
+    new_map[map > 1.5] = np.inf
+    new_map += map*robot_radius
     
+    bump_map = len(map)*len(map[0])*np.ones(map.shape).astype(np.float32)
+    bump_map[new_map < 0.5] = 0
+    new_map += bump_map
+
+    new_map += np.ones(map.shape)
+
     if save_images:
         plt.figure()
         plt.imshow(new_map)
@@ -86,7 +91,7 @@ cdef smooth_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t
         return path
     cdef int i_ref = 0
     cdef int j_ref = 2
-    cdef cnp.ndarray[cnp.float32_t, ndim=2] new_path = np.zeros((len(path),2)).astype(DTYPE)
+    cdef cnp.ndarray[cnp.int64_t, ndim=2] new_path = np.zeros((len(path),2)).astype(np.int64)
     new_path[0] = path[0]
     cdef int path_index = 1
     cdef int maxpath_index = len(path)
@@ -172,7 +177,7 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
         current = queue.pop(0)
         if explored[current[0]][current[1]]:
             continue
-        if map_border[current[0]][current[1]] == False:
+        if map_border[current[0]][current[1]] < len(map_border)*len(map_border[0]):
             start = current
             break
         explored[current[0]][current[1]] = True
@@ -185,7 +190,7 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
         current = queue.pop(0)
         if explored[current[0]][current[1]]:
             continue
-        if map_border[current[0]][current[1]] == False:
+        if map_border[current[0]][current[1]] < len(map_border)*len(map_border[0]):
             end = current
             break
         explored[current[0]][current[1]] = True
