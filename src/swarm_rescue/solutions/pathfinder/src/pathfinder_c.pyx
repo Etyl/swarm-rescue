@@ -15,13 +15,22 @@ ctypedef cnp.int64_t DTYPE_t
 robot_radius = 15
 sub_segment_size = 10 # the number of segment to divide each path segment into
 path_refinements = 3 # number of times to refine the path
-save_images = False
+save_images = True
 debug_mode = False
 output = "./solve"
 
 
-cdef border_from_map_np(map, robot_radius):
-    map = np.ones(map.shape).astype(np.float32)-map
+cdef border_from_map_np(map : np.ndarray, robot_radius : int):
+    """
+    Args:
+        map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
+        robot_radius: radius of the robot in pixels
+    Returns:
+        new_map: 2D numpy array of R+ -> 0=free, inf=occupied
+    """
+
+    new_map = np.zeros(map.shape).astype(np.float64)
+    new_map[map > 1.5] = 1
     for _ in range(robot_radius):
         map = (np.roll(map,(1, 0), axis=(1, 0))+
                np.roll(map,(0, 1), axis=(1, 0))+
@@ -30,11 +39,16 @@ cdef border_from_map_np(map, robot_radius):
                np.roll(map,(1, 1), axis=(1, 0))+
                np.roll(map,(-1, -1), axis=(1, 0))+
                np.roll(map,(1, -1), axis=(1, 0))+
-               np.roll(map,(-1, 1), axis=(1, 0)))
+               np.roll(map,(-1, 1), axis=(1, 0)))/8
+
+    new_map[map > 1.5] = np.inf
+    new_map += map*robot_radius
+    
     if save_images:
         plt.imshow(map>0.5)
         plt.savefig("./map_border.png")
-    return map>0.5
+
+    return new_map
 
 cdef interpolate_path(cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.int64_t, ndim=1] point2, float t):
     return point1 + (point2-point1)*t
@@ -137,8 +151,9 @@ def neighbors(map,point):
         neighbors.append((point[0],point[1]+1))
     return neighbors
 
-def findPointsAvailable(map_border, start, end):
+def findPointsAvailable(map_border : np.ndarray, start, end):
     # find closest available point to start and end using BFS
+    map_border = map_border > 0.5
     start = np.array(start)
     end = np.array(end)
     explored = np.zeros(map_border.shape).astype(bool)
@@ -173,7 +188,7 @@ def findPointsAvailable(map_border, start, end):
 def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=robot_radius):
     """
     Args:
-        map: 2D numpy array with 0=free, 1=obstacle
+        map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
         start: tuple of start coordinates
         end: tuple of end coordinates
     """
@@ -184,13 +199,10 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=ro
         
         start,end = findPointsAvailable(map_border, start, end)
 
-        grid = np.ones(map.shape).astype(np.float32)
-        grid[map_border == 1] = np.inf
-
-        assert grid.min() == 1, "cost of moving must be at least 1"
+        assert map_border.min() == 1, "cost of moving must be at least 1"
 
         tp0 = time.time()
-        path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
+        path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
         tp = time.time() - tp0
         if path is None:
             print("No path found")

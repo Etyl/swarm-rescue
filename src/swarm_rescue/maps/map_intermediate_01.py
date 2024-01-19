@@ -38,7 +38,7 @@ class MyMapIntermediate01(MapAbstract):
         self._wounded_persons: List[WoundedPerson] = []
 
         orient = random.uniform(-math.pi, math.pi)
-        self._drones_pos = [((295, 118), orient), ((-295, 120), orient)]
+        self._drones_pos = [((295, 118), orient)]
         self._number_drones = len(self._drones_pos)
         self._drones: List[DroneAbstract] = []
 

@@ -48,13 +48,13 @@ class Launcher:
 
         """
         Here you can fill in the evaluation plan ("evalplan") yourself, adding or removing configurations.
-        A configuration is defined by a map of the environment and whether or not there are zones of difficulty.
+        A configuration is q by a map of the environment and whether or not there are zones of difficulty.
         """
 
         self.team_info = TeamInfo()
         self.eval_plan = EvalPlan()
 
-        eval_config = EvalConfig(map_type=MyMapIntermediate02, nb_rounds=1)
+        eval_config = EvalConfig(map_type=MyMapIntermediate01, nb_rounds=1)
         self.eval_plan.add(eval_config=eval_config)
 
         """
