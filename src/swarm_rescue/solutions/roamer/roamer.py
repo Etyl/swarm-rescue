@@ -20,7 +20,7 @@ import cv2
 # import asyncio
 # import threading
 
-FRONTIER_SELECTION_SIZE = 4
+FRONTIER_SELECTION_SIZE = 10
 
 class RoamerController(StateMachine):
 
@@ -105,7 +105,7 @@ class RoamerController(StateMachine):
         if self.drone.nextWaypoint is None: return True
 
         # TODO fix this
-        if self.target is None: return False
+        if self.target is None: return True
 
         dist = np.linalg.norm(self.drone.get_position() - self.target)
         if len(self.drone.path) == 0: return dist < 20
