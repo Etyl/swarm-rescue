@@ -225,7 +225,7 @@ class Map():
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
         grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]
 
-        grid_path = pathfinder(obstacle_grid, grid_start, grid_end)
+        grid_path = pathfinder(2*(1-obstacle_grid), grid_start, grid_end)
 
         if grid_path is None:
             return None
