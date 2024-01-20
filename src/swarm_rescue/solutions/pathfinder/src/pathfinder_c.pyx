@@ -167,7 +167,6 @@ def neighbors(map,point):
 
 def findPointsAvailable(map_border : np.ndarray, start, end):
     # find closest available point to start and end using BFS
-    map_border = map_border > 0.5
     start = np.array(start)
     end = np.array(end)
     explored = np.zeros(map_border.shape).astype(bool)
@@ -176,7 +175,7 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
         current = queue.pop(0)
         if explored[current[0]][current[1]]:
             continue
-        if map_border[current[0]][current[1]] < len(map_border)*len(map_border[0]):
+        if map_border[current[0]][current[1]] < 2*len(map_border)*len(map_border[0]):
             start = current
             break
         explored[current[0]][current[1]] = True
@@ -196,6 +195,9 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
         for neighbor in neighbors(map_border, current):
             if not explored[neighbor[0]][neighbor[1]]:
                 queue.append(neighbor)
+    if debug_mode:
+        print(f"Start : {start}, End : {end}")
+        print(f"Start cost : {map_border[start[0]][start[1]]}, End cost : {map_border[end[0]][end[1]]}")
     return start, end
 
 
