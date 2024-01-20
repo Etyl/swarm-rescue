@@ -14,8 +14,8 @@ ctypedef cnp.int64_t DTYPE_t
 
 SUB_SEGMENT_SIZE = 10 # the number of segment to divide each path segment into
 PATH_REFINEMENTS = 3 # number of times to refine the path
-save_images = True
-debug_mode = True
+save_images = False
+debug_mode = False
 output = "./solve"
 
 
