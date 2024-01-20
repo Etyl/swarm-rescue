@@ -188,7 +188,7 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
         current = queue.pop(0)
         if explored[current[0]][current[1]]:
             continue
-        if map_border[current[0]][current[1]] < len(map_border)*len(map_border[0]):
+        if map_border[current[0]][current[1]] < 2*len(map_border)*len(map_border[0]):
             end = current
             break
         explored[current[0]][current[1]] = True
