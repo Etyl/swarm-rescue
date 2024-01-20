@@ -15,7 +15,7 @@ ctypedef cnp.int64_t DTYPE_t
 SUB_SEGMENT_SIZE = 10 # the number of segment to divide each path segment into
 PATH_REFINEMENTS = 3 # number of times to refine the path
 save_images = False
-debug_mode = False
+debug_mode = True
 output = "./solve"
 
 
@@ -70,7 +70,7 @@ cdef interpolate_path(cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.i
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False) # turn off negative indexing for entire function
 @cython.cdivision(True)
-cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point1,cnp.ndarray[cnp.int64_t, ndim=1] point2):
+cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.int64_t, ndim=1] point2):
     cdef int n = int(np.sum(np.abs(point2-point1)))
     cdef int[2] b = point1
     cdef int[2] a = point2-point1
@@ -78,8 +78,7 @@ cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_
     for t in range(n+2):
         x = b[0] + (a[0]*t)/(n+1)
         y = b[1] + (a[1]*t)/(n+1)
-        # TODO : fix value check
-        if map[x][y] > 1:
+        if map[x][y] <= map[b[0]][b[1]]:
             return False
     return True
 
@@ -209,23 +208,22 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=15
     """
     if debug_mode:
 
-        t0 = time.time()
+        t0 = time.perf_counter()
         map_border = border_from_map_np(map, robot_radius)
         
         start,end = findPointsAvailable(map_border, start, end)
 
         # assert map_border.min() > 0.5, "cost of moving must be at least 1"
 
-        tp0 = time.time()
+        tp0 = time.perf_counter()
         path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
-        tp = time.time() - tp0
+        tp = time.perf_counter() - tp0
         if path is None:
             print("No path found")
             return None
 
-        ts0 = time.time()
+        ts0 = time.perf_counter()
         path_smooth = smooth_path(map_border, path.astype(DTYPE))
-        ts = time.time() - ts0
         
         path_refined = segmentize_path(map_border, np.array(path_smooth).astype(DTYPE))
         path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
@@ -233,8 +231,13 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=15
         for _ in range(PATH_REFINEMENTS-1):
             path_refined = segmentize_path(map_border, np.array(path_refined).astype(DTYPE))
             path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
-
-        print(f"Ratio : {ts/tp:.6f}, Time : {time.time()-t0:.6f}")    
+        
+        ts = time.perf_counter() - ts0
+        
+        total_time = time.perf_counter() - t0
+        print(f"=========PATHFINDING===========")
+        print(f"Time : {total_time:.6f}")
+        print(f"A* : {tp/total_time*100:.1f}% | Refinement : {ts/total_time*100:.1f}%")   
     else:    
         map_border = border_from_map_np(map, robot_radius)
         

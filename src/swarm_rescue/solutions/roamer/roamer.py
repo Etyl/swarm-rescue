@@ -390,6 +390,13 @@ class Roamer:
             for x, y in frontier:
                 img[x][y] = (0, 255, 0)
 
+        for pos in path:
+            x,y = self.map.world_to_grid(pos)
+            img[x][y] = (0, 0, 255)
+        
+        (x,y) = self.map.world_to_grid(self.find_next_unexplored_target(6))
+        img[x][y] = (255, 0, 0)
+
         # Convert coordinates to integers and assign blue color to the path
         # for coord in path:
         #     x, y = map(int, coord)
