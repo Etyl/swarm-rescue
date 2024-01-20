@@ -362,7 +362,7 @@ class Roamer:
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
         return np.transpose(img, (1, 0, 2))
 
-    def display_map_with_path(self, grid_map, path, id):
+    def display_map_with_path(self, grid_map, path, target, id):
         """
         Display the map with points 1 in white, points 1000 in brown, and the path in blue.
         """
@@ -392,10 +392,9 @@ class Roamer:
 
         for pos in path:
             x,y = self.map.world_to_grid(pos)
-            img[x][y] = (0, 0, 255)
+            img[x][y] = (255, 0, 0)
         
-        (x,y) = self.map.world_to_grid(self.find_next_unexplored_target(6))
-        img[x][y] = (255, 0, 0)
+        img[target[0]][target[1]] = (0 , 0, 255)
 
         # Convert coordinates to integers and assign blue color to the path
         # for coord in path:
@@ -542,6 +541,6 @@ class Roamer:
         
         if self.debug_mode: 
             print("[Roamer] Path found : ", path)
-            self.display_map_with_path(self.map.get_map_matrix(), path, 5)
+            self.display_map_with_path(self.map.get_map_matrix(), path, target, 5)
 
         return path, target

@@ -14,7 +14,7 @@ ctypedef cnp.int64_t DTYPE_t
 
 SUB_SEGMENT_SIZE = 10 # the number of segment to divide each path segment into
 PATH_REFINEMENTS = 3 # number of times to refine the path
-save_images = False
+save_images = True
 debug_mode = True
 output = "./solve"
 
@@ -78,7 +78,7 @@ cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_
     for t in range(n+2):
         x = b[0] + (a[0]*t)/(n+1)
         y = b[1] + (a[1]*t)/(n+1)
-        if map[x][y] <= map[b[0]][b[1]]:
+        if map[x][y] > map[b[0]][b[1]]:
             return False
     return True
 
