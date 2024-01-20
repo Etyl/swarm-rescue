@@ -158,7 +158,7 @@ class RoamerController(StateMachine):
 
         # if no target found
         if self.target is None:
-            if self.debug_mode: print("No target found")
+            if self.debug_mode: print("[Roamer] No path to target found")
             self.none_target_count += 1
 
             if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
@@ -167,6 +167,7 @@ class RoamerController(StateMachine):
         
         # if target is too close
         if self.target == 0:
+            if self.debug_mode: print("[Roamer] Target too close")
             self.command = {"forward": 0.0,
                             "lateral": 0.0,
                             "rotation": 0.0,
@@ -390,11 +391,16 @@ class Roamer:
             for x, y in frontier:
                 img[x][y] = (0, 255, 0)
 
-        for pos in path:
-            x,y = self.map.world_to_grid(pos)
-            img[x][y] = (255, 0, 0)
+        if path is not None:
+            for pos in path:
+                x,y = self.map.world_to_grid(pos)
+                img[x][y] = (255, 0, 0)
         
         img[target[0]][target[1]] = (0 , 0, 255)
+        img[target[0]+1][target[1]] = (0 , 0, 255)
+        img[target[0]][target[1]+1] = (0 , 0, 255)
+        img[target[0]][target[1]-1] = (0 , 0, 255)
+        img[target[0]-1][target[1]] = (0 , 0, 255)
 
         # Convert coordinates to integers and assign blue color to the path
         # for coord in path:
@@ -533,14 +539,13 @@ class Roamer:
             return [], 0
 
         path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
-
-        
-        # TODO change implementation
-        if path is None:
-            return [], None
         
         if self.debug_mode: 
             print("[Roamer] Path found : ", path)
             self.display_map_with_path(self.map.get_map_matrix(), path, target, 5)
+
+        # TODO change implementation
+        if path is None:
+            return [], None
 
         return path, target

@@ -199,7 +199,7 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
     return start, end
 
 
-def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=15):
+def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30):
     """
     Args:
         map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
