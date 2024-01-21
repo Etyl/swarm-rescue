@@ -68,7 +68,7 @@ class Map():
         #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(self.drone_id))
         #display_grid(self.confidence_grid, pose, title="Confidence grid of drone {}".format(self.drone_id))
         # Resize confidence_grid_downsampled to the size of the confidence_grid
-        self.confidence_grid.set_grid(cv2.resize(self.confidence_grid_downsampled.get_grid(), (self.height, self.width), interpolation=cv2.INTER_LINEAR_EXACT).astype(np.int64))
+        self.confidence_grid.set_grid(cv2.resize(self.confidence_grid_downsampled.get_grid(), (self.height, self.width), interpolation=cv2.INTER_LINEAR_EXACT).astype(np.int16))
 
     def update_occupancy_grid(self, pose):
         """
@@ -94,7 +94,7 @@ class Map():
         lidar_dist_hit = lidar_dist[lidar_dist < max_range]
         lidar_angles_hit = lidar_angles[lidar_dist < max_range]
 
-        world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation)))).astype(int)
+        world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation)))).astype(np.int16)
 
         self.occupancy_grid.set_grid(np.where(boundary_mask, buffer, self.occupancy_grid.get_grid()))
         self.occupancy_grid.add_points(world_points_hit[:,0], world_points_hit[:,1], OBSTACLE_ZONE_VALUE)
@@ -198,7 +198,7 @@ class Map():
         """
         self.occupancy_grid.set_grid(np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(), self.occupancy_grid.get_grid(), other_map.occupancy_grid.get_grid()))
         #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
-        self.update_map()
+        #self.update_map()
     
     def shortest_path(self, start: Pose, end: Pose):
         """

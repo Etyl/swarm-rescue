@@ -5,8 +5,8 @@ from libc.stdlib cimport malloc, free
 
 cnp.import_array()  # Necessary to call when using NumPy with Cython
 
-DTYPE = np.int64
-ctypedef cnp.int64_t DTYPE_t
+DTYPE = np.int16
+ctypedef cnp.int16_t DTYPE_t
 cimport cython
 
 cdef class Grid:
