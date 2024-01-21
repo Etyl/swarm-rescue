@@ -1,6 +1,6 @@
 from statemachine import StateMachine, State
 import solutions
-
+import numpy as np
 
 
 class DroneController(StateMachine):
@@ -99,7 +99,11 @@ class DroneController(StateMachine):
     @approaching_wounded.enter
     def on_enter_approaching_wounded(self):
         self.command = self.drone.command_semantic
-        self.command["grasper"] = 1
+        dist = np.linalg.norm(self.drone.wounded_target - self.drone.get_position())
+        if dist < 80:
+            self.command["grasper"] = 1
+        else:
+            self.command["grasper"] = 0
 
     def before_going_to_center(self):
         self.drone.path = self.drone.get_path(self.drone.rescue_center_position, 1)

@@ -57,7 +57,7 @@ class FrontierDrone(DroneAbstract):
         ## Debug controls
 
         self.debug_path = False # True if the path must be displayed
-        self.debug_wounded = False
+        self.debug_wounded = True
         self.debug_positions = True
         self.debug_map = False
         self.debug_roamer = False
@@ -480,6 +480,9 @@ class FrontierDrone(DroneAbstract):
             global_angle = normalize_angle(compute_angle(np.array([1,0]), drone.position - drone_pos))
             angle = normalize_angle(global_angle - self.get_angle())
             repulsion -= repulse_func(dist) * np.array([math.cos(angle), math.sin(angle)])
+
+        if not self.roaming:
+            repulsion /= 10
 
         self.repulsion = repulsion
 
