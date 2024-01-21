@@ -43,6 +43,7 @@ class Map():
         self.occupancy_grid = Grid(area_world, resolution)
         self.binary_occupancy_grid = np.zeros((self.width, self.height)).astype(np.uint8)
         self.confidence_grid = Grid(area_world, resolution)
+        self.confidence_grid_downsampled = Grid(area_world, resolution * 4)
         
         self.map = np.full((self.width, self.height), Zone.INEXPLORED)
 
@@ -61,11 +62,13 @@ class Map():
         world_points = np.column_stack((pose.position[0] + np.multiply(lidar_dist, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist, np.sin(lidar_angles + pose.orientation))))
 
         for x, y in world_points:
-            self.confidence_grid.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
+            self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 
-        self.confidence_grid.set_grid(np.clip(self.confidence_grid.get_grid(), 0, CONFIDENCE_THRESHOLD))
+        self.confidence_grid_downsampled.set_grid(np.clip(self.confidence_grid_downsampled.get_grid(), 0, CONFIDENCE_THRESHOLD))
         #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(self.drone_id))
         #display_grid(self.confidence_grid, pose, title="Confidence grid of drone {}".format(self.drone_id))
+        # Resize confidence_grid_downsampled to the size of the confidence_grid
+        self.confidence_grid.set_grid(cv2.resize(self.confidence_grid_downsampled.get_grid(), (self.height, self.width), interpolation=cv2.INTER_LINEAR_EXACT).astype(np.int64))
 
     def update_occupancy_grid(self, pose):
         """
@@ -119,7 +122,8 @@ class Map():
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        #self.display_map()
+        # if self.drone_id == 0:
+        #     self.display_map()
 
     def __setitem__(self, pos, zone):
         x,y = pos
@@ -151,8 +155,7 @@ class Map():
         # Assign colors to each point based on the color map
         for x in range(self.width):
             for y in range(self.height):
-                img[x][y] = color_map[self[x, y]]
-
+                img[x][y] = np.array(color_map[self[x, y]]) * self.confidence_grid.get_grid()[x][y] / CONFIDENCE_THRESHOLD
 
         # # Display the image
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
@@ -194,7 +197,7 @@ class Map():
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
         self.occupancy_grid.set_grid(np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(), self.occupancy_grid.get_grid(), other_map.occupancy_grid.get_grid()))
-        self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
+        #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         self.update_map()
     
     def shortest_path(self, start: Pose, end: Pose):

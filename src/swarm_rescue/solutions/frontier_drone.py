@@ -55,11 +55,11 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = True # True if the path must be displayed
+        self.debug_path = False # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
-        self.debug_roamer = True
+        self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
         
@@ -477,7 +477,10 @@ class FrontierDrone(DroneAbstract):
                 pass
         
         self.controller.cycle()
+        t1 = time.process_time()
         self.update_mapping()
+        t2 = time.process_time()
+        print("Time to update map in (ms) : ", (t2-t1)*1000)
         self.keep_distance_from_walls()
             
         if self.roaming:
