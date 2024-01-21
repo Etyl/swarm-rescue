@@ -20,7 +20,7 @@ import cv2
 # import asyncio
 # import threading
 
-FRONTIER_SELECTION_SIZE = 4
+FRONTIER_SELECTION_SIZE = 10
 
 class RoamerController(StateMachine):
 
@@ -105,7 +105,7 @@ class RoamerController(StateMachine):
         if self.drone.nextWaypoint is None: return True
 
         # TODO fix this
-        if self.target is None: return False
+        if self.target is None: return True
 
         dist = np.linalg.norm(self.drone.get_position() - self.target)
         if len(self.drone.path) == 0: return dist < 20
@@ -158,7 +158,7 @@ class RoamerController(StateMachine):
 
         # if no target found
         if self.target is None:
-            if self.debug_mode: print("No target found")
+            if self.debug_mode: print("[Roamer] No path to target found")
             self.none_target_count += 1
 
             if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
@@ -167,6 +167,7 @@ class RoamerController(StateMachine):
         
         # if target is too close
         if self.target == 0:
+            if self.debug_mode: print("[Roamer] Target too close")
             self.command = {"forward": 0.0,
                             "lateral": 0.0,
                             "rotation": 0.0,
@@ -226,7 +227,6 @@ class Roamer:
     def __init__(self, drone: DroneAbstract, map: Map, debug_mode: bool = False):
         self.drone = drone
         self.map = map
-        self.map_matrix = map.map # the map with the Zones values
         self.debug_mode = debug_mode
     
     def print_num_map(self, map, output_file='output.txt'):
@@ -247,7 +247,8 @@ class Roamer:
         Find the closest unexplored target from the drone's curretn position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
-        map_matrix_copy = self.map_matrix.copy() # copy map (to not modify the original)
+        map_matrix_copy = self.map.get_map_matrix().copy() # copy map (to not modify the original)
+  
         map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int (for the Frontier Explorer algorithms)
         drone_position = self.drone.get_position()
 
@@ -309,9 +310,14 @@ class Roamer:
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
         
         # normalize
-        frontier_count = frontier_count / np.max(frontier_count)
-        selected_frontiers_distance = selected_frontiers_distance / np.max(selected_frontiers_distance)
-        frontiers_size = frontiers_size / np.max(frontiers_size)
+        frontier_count_max = np.max(frontier_count)
+        frontier_cout = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
+        
+        selected_frontiers_distance_max = np.max(selected_frontiers_distance)
+        selected_frontiers_distance = 0 if selected_frontiers_distance_max == 0 else selected_frontiers_distance / selected_frontiers_distance_max
+
+        frontier_count_max = np.max(frontiers_size)
+        frontiers_size = 0 if frontier_count_max == 0 else frontiers_size / frontier_count_max
 
         # score
         score = 2*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size
@@ -338,7 +344,7 @@ class Roamer:
         returns the map as an image
         debuggin purposes
         """
-        x_max_grid, y_max_grid = self.map_matrix.shape
+        x_max_grid, y_max_grid = self.map.get_map_matrix().shape
         
         color_map = {
             Zone.OBSTACLE: (50, 100, 200),
@@ -357,11 +363,11 @@ class Roamer:
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
         return np.transpose(img, (1, 0, 2))
 
-    def display_map_with_path(self, grid_map, path, id):
+    def display_map_with_path(self, grid_map, path, target, id):
         """
         Display the map with points 1 in white, points 1000 in brown, and the path in blue.
         """
-        x_max_grid, y_max_grid = self.map_matrix.shape
+        x_max_grid, y_max_grid = self.map.get_map_matrix().shape
 
         # Define color map
         color_map = {
@@ -384,6 +390,17 @@ class Roamer:
         for frontier in self.frontiers:
             for x, y in frontier:
                 img[x][y] = (0, 255, 0)
+
+        if path is not None:
+            for pos in path:
+                x,y = self.map.world_to_grid(pos)
+                img[x][y] = (255, 0, 0)
+        
+        img[target[0]][target[1]] = (0 , 0, 255)
+        img[target[0]+1][target[1]] = (0 , 0, 255)
+        img[target[0]][target[1]+1] = (0 , 0, 255)
+        img[target[0]][target[1]-1] = (0 , 0, 255)
+        img[target[0]-1][target[1]] = (0 , 0, 255)
 
         # Convert coordinates to integers and assign blue color to the path
         # for coord in path:
@@ -523,12 +540,12 @@ class Roamer:
 
         path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
         
+        if self.debug_mode: 
+            print("[Roamer] Path found : ", path)
+            self.display_map_with_path(self.map.get_map_matrix(), path, target, 5)
+
         # TODO change implementation
         if path is None:
             return [], None
-        
-        if self.debug_mode: 
-            print("[Roamer] Path found : ", path)
-            self.display_map_with_path(self.map_matrix, path, 5)
 
         return path, target

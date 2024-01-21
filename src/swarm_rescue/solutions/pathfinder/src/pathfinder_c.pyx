@@ -12,29 +12,57 @@ cnp.import_array()
 DTYPE = np.int64
 ctypedef cnp.int64_t DTYPE_t
 
-robot_radius = 15
-sub_segment_size = 10 # the number of segment to divide each path segment into
-path_refinements = 3 # number of times to refine the path
+SUB_SEGMENT_SIZE = 10 # the number of segment to divide each path segment into
+PATH_REFINEMENTS = 3 # number of times to refine the path
 save_images = False
 debug_mode = False
 output = "./solve"
 
 
-cdef border_from_map_np(map, robot_radius):
-    map = np.ones(map.shape).astype(np.float32)-map
-    for _ in range(robot_radius):
-        map = (np.roll(map,(1, 0), axis=(1, 0))+
-               np.roll(map,(0, 1), axis=(1, 0))+
-               np.roll(map,(-1, 0), axis=(1, 0))+
-               np.roll(map,(0, -1), axis=(1, 0))+
-               np.roll(map,(1, 1), axis=(1, 0))+
-               np.roll(map,(-1, -1), axis=(1, 0))+
-               np.roll(map,(1, -1), axis=(1, 0))+
-               np.roll(map,(-1, 1), axis=(1, 0)))
+cdef border_from_map_np(map : np.ndarray, robot_radius : int):
+    """
+    Args:
+        map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
+        robot_radius: radius of the robot in pixels
+    Returns:
+        new_map: 2D numpy array of R+ -> 0=free, inf=occupied
+    """
     if save_images:
-        plt.imshow(map>0.5)
+        plt.figure()
+        plt.imshow(map/2)
+        plt.colorbar()
+        plt.savefig("./map_init.png")
+
+    new_map = np.zeros(map.shape).astype(np.float32)
+    new_map[map > 1.5] = 1
+    for _ in range(robot_radius):
+        roll_map = (np.roll(new_map,(1, 0), axis=(1, 0))+
+                    np.roll(new_map,(0, 1), axis=(1, 0))+
+                    np.roll(new_map,(-1, 0), axis=(1, 0))+
+                    np.roll(new_map,(0, -1), axis=(1, 0))+
+                    np.roll(new_map,(1, 1), axis=(1, 0))+
+                    np.roll(new_map,(-1, -1), axis=(1, 0))+
+                    np.roll(new_map,(1, -1), axis=(1, 0))+
+                    np.roll(new_map,(-1, 1), axis=(1, 0)))
+        roll_map[roll_map>0.5] = 1
+        new_map += roll_map
+
+    new_map[map > 1.5] = np.inf
+    new_map += map*robot_radius
+    
+    bump_map = len(map)*len(map[0])*np.ones(map.shape).astype(np.float32)
+    bump_map[new_map < 0.5] = 0
+    new_map += bump_map
+
+    new_map += np.ones(map.shape)
+
+    if save_images:
+        plt.figure()
+        plt.imshow(new_map)
+        plt.colorbar()
         plt.savefig("./map_border.png")
-    return map>0.5
+
+    return new_map
 
 cdef interpolate_path(cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.int64_t, ndim=1] point2, float t):
     return point1 + (point2-point1)*t
@@ -42,7 +70,7 @@ cdef interpolate_path(cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.i
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False) # turn off negative indexing for entire function
 @cython.cdivision(True)
-cdef is_path_free(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point1,cnp.ndarray[cnp.int64_t, ndim=1] point2):
+cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.int64_t, ndim=1] point2):
     cdef int n = int(np.sum(np.abs(point2-point1)))
     cdef int[2] b = point1
     cdef int[2] a = point2-point1
@@ -50,20 +78,19 @@ cdef is_path_free(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t,
     for t in range(n+2):
         x = b[0] + (a[0]*t)/(n+1)
         y = b[1] + (a[1]*t)/(n+1)
-        if map[x][y] == 1:
+        if map[x][y] > map[b[0]][b[1]]:
             return False
     return True
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False) # turn off negative indexing for entire function
-cdef smooth_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
+cdef smooth_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
 
     if len(path)<2:
         return path
-    
     cdef int i_ref = 0
     cdef int j_ref = 2
-    cdef cnp.ndarray[cnp.int64_t, ndim=2] new_path = np.zeros((len(path),2)).astype(DTYPE)
+    cdef cnp.ndarray[cnp.int64_t, ndim=2] new_path = np.zeros((len(path),2)).astype(np.int64)
     new_path[0] = path[0]
     cdef int path_index = 1
     cdef int maxpath_index = len(path)
@@ -89,10 +116,10 @@ cdef smooth_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
 @cython.wraparound(False) # turn off negative indexing for entire function
 cdef segmentize(cnp.ndarray[cnp.int64_t, ndim=2] path, int i):
-    cdef int num_sub_segments = np.sqrt(np.sum((path[i+1]-path[i])**2))/sub_segment_size
+    cdef int num_sub_segments = np.sqrt(np.sum((path[i+1]-path[i])**2))/SUB_SEGMENT_SIZE
     return [np.rint(interpolate_path(path[i], path[i+1], t/(num_sub_segments+1))) for t in range(num_sub_segments+2)]
 
-cdef segmentize_path(cnp.ndarray[cnp.int64_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
+cdef segmentize_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
     if len(path)<2:
         return path
     new_path = []
@@ -138,7 +165,7 @@ def neighbors(map,point):
         neighbors.append((point[0],point[1]+1))
     return neighbors
 
-def findPointsAvailable(map_border, start, end):
+def findPointsAvailable(map_border : np.ndarray, start, end):
     # find closest available point to start and end using BFS
     start = np.array(start)
     end = np.array(end)
@@ -148,7 +175,7 @@ def findPointsAvailable(map_border, start, end):
         current = queue.pop(0)
         if explored[current[0]][current[1]]:
             continue
-        if map_border[current[0]][current[1]] == False:
+        if map_border[current[0]][current[1]] < 2*len(map_border)*len(map_border[0]):
             start = current
             break
         explored[current[0]][current[1]] = True
@@ -161,80 +188,83 @@ def findPointsAvailable(map_border, start, end):
         current = queue.pop(0)
         if explored[current[0]][current[1]]:
             continue
-        if map_border[current[0]][current[1]] == False:
+        if map_border[current[0]][current[1]] < 2*len(map_border)*len(map_border[0]):
             end = current
             break
         explored[current[0]][current[1]] = True
         for neighbor in neighbors(map_border, current):
             if not explored[neighbor[0]][neighbor[1]]:
                 queue.append(neighbor)
+    if debug_mode:
+        print(f"Start : {start}, End : {end}")
+        print(f"Start cost : {map_border[start[0]][start[1]]}, End cost : {map_border[end[0]][end[1]]}")
     return start, end
 
 
-def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=robot_radius):
+def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30):
     """
     Args:
-        map: 2D numpy array with 0=free, 1=obstacle
+        map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
         start: tuple of start coordinates
         end: tuple of end coordinates
     """
     if debug_mode:
 
-        t0 = time.time()
-        map_border = border_from_map_np(map, robot_radius).astype(DTYPE)
+        t0 = time.perf_counter()
+        map_border = border_from_map_np(map, robot_radius)
         
         start,end = findPointsAvailable(map_border, start, end)
 
-        grid = np.ones(map.shape).astype(np.float32)
-        grid[map_border == 1] = np.inf
+        # assert map_border.min() > 0.5, "cost of moving must be at least 1"
 
-        assert grid.min() == 1, "cost of moving must be at least 1"
-
-        tp0 = time.time()
-        path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
-        tp = time.time() - tp0
+        tp0 = time.perf_counter()
+        path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
+        tp = time.perf_counter() - tp0
         if path is None:
             print("No path found")
             return None
 
-        ts0 = time.time()
+        ts0 = time.perf_counter()
         path_smooth = smooth_path(map_border, path.astype(DTYPE))
-        ts = time.time() - ts0
         
         path_refined = segmentize_path(map_border, np.array(path_smooth).astype(DTYPE))
         path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
         
-        for _ in range(path_refinements-1):
+        for _ in range(PATH_REFINEMENTS-1):
             path_refined = segmentize_path(map_border, np.array(path_refined).astype(DTYPE))
             path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
-
-        print(f"Ratio : {ts/tp:.6f}, Time : {time.time()-t0:.6f}")    
+        
+        ts = time.perf_counter() - ts0
+        
+        total_time = time.perf_counter() - t0
+        print(f"=========PATHFINDING===========")
+        print(f"Time : {total_time:.6f}")
+        print(f"A* : {tp/total_time*100:.1f}% | Refinement : {ts/total_time*100:.1f}%")   
     else:    
-        map_border = border_from_map_np(map, robot_radius).astype(DTYPE)
+        map_border = border_from_map_np(map, robot_radius)
         
         start,end = findPointsAvailable(map_border, start, end)
 
-        grid = np.ones(map.shape).astype(np.float32)
-        grid[map_border == True] = np.inf
+        # assert map_border.min() > 0.5, "cost of moving must be at least 1"
 
-        assert grid.min() == 1, "cost of moving must be at least 1"
-
-        path = pyastar2d.astar_path(grid, start, end, allow_diagonal=False)
+        path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
         if path is None:
-            print("No path found")
             return None
 
         path_smooth = smooth_path(map_border, path.astype(DTYPE))
-
-        path_refined = segmentize_path(map_border,np.array(path_smooth).astype(DTYPE))
+        
+        path_refined = segmentize_path(map_border, np.array(path_smooth).astype(DTYPE))
         path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
         
-        for _ in range(path_refinements-1):
+        for _ in range(PATH_REFINEMENTS-1):
             path_refined = segmentize_path(map_border, np.array(path_refined).astype(DTYPE))
             path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
        
     if save_images:
-        plt.imshow(np.stack((map_border, map_border, map_border), axis=2).astype(np.float32))
+        img_border = map_border.astype(np.float32).copy()
+        img_border[img_border==np.inf] = robot_radius
+        img_border /= robot_radius
+        plt.imshow(np.stack((img_border, img_border, img_border), axis=2).astype(np.float32))
         plt.savefig("./border.png")
         map = np.stack((map, map, map), axis=2)
 

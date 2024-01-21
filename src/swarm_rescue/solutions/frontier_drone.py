@@ -10,6 +10,8 @@ import arcade
 from collections import deque 
 from statemachine import exceptions
 
+import time
+
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
 from spg_overlay.utils.utils import circular_mean, normalize_angle
@@ -70,7 +72,8 @@ class FrontierDrone(DroneAbstract):
                         "rotation": 0.0,
                         "grasper": 0}
 
-        self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
+        #self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
+        self.map = Map(area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, identifier=self.identifier, debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
@@ -137,6 +140,7 @@ class FrontierDrone(DroneAbstract):
         data.angle = self.get_angle()
         data.wounded_found = self.wounded_found
         data.wounded_target = self.wounded_target
+        data.map = self.map
         return data
 
     def get_position(self):
@@ -165,7 +169,6 @@ class FrontierDrone(DroneAbstract):
         for k in range(len(lidar_dists)):
             if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
                 measures.append([lidar_dists[k], lidar_angles[k]])
-
         def Q(x):
             [posX, posY, angle] = x
             value = 0
@@ -174,9 +177,9 @@ class FrontierDrone(DroneAbstract):
                 point[0] = starting_pos[0] + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle)
                 point[1] = starting_pos[1] + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle)
                 point = self.map.world_to_grid(point)
-                if point[0] < 0 or point[0] >= self.map.x_max_grid or point[1] < 0 or point[1] >= self.map.y_max_grid:
+                if point[0] < 0 or point[0] >= self.map.width or point[1] < 0 or point[1] >= self.map.height:
                     continue
-                value -= self.map.confidence_map[point[0],point[1]]
+                value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
             return value
         
         mindx, mindy, mindangle = 0,0,0
@@ -275,6 +278,7 @@ class FrontierDrone(DroneAbstract):
                 self.drone_list[k] = drone_data
                 return
         self.drone_list.append(drone_data)
+
 
     def process_communicator(self):
         """
@@ -473,7 +477,10 @@ class FrontierDrone(DroneAbstract):
                 pass
         
         self.controller.cycle()
+        t1 = time.process_time()
         self.update_mapping()
+        t2 = time.process_time()
+        print("Time to update map in (ms) : ", (t2-t1)*1000)
         self.keep_distance_from_walls()
             
         if self.roaming:
@@ -511,11 +518,23 @@ class FrontierDrone(DroneAbstract):
         """
         updates the map
         """
+       # t1 = time.process_time()
         detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
-        max_vel_angle = 0.08
-        #if abs(self.measured_angular_velocity()) < max_vel_angle:
-        self.map.update(self.estimated_pose, detection_semantic)
+        # max_vel_angle = 0.08
+        # if abs(self.measured_angular_velocity()) < max_vel_angle:
+        self.map.update(self.estimated_pose)
+       # t2 = time.process_time()
+
+        #print("Time to update map in (ms) : ", (t2-t1)*1000)
+        # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
+        # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
+        # self.newmap.update_map()
+        # self.newmap.display_map()
+            
+        for other_drone in self.drone_list:
+            if other_drone.id == self.identifier: continue
+            self.map.merge(other_drone.map)
 
 
     def draw_top_layer(self):
