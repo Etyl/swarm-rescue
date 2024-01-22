@@ -1837,12 +1837,12 @@ typedef npy_longdouble __pyx_t_5numpy_longdouble_t;
 
 /* "grid_c.pyx":9
  * 
- * DTYPE = np.int16
- * ctypedef cnp.int16_t DTYPE_t             # <<<<<<<<<<<<<<
+ * DTYPE = np.double
+ * ctypedef cnp.double_t DTYPE_t             # <<<<<<<<<<<<<<
  * cimport cython
  * 
  */
-typedef __pyx_t_5numpy_int16_t __pyx_t_6grid_c_DTYPE_t;
+typedef __pyx_t_5numpy_double_t __pyx_t_6grid_c_DTYPE_t;
 /* #### Code section: complex_type_declarations ### */
 /* Declarations.proto */
 #if CYTHON_CCOMPLEX && (1) && (!0 || __cplusplus)
@@ -2019,6 +2019,8 @@ struct __pyx_memoryviewslice_obj {
 struct __pyx_vtabstruct_6grid_c_Grid {
   PyObject *(*conv_world_to_grid)(struct __pyx_obj_6grid_c_Grid *, float, float);
   PyObject *(*conv_grid_to_world)(struct __pyx_obj_6grid_c_Grid *, int, int);
+  PyObject *(*add_value_along_line)(struct __pyx_obj_6grid_c_Grid *, float, float, float, float, int);
+  PyObject *(*add_value_along_line_confidence)(struct __pyx_obj_6grid_c_Grid *, float, float, float, float, int);
 };
 static struct __pyx_vtabstruct_6grid_c_Grid *__pyx_vtabptr_6grid_c_Grid;
 
@@ -3182,6 +3184,8 @@ static CYTHON_INLINE npy_intp __pyx_f_5numpy_7ndarray_4size_size(PyArrayObject *
 static CYTHON_INLINE char *__pyx_f_5numpy_7ndarray_4data_data(PyArrayObject *__pyx_v_self); /* proto*/
 static PyObject *__pyx_f_6grid_c_4Grid_conv_world_to_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_world, float __pyx_v_y_world); /* proto*/
 static PyObject *__pyx_f_6grid_c_4Grid_conv_grid_to_world(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, int __pyx_v_x_grid, int __pyx_v_y_grid); /* proto*/
+static PyObject *__pyx_f_6grid_c_4Grid_add_value_along_line(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, float __pyx_v_x_1, float __pyx_v_y_1, int __pyx_v_val); /* proto*/
+static PyObject *__pyx_f_6grid_c_4Grid_add_value_along_line_confidence(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, float __pyx_v_x_1, float __pyx_v_y_1, int __pyx_v_val); /* proto*/
 
 /* Module declarations from "libc.string" */
 
@@ -3256,7 +3260,7 @@ static void __pyx_memoryview_slice_assign_scalar(__Pyx_memviewslice *, int, size
 static void __pyx_memoryview__slice_assign_scalar(char *, Py_ssize_t *, Py_ssize_t *, int, size_t, void *); /*proto*/
 static PyObject *__pyx_unpickle_Enum__set_state(struct __pyx_MemviewEnum_obj *, PyObject *); /*proto*/
 /* #### Code section: typeinfo ### */
-static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_6grid_c_DTYPE_t = { "DTYPE_t", NULL, sizeof(__pyx_t_6grid_c_DTYPE_t), { 0 }, 0, __PYX_IS_UNSIGNED(__pyx_t_6grid_c_DTYPE_t) ? 'U' : 'I', __PYX_IS_UNSIGNED(__pyx_t_6grid_c_DTYPE_t), 0 };
+static __Pyx_TypeInfo __Pyx_TypeInfo_nn___pyx_t_6grid_c_DTYPE_t = { "DTYPE_t", NULL, sizeof(__pyx_t_6grid_c_DTYPE_t), { 0 }, 0, 'R', 0, 0 };
 /* #### Code section: before_global_var ### */
 #define __Pyx_MODULE_NAME "grid_c"
 extern int __pyx_module_is_main_grid_c;
@@ -3286,14 +3290,11 @@ static const char __pyx_k__2[] = ".";
 static const char __pyx_k__3[] = "*";
 static const char __pyx_k__6[] = "'";
 static const char __pyx_k__7[] = ")";
-static const char __pyx_k_dx[] = "dx";
-static const char __pyx_k_dy[] = "dy";
 static const char __pyx_k_gc[] = "gc";
 static const char __pyx_k_id[] = "id";
 static const char __pyx_k_np[] = "np";
-static const char __pyx_k__37[] = "?";
+static const char __pyx_k__36[] = "?";
 static const char __pyx_k_abc[] = "abc";
-static const char __pyx_k_abs[] = "abs";
 static const char __pyx_k_and[] = " and ";
 static const char __pyx_k_got[] = " (got ";
 static const char __pyx_k_new[] = "__new__";
@@ -3301,9 +3302,7 @@ static const char __pyx_k_obj[] = "obj";
 static const char __pyx_k_sys[] = "sys";
 static const char __pyx_k_val[] = "val";
 static const char __pyx_k_x_0[] = "x_0";
-static const char __pyx_k_x_1[] = "x_1";
 static const char __pyx_k_y_0[] = "y_0";
-static const char __pyx_k_y_1[] = "y_1";
 static const char __pyx_k_Grid[] = "Grid";
 static const char __pyx_k_base[] = "base";
 static const char __pyx_k_dict[] = "__dict__";
@@ -3329,14 +3328,12 @@ static const char __pyx_k_dtype[] = "dtype";
 static const char __pyx_k_error[] = "error";
 static const char __pyx_k_flags[] = "flags";
 static const char __pyx_k_index[] = "index";
-static const char __pyx_k_int16[] = "int16";
 static const char __pyx_k_numpy[] = "numpy";
 static const char __pyx_k_range[] = "range";
 static const char __pyx_k_shape[] = "shape";
 static const char __pyx_k_start[] = "start";
-static const char __pyx_k_x_end[] = "x_end";
-static const char __pyx_k_y_end[] = "y_end";
 static const char __pyx_k_zeros[] = "zeros";
+static const char __pyx_k_double[] = "double";
 static const char __pyx_k_enable[] = "enable";
 static const char __pyx_k_encode[] = "encode";
 static const char __pyx_k_format[] = "format";
@@ -3348,17 +3345,13 @@ static const char __pyx_k_reduce[] = "__reduce__";
 static const char __pyx_k_struct[] = "struct";
 static const char __pyx_k_unpack[] = "unpack";
 static const char __pyx_k_update[] = "update";
-static const char __pyx_k_y_step[] = "y_step";
 static const char __pyx_k_disable[] = "disable";
 static const char __pyx_k_fortran[] = "fortran";
 static const char __pyx_k_memview[] = "memview";
-static const char __pyx_k_x_start[] = "x_start";
-static const char __pyx_k_y_start[] = "y_start";
 static const char __pyx_k_Ellipsis[] = "Ellipsis";
 static const char __pyx_k_Sequence[] = "Sequence";
 static const char __pyx_k_get_grid[] = "get_grid";
 static const char __pyx_k_getstate[] = "__getstate__";
-static const char __pyx_k_is_steep[] = "is_steep";
 static const char __pyx_k_itemsize[] = "itemsize";
 static const char __pyx_k_points_x[] = "points_x";
 static const char __pyx_k_points_y[] = "points_y";
@@ -3386,7 +3379,6 @@ static const char __pyx_k_y_max_grid[] = "y_max_grid";
 static const char __pyx_k_ImportError[] = "ImportError";
 static const char __pyx_k_MemoryError[] = "MemoryError";
 static const char __pyx_k_PickleError[] = "PickleError";
-static const char __pyx_k_added_value[] = "added_value";
 static const char __pyx_k_collections[] = "collections";
 static const char __pyx_k_half_height[] = "half_height";
 static const char __pyx_k_initializing[] = "_initializing";
@@ -3405,7 +3397,6 @@ static const char __pyx_k_Grid_add_points[] = "Grid.add_points";
 static const char __pyx_k_View_MemoryView[] = "View.MemoryView";
 static const char __pyx_k_allocate_buffer[] = "allocate_buffer";
 static const char __pyx_k_collections_abc[] = "collections.abc";
-static const char __pyx_k_dist_from_start[] = "dist_from_start";
 static const char __pyx_k_dtype_is_object[] = "dtype_is_object";
 static const char __pyx_k_pyx_PickleError[] = "__pyx_PickleError";
 static const char __pyx_k_setstate_cython[] = "__setstate_cython__";
@@ -3415,9 +3406,9 @@ static const char __pyx_k_asyncio_coroutines[] = "asyncio.coroutines";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_strided_and_direct[] = "<strided and direct>";
 static const char __pyx_k_Grid___reduce_cython[] = "Grid.__reduce_cython__";
-static const char __pyx_k_add_value_along_line[] = "add_value_along_line";
 static const char __pyx_k_strided_and_indirect[] = "<strided and indirect>";
 static const char __pyx_k_Invalid_shape_in_axis[] = "Invalid shape in axis ";
+static const char __pyx_k_add_value_along_lines[] = "add_value_along_lines";
 static const char __pyx_k_contiguous_and_direct[] = "<contiguous and direct>";
 static const char __pyx_k_Cannot_index_with_type[] = "Cannot index with type '";
 static const char __pyx_k_Grid___setstate_cython[] = "Grid.__setstate_cython__";
@@ -3425,13 +3416,12 @@ static const char __pyx_k_MemoryView_of_r_object[] = "<MemoryView of %r object>"
 static const char __pyx_k_MemoryView_of_r_at_0x_x[] = "<MemoryView of %r at 0x%x>";
 static const char __pyx_k_contiguous_and_indirect[] = "<contiguous and indirect>";
 static const char __pyx_k_Dimension_d_is_not_direct[] = "Dimension %d is not direct";
-static const char __pyx_k_Grid_add_value_along_line[] = "Grid.add_value_along_line";
+static const char __pyx_k_Grid_add_value_along_lines[] = "Grid.add_value_along_lines";
 static const char __pyx_k_Index_out_of_bounds_axis_d[] = "Index out of bounds (axis %d)";
 static const char __pyx_k_Step_may_not_be_zero_axis_d[] = "Step may not be zero (axis %d)";
 static const char __pyx_k_itemsize_0_for_cython_array[] = "itemsize <= 0 for cython.array";
 static const char __pyx_k_unable_to_allocate_array_data[] = "unable to allocate array data.";
 static const char __pyx_k_strided_and_direct_or_indirect[] = "<strided and direct or indirect>";
-static const char __pyx_k_add_value_along_line_confidence[] = "add_value_along_line_confidence";
 static const char __pyx_k_numpy_core_multiarray_failed_to[] = "numpy.core.multiarray failed to import";
 static const char __pyx_k_All_dimensions_preceding_dimensi[] = "All dimensions preceding dimension %d must be indexed and not sliced";
 static const char __pyx_k_Buffer_view_does_not_expose_stri[] = "Buffer view does not expose strides";
@@ -3440,12 +3430,13 @@ static const char __pyx_k_Cannot_assign_to_read_only_memor[] = "Cannot assign to
 static const char __pyx_k_Cannot_create_writable_memory_vi[] = "Cannot create writable memory view from read-only memoryview";
 static const char __pyx_k_Cannot_transpose_memoryview_with[] = "Cannot transpose memoryview with indirect dimensions";
 static const char __pyx_k_Empty_shape_tuple_for_cython_arr[] = "Empty shape tuple for cython.array";
-static const char __pyx_k_Grid_add_value_along_line_confid[] = "Grid.add_value_along_line_confidence";
+static const char __pyx_k_Grid_add_value_along_lines_confi[] = "Grid.add_value_along_lines_confidence";
 static const char __pyx_k_Incompatible_checksums_0x_x_vs_0[] = "Incompatible checksums (0x%x vs (0x82a3537, 0x6ae9995, 0xb068931) = (name))";
 static const char __pyx_k_Indirect_dimensions_not_supporte[] = "Indirect dimensions not supported";
 static const char __pyx_k_Invalid_mode_expected_c_or_fortr[] = "Invalid mode, expected 'c' or 'fortran', got ";
 static const char __pyx_k_Out_of_bounds_on_buffer_access_a[] = "Out of bounds on buffer access (axis ";
 static const char __pyx_k_Unable_to_convert_item_to_object[] = "Unable to convert item to object";
+static const char __pyx_k_add_value_along_lines_confidence[] = "add_value_along_lines_confidence";
 static const char __pyx_k_got_differing_extents_in_dimensi[] = "got differing extents in dimension ";
 static const char __pyx_k_no_default___reduce___due_to_non[] = "no default __reduce__ due to non-trivial __cinit__";
 static const char __pyx_k_numpy_core_umath_failed_to_impor[] = "numpy.core.umath failed to import";
@@ -3493,12 +3484,12 @@ static PyObject *__pyx_pf___pyx_memoryviewslice___reduce_cython__(CYTHON_UNUSED 
 static PyObject *__pyx_pf___pyx_memoryviewslice_2__setstate_cython__(CYTHON_UNUSED struct __pyx_memoryviewslice_obj *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v___pyx_state); /* proto */
 static PyObject *__pyx_pf_15View_dot_MemoryView___pyx_unpickle_Enum(CYTHON_UNUSED PyObject *__pyx_self, PyObject *__pyx_v___pyx_type, long __pyx_v___pyx_checksum, PyObject *__pyx_v___pyx_state); /* proto */
 static int __pyx_pf_6grid_c_4Grid___cinit__(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyObject *__pyx_v_size_area_world, float __pyx_v_resolution); /* proto */
-static PyObject *__pyx_pf_6grid_c_4Grid_2add_value_along_line(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, float __pyx_v_x_1, float __pyx_v_y_1, int __pyx_v_val); /* proto */
-static PyObject *__pyx_pf_6grid_c_4Grid_4add_points(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyArrayObject *__pyx_v_points_x, PyArrayObject *__pyx_v_points_y, int __pyx_v_val); /* proto */
-static PyObject *__pyx_pf_6grid_c_4Grid_6add_point(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x, float __pyx_v_y, int __pyx_v_val); /* proto */
-static PyObject *__pyx_pf_6grid_c_4Grid_8get_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_6grid_c_4Grid_10set_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyArrayObject *__pyx_v_grid); /* proto */
-static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, float __pyx_v_x_1, float __pyx_v_y_1, int __pyx_v_val); /* proto */
+static PyObject *__pyx_pf_6grid_c_4Grid_2add_points(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyArrayObject *__pyx_v_points_x, PyArrayObject *__pyx_v_points_y, int __pyx_v_val); /* proto */
+static PyObject *__pyx_pf_6grid_c_4Grid_4add_point(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x, float __pyx_v_y, int __pyx_v_val); /* proto */
+static PyObject *__pyx_pf_6grid_c_4Grid_6get_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_6grid_c_4Grid_8set_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyArrayObject *__pyx_v_grid); /* proto */
+static PyObject *__pyx_pf_6grid_c_4Grid_10add_value_along_lines_confidence(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, PyArrayObject *__pyx_v_points_x, PyArrayObject *__pyx_v_points_y, int __pyx_v_val); /* proto */
+static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_lines(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, PyArrayObject *__pyx_v_points_x, PyArrayObject *__pyx_v_points_y, int __pyx_v_val); /* proto */
 static PyObject *__pyx_pf_6grid_c_4Grid_10x_max_grid___get__(struct __pyx_obj_6grid_c_Grid *__pyx_v_self); /* proto */
 static int __pyx_pf_6grid_c_4Grid_10x_max_grid_2__set__(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyObject *__pyx_v_value); /* proto */
 static PyObject *__pyx_pf_6grid_c_4Grid_10y_max_grid___get__(struct __pyx_obj_6grid_c_Grid *__pyx_v_self); /* proto */
@@ -3620,8 +3611,8 @@ typedef struct {
   PyObject *__pyx_n_s_Grid___setstate_cython;
   PyObject *__pyx_n_s_Grid_add_point;
   PyObject *__pyx_n_s_Grid_add_points;
-  PyObject *__pyx_n_s_Grid_add_value_along_line;
-  PyObject *__pyx_n_s_Grid_add_value_along_line_confid;
+  PyObject *__pyx_n_s_Grid_add_value_along_lines;
+  PyObject *__pyx_n_s_Grid_add_value_along_lines_confi;
   PyObject *__pyx_n_s_Grid_get_grid;
   PyObject *__pyx_n_s_Grid_set_grid;
   PyObject *__pyx_n_s_ImportError;
@@ -3645,16 +3636,14 @@ typedef struct {
   PyObject *__pyx_n_s_View_MemoryView;
   PyObject *__pyx_kp_u__2;
   PyObject *__pyx_n_s__3;
-  PyObject *__pyx_n_s__37;
+  PyObject *__pyx_n_s__36;
   PyObject *__pyx_kp_u__6;
   PyObject *__pyx_kp_u__7;
   PyObject *__pyx_n_s_abc;
-  PyObject *__pyx_n_s_abs;
   PyObject *__pyx_n_s_add_point;
   PyObject *__pyx_n_s_add_points;
-  PyObject *__pyx_n_s_add_value_along_line;
-  PyObject *__pyx_n_s_add_value_along_line_confidence;
-  PyObject *__pyx_n_s_added_value;
+  PyObject *__pyx_n_s_add_value_along_lines;
+  PyObject *__pyx_n_s_add_value_along_lines_confidence;
   PyObject *__pyx_n_s_allocate_buffer;
   PyObject *__pyx_kp_u_and;
   PyObject *__pyx_n_s_asyncio_coroutines;
@@ -3671,11 +3660,9 @@ typedef struct {
   PyObject *__pyx_n_s_count;
   PyObject *__pyx_n_s_dict;
   PyObject *__pyx_kp_u_disable;
-  PyObject *__pyx_n_s_dist_from_start;
+  PyObject *__pyx_n_s_double;
   PyObject *__pyx_n_s_dtype;
   PyObject *__pyx_n_s_dtype_is_object;
-  PyObject *__pyx_n_s_dx;
-  PyObject *__pyx_n_s_dy;
   PyObject *__pyx_kp_u_enable;
   PyObject *__pyx_n_s_encode;
   PyObject *__pyx_n_s_enumerate;
@@ -3699,9 +3686,7 @@ typedef struct {
   PyObject *__pyx_n_s_import;
   PyObject *__pyx_n_s_index;
   PyObject *__pyx_n_s_initializing;
-  PyObject *__pyx_n_s_int16;
   PyObject *__pyx_n_s_is_coroutine;
-  PyObject *__pyx_n_s_is_steep;
   PyObject *__pyx_kp_u_isenabled;
   PyObject *__pyx_n_s_itemsize;
   PyObject *__pyx_kp_s_itemsize_0_for_cython_array;
@@ -3763,19 +3748,12 @@ typedef struct {
   PyObject *__pyx_n_s_version_info;
   PyObject *__pyx_n_s_x;
   PyObject *__pyx_n_s_x_0;
-  PyObject *__pyx_n_s_x_1;
-  PyObject *__pyx_n_s_x_end;
   PyObject *__pyx_n_s_x_max_grid;
   PyObject *__pyx_n_s_x_px;
-  PyObject *__pyx_n_s_x_start;
   PyObject *__pyx_n_s_y;
   PyObject *__pyx_n_s_y_0;
-  PyObject *__pyx_n_s_y_1;
-  PyObject *__pyx_n_s_y_end;
   PyObject *__pyx_n_s_y_max_grid;
   PyObject *__pyx_n_s_y_px;
-  PyObject *__pyx_n_s_y_start;
-  PyObject *__pyx_n_s_y_step;
   PyObject *__pyx_n_s_zeros;
   PyObject *__pyx_float_0_5;
   PyObject *__pyx_float_2_0;
@@ -3807,17 +3785,16 @@ typedef struct {
   PyObject *__pyx_tuple__26;
   PyObject *__pyx_tuple__28;
   PyObject *__pyx_tuple__30;
-  PyObject *__pyx_tuple__32;
-  PyObject *__pyx_tuple__35;
+  PyObject *__pyx_tuple__34;
   PyObject *__pyx_codeobj__21;
   PyObject *__pyx_codeobj__23;
   PyObject *__pyx_codeobj__25;
   PyObject *__pyx_codeobj__27;
   PyObject *__pyx_codeobj__29;
   PyObject *__pyx_codeobj__31;
+  PyObject *__pyx_codeobj__32;
   PyObject *__pyx_codeobj__33;
-  PyObject *__pyx_codeobj__34;
-  PyObject *__pyx_codeobj__36;
+  PyObject *__pyx_codeobj__35;
 } __pyx_mstate;
 
 #if CYTHON_USE_MODULE_STATE
@@ -3905,8 +3882,8 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_Grid___setstate_cython);
   Py_CLEAR(clear_module_state->__pyx_n_s_Grid_add_point);
   Py_CLEAR(clear_module_state->__pyx_n_s_Grid_add_points);
-  Py_CLEAR(clear_module_state->__pyx_n_s_Grid_add_value_along_line);
-  Py_CLEAR(clear_module_state->__pyx_n_s_Grid_add_value_along_line_confid);
+  Py_CLEAR(clear_module_state->__pyx_n_s_Grid_add_value_along_lines);
+  Py_CLEAR(clear_module_state->__pyx_n_s_Grid_add_value_along_lines_confi);
   Py_CLEAR(clear_module_state->__pyx_n_s_Grid_get_grid);
   Py_CLEAR(clear_module_state->__pyx_n_s_Grid_set_grid);
   Py_CLEAR(clear_module_state->__pyx_n_s_ImportError);
@@ -3930,16 +3907,14 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_View_MemoryView);
   Py_CLEAR(clear_module_state->__pyx_kp_u__2);
   Py_CLEAR(clear_module_state->__pyx_n_s__3);
-  Py_CLEAR(clear_module_state->__pyx_n_s__37);
+  Py_CLEAR(clear_module_state->__pyx_n_s__36);
   Py_CLEAR(clear_module_state->__pyx_kp_u__6);
   Py_CLEAR(clear_module_state->__pyx_kp_u__7);
   Py_CLEAR(clear_module_state->__pyx_n_s_abc);
-  Py_CLEAR(clear_module_state->__pyx_n_s_abs);
   Py_CLEAR(clear_module_state->__pyx_n_s_add_point);
   Py_CLEAR(clear_module_state->__pyx_n_s_add_points);
-  Py_CLEAR(clear_module_state->__pyx_n_s_add_value_along_line);
-  Py_CLEAR(clear_module_state->__pyx_n_s_add_value_along_line_confidence);
-  Py_CLEAR(clear_module_state->__pyx_n_s_added_value);
+  Py_CLEAR(clear_module_state->__pyx_n_s_add_value_along_lines);
+  Py_CLEAR(clear_module_state->__pyx_n_s_add_value_along_lines_confidence);
   Py_CLEAR(clear_module_state->__pyx_n_s_allocate_buffer);
   Py_CLEAR(clear_module_state->__pyx_kp_u_and);
   Py_CLEAR(clear_module_state->__pyx_n_s_asyncio_coroutines);
@@ -3956,11 +3931,9 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_count);
   Py_CLEAR(clear_module_state->__pyx_n_s_dict);
   Py_CLEAR(clear_module_state->__pyx_kp_u_disable);
-  Py_CLEAR(clear_module_state->__pyx_n_s_dist_from_start);
+  Py_CLEAR(clear_module_state->__pyx_n_s_double);
   Py_CLEAR(clear_module_state->__pyx_n_s_dtype);
   Py_CLEAR(clear_module_state->__pyx_n_s_dtype_is_object);
-  Py_CLEAR(clear_module_state->__pyx_n_s_dx);
-  Py_CLEAR(clear_module_state->__pyx_n_s_dy);
   Py_CLEAR(clear_module_state->__pyx_kp_u_enable);
   Py_CLEAR(clear_module_state->__pyx_n_s_encode);
   Py_CLEAR(clear_module_state->__pyx_n_s_enumerate);
@@ -3984,9 +3957,7 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_import);
   Py_CLEAR(clear_module_state->__pyx_n_s_index);
   Py_CLEAR(clear_module_state->__pyx_n_s_initializing);
-  Py_CLEAR(clear_module_state->__pyx_n_s_int16);
   Py_CLEAR(clear_module_state->__pyx_n_s_is_coroutine);
-  Py_CLEAR(clear_module_state->__pyx_n_s_is_steep);
   Py_CLEAR(clear_module_state->__pyx_kp_u_isenabled);
   Py_CLEAR(clear_module_state->__pyx_n_s_itemsize);
   Py_CLEAR(clear_module_state->__pyx_kp_s_itemsize_0_for_cython_array);
@@ -4048,19 +4019,12 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_n_s_version_info);
   Py_CLEAR(clear_module_state->__pyx_n_s_x);
   Py_CLEAR(clear_module_state->__pyx_n_s_x_0);
-  Py_CLEAR(clear_module_state->__pyx_n_s_x_1);
-  Py_CLEAR(clear_module_state->__pyx_n_s_x_end);
   Py_CLEAR(clear_module_state->__pyx_n_s_x_max_grid);
   Py_CLEAR(clear_module_state->__pyx_n_s_x_px);
-  Py_CLEAR(clear_module_state->__pyx_n_s_x_start);
   Py_CLEAR(clear_module_state->__pyx_n_s_y);
   Py_CLEAR(clear_module_state->__pyx_n_s_y_0);
-  Py_CLEAR(clear_module_state->__pyx_n_s_y_1);
-  Py_CLEAR(clear_module_state->__pyx_n_s_y_end);
   Py_CLEAR(clear_module_state->__pyx_n_s_y_max_grid);
   Py_CLEAR(clear_module_state->__pyx_n_s_y_px);
-  Py_CLEAR(clear_module_state->__pyx_n_s_y_start);
-  Py_CLEAR(clear_module_state->__pyx_n_s_y_step);
   Py_CLEAR(clear_module_state->__pyx_n_s_zeros);
   Py_CLEAR(clear_module_state->__pyx_float_0_5);
   Py_CLEAR(clear_module_state->__pyx_float_2_0);
@@ -4092,17 +4056,16 @@ static int __pyx_m_clear(PyObject *m) {
   Py_CLEAR(clear_module_state->__pyx_tuple__26);
   Py_CLEAR(clear_module_state->__pyx_tuple__28);
   Py_CLEAR(clear_module_state->__pyx_tuple__30);
-  Py_CLEAR(clear_module_state->__pyx_tuple__32);
-  Py_CLEAR(clear_module_state->__pyx_tuple__35);
+  Py_CLEAR(clear_module_state->__pyx_tuple__34);
   Py_CLEAR(clear_module_state->__pyx_codeobj__21);
   Py_CLEAR(clear_module_state->__pyx_codeobj__23);
   Py_CLEAR(clear_module_state->__pyx_codeobj__25);
   Py_CLEAR(clear_module_state->__pyx_codeobj__27);
   Py_CLEAR(clear_module_state->__pyx_codeobj__29);
   Py_CLEAR(clear_module_state->__pyx_codeobj__31);
+  Py_CLEAR(clear_module_state->__pyx_codeobj__32);
   Py_CLEAR(clear_module_state->__pyx_codeobj__33);
-  Py_CLEAR(clear_module_state->__pyx_codeobj__34);
-  Py_CLEAR(clear_module_state->__pyx_codeobj__36);
+  Py_CLEAR(clear_module_state->__pyx_codeobj__35);
   return 0;
 }
 #endif
@@ -4168,8 +4131,8 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_Grid___setstate_cython);
   Py_VISIT(traverse_module_state->__pyx_n_s_Grid_add_point);
   Py_VISIT(traverse_module_state->__pyx_n_s_Grid_add_points);
-  Py_VISIT(traverse_module_state->__pyx_n_s_Grid_add_value_along_line);
-  Py_VISIT(traverse_module_state->__pyx_n_s_Grid_add_value_along_line_confid);
+  Py_VISIT(traverse_module_state->__pyx_n_s_Grid_add_value_along_lines);
+  Py_VISIT(traverse_module_state->__pyx_n_s_Grid_add_value_along_lines_confi);
   Py_VISIT(traverse_module_state->__pyx_n_s_Grid_get_grid);
   Py_VISIT(traverse_module_state->__pyx_n_s_Grid_set_grid);
   Py_VISIT(traverse_module_state->__pyx_n_s_ImportError);
@@ -4193,16 +4156,14 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_View_MemoryView);
   Py_VISIT(traverse_module_state->__pyx_kp_u__2);
   Py_VISIT(traverse_module_state->__pyx_n_s__3);
-  Py_VISIT(traverse_module_state->__pyx_n_s__37);
+  Py_VISIT(traverse_module_state->__pyx_n_s__36);
   Py_VISIT(traverse_module_state->__pyx_kp_u__6);
   Py_VISIT(traverse_module_state->__pyx_kp_u__7);
   Py_VISIT(traverse_module_state->__pyx_n_s_abc);
-  Py_VISIT(traverse_module_state->__pyx_n_s_abs);
   Py_VISIT(traverse_module_state->__pyx_n_s_add_point);
   Py_VISIT(traverse_module_state->__pyx_n_s_add_points);
-  Py_VISIT(traverse_module_state->__pyx_n_s_add_value_along_line);
-  Py_VISIT(traverse_module_state->__pyx_n_s_add_value_along_line_confidence);
-  Py_VISIT(traverse_module_state->__pyx_n_s_added_value);
+  Py_VISIT(traverse_module_state->__pyx_n_s_add_value_along_lines);
+  Py_VISIT(traverse_module_state->__pyx_n_s_add_value_along_lines_confidence);
   Py_VISIT(traverse_module_state->__pyx_n_s_allocate_buffer);
   Py_VISIT(traverse_module_state->__pyx_kp_u_and);
   Py_VISIT(traverse_module_state->__pyx_n_s_asyncio_coroutines);
@@ -4219,11 +4180,9 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_count);
   Py_VISIT(traverse_module_state->__pyx_n_s_dict);
   Py_VISIT(traverse_module_state->__pyx_kp_u_disable);
-  Py_VISIT(traverse_module_state->__pyx_n_s_dist_from_start);
+  Py_VISIT(traverse_module_state->__pyx_n_s_double);
   Py_VISIT(traverse_module_state->__pyx_n_s_dtype);
   Py_VISIT(traverse_module_state->__pyx_n_s_dtype_is_object);
-  Py_VISIT(traverse_module_state->__pyx_n_s_dx);
-  Py_VISIT(traverse_module_state->__pyx_n_s_dy);
   Py_VISIT(traverse_module_state->__pyx_kp_u_enable);
   Py_VISIT(traverse_module_state->__pyx_n_s_encode);
   Py_VISIT(traverse_module_state->__pyx_n_s_enumerate);
@@ -4247,9 +4206,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_import);
   Py_VISIT(traverse_module_state->__pyx_n_s_index);
   Py_VISIT(traverse_module_state->__pyx_n_s_initializing);
-  Py_VISIT(traverse_module_state->__pyx_n_s_int16);
   Py_VISIT(traverse_module_state->__pyx_n_s_is_coroutine);
-  Py_VISIT(traverse_module_state->__pyx_n_s_is_steep);
   Py_VISIT(traverse_module_state->__pyx_kp_u_isenabled);
   Py_VISIT(traverse_module_state->__pyx_n_s_itemsize);
   Py_VISIT(traverse_module_state->__pyx_kp_s_itemsize_0_for_cython_array);
@@ -4311,19 +4268,12 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_n_s_version_info);
   Py_VISIT(traverse_module_state->__pyx_n_s_x);
   Py_VISIT(traverse_module_state->__pyx_n_s_x_0);
-  Py_VISIT(traverse_module_state->__pyx_n_s_x_1);
-  Py_VISIT(traverse_module_state->__pyx_n_s_x_end);
   Py_VISIT(traverse_module_state->__pyx_n_s_x_max_grid);
   Py_VISIT(traverse_module_state->__pyx_n_s_x_px);
-  Py_VISIT(traverse_module_state->__pyx_n_s_x_start);
   Py_VISIT(traverse_module_state->__pyx_n_s_y);
   Py_VISIT(traverse_module_state->__pyx_n_s_y_0);
-  Py_VISIT(traverse_module_state->__pyx_n_s_y_1);
-  Py_VISIT(traverse_module_state->__pyx_n_s_y_end);
   Py_VISIT(traverse_module_state->__pyx_n_s_y_max_grid);
   Py_VISIT(traverse_module_state->__pyx_n_s_y_px);
-  Py_VISIT(traverse_module_state->__pyx_n_s_y_start);
-  Py_VISIT(traverse_module_state->__pyx_n_s_y_step);
   Py_VISIT(traverse_module_state->__pyx_n_s_zeros);
   Py_VISIT(traverse_module_state->__pyx_float_0_5);
   Py_VISIT(traverse_module_state->__pyx_float_2_0);
@@ -4355,17 +4305,16 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
   Py_VISIT(traverse_module_state->__pyx_tuple__26);
   Py_VISIT(traverse_module_state->__pyx_tuple__28);
   Py_VISIT(traverse_module_state->__pyx_tuple__30);
-  Py_VISIT(traverse_module_state->__pyx_tuple__32);
-  Py_VISIT(traverse_module_state->__pyx_tuple__35);
+  Py_VISIT(traverse_module_state->__pyx_tuple__34);
   Py_VISIT(traverse_module_state->__pyx_codeobj__21);
   Py_VISIT(traverse_module_state->__pyx_codeobj__23);
   Py_VISIT(traverse_module_state->__pyx_codeobj__25);
   Py_VISIT(traverse_module_state->__pyx_codeobj__27);
   Py_VISIT(traverse_module_state->__pyx_codeobj__29);
   Py_VISIT(traverse_module_state->__pyx_codeobj__31);
+  Py_VISIT(traverse_module_state->__pyx_codeobj__32);
   Py_VISIT(traverse_module_state->__pyx_codeobj__33);
-  Py_VISIT(traverse_module_state->__pyx_codeobj__34);
-  Py_VISIT(traverse_module_state->__pyx_codeobj__36);
+  Py_VISIT(traverse_module_state->__pyx_codeobj__35);
   return 0;
 }
 #endif
@@ -4469,8 +4418,8 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_Grid___setstate_cython __pyx_mstate_global->__pyx_n_s_Grid___setstate_cython
 #define __pyx_n_s_Grid_add_point __pyx_mstate_global->__pyx_n_s_Grid_add_point
 #define __pyx_n_s_Grid_add_points __pyx_mstate_global->__pyx_n_s_Grid_add_points
-#define __pyx_n_s_Grid_add_value_along_line __pyx_mstate_global->__pyx_n_s_Grid_add_value_along_line
-#define __pyx_n_s_Grid_add_value_along_line_confid __pyx_mstate_global->__pyx_n_s_Grid_add_value_along_line_confid
+#define __pyx_n_s_Grid_add_value_along_lines __pyx_mstate_global->__pyx_n_s_Grid_add_value_along_lines
+#define __pyx_n_s_Grid_add_value_along_lines_confi __pyx_mstate_global->__pyx_n_s_Grid_add_value_along_lines_confi
 #define __pyx_n_s_Grid_get_grid __pyx_mstate_global->__pyx_n_s_Grid_get_grid
 #define __pyx_n_s_Grid_set_grid __pyx_mstate_global->__pyx_n_s_Grid_set_grid
 #define __pyx_n_s_ImportError __pyx_mstate_global->__pyx_n_s_ImportError
@@ -4494,16 +4443,14 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_View_MemoryView __pyx_mstate_global->__pyx_n_s_View_MemoryView
 #define __pyx_kp_u__2 __pyx_mstate_global->__pyx_kp_u__2
 #define __pyx_n_s__3 __pyx_mstate_global->__pyx_n_s__3
-#define __pyx_n_s__37 __pyx_mstate_global->__pyx_n_s__37
+#define __pyx_n_s__36 __pyx_mstate_global->__pyx_n_s__36
 #define __pyx_kp_u__6 __pyx_mstate_global->__pyx_kp_u__6
 #define __pyx_kp_u__7 __pyx_mstate_global->__pyx_kp_u__7
 #define __pyx_n_s_abc __pyx_mstate_global->__pyx_n_s_abc
-#define __pyx_n_s_abs __pyx_mstate_global->__pyx_n_s_abs
 #define __pyx_n_s_add_point __pyx_mstate_global->__pyx_n_s_add_point
 #define __pyx_n_s_add_points __pyx_mstate_global->__pyx_n_s_add_points
-#define __pyx_n_s_add_value_along_line __pyx_mstate_global->__pyx_n_s_add_value_along_line
-#define __pyx_n_s_add_value_along_line_confidence __pyx_mstate_global->__pyx_n_s_add_value_along_line_confidence
-#define __pyx_n_s_added_value __pyx_mstate_global->__pyx_n_s_added_value
+#define __pyx_n_s_add_value_along_lines __pyx_mstate_global->__pyx_n_s_add_value_along_lines
+#define __pyx_n_s_add_value_along_lines_confidence __pyx_mstate_global->__pyx_n_s_add_value_along_lines_confidence
 #define __pyx_n_s_allocate_buffer __pyx_mstate_global->__pyx_n_s_allocate_buffer
 #define __pyx_kp_u_and __pyx_mstate_global->__pyx_kp_u_and
 #define __pyx_n_s_asyncio_coroutines __pyx_mstate_global->__pyx_n_s_asyncio_coroutines
@@ -4520,11 +4467,9 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_count __pyx_mstate_global->__pyx_n_s_count
 #define __pyx_n_s_dict __pyx_mstate_global->__pyx_n_s_dict
 #define __pyx_kp_u_disable __pyx_mstate_global->__pyx_kp_u_disable
-#define __pyx_n_s_dist_from_start __pyx_mstate_global->__pyx_n_s_dist_from_start
+#define __pyx_n_s_double __pyx_mstate_global->__pyx_n_s_double
 #define __pyx_n_s_dtype __pyx_mstate_global->__pyx_n_s_dtype
 #define __pyx_n_s_dtype_is_object __pyx_mstate_global->__pyx_n_s_dtype_is_object
-#define __pyx_n_s_dx __pyx_mstate_global->__pyx_n_s_dx
-#define __pyx_n_s_dy __pyx_mstate_global->__pyx_n_s_dy
 #define __pyx_kp_u_enable __pyx_mstate_global->__pyx_kp_u_enable
 #define __pyx_n_s_encode __pyx_mstate_global->__pyx_n_s_encode
 #define __pyx_n_s_enumerate __pyx_mstate_global->__pyx_n_s_enumerate
@@ -4548,9 +4493,7 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_import __pyx_mstate_global->__pyx_n_s_import
 #define __pyx_n_s_index __pyx_mstate_global->__pyx_n_s_index
 #define __pyx_n_s_initializing __pyx_mstate_global->__pyx_n_s_initializing
-#define __pyx_n_s_int16 __pyx_mstate_global->__pyx_n_s_int16
 #define __pyx_n_s_is_coroutine __pyx_mstate_global->__pyx_n_s_is_coroutine
-#define __pyx_n_s_is_steep __pyx_mstate_global->__pyx_n_s_is_steep
 #define __pyx_kp_u_isenabled __pyx_mstate_global->__pyx_kp_u_isenabled
 #define __pyx_n_s_itemsize __pyx_mstate_global->__pyx_n_s_itemsize
 #define __pyx_kp_s_itemsize_0_for_cython_array __pyx_mstate_global->__pyx_kp_s_itemsize_0_for_cython_array
@@ -4612,19 +4555,12 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_n_s_version_info __pyx_mstate_global->__pyx_n_s_version_info
 #define __pyx_n_s_x __pyx_mstate_global->__pyx_n_s_x
 #define __pyx_n_s_x_0 __pyx_mstate_global->__pyx_n_s_x_0
-#define __pyx_n_s_x_1 __pyx_mstate_global->__pyx_n_s_x_1
-#define __pyx_n_s_x_end __pyx_mstate_global->__pyx_n_s_x_end
 #define __pyx_n_s_x_max_grid __pyx_mstate_global->__pyx_n_s_x_max_grid
 #define __pyx_n_s_x_px __pyx_mstate_global->__pyx_n_s_x_px
-#define __pyx_n_s_x_start __pyx_mstate_global->__pyx_n_s_x_start
 #define __pyx_n_s_y __pyx_mstate_global->__pyx_n_s_y
 #define __pyx_n_s_y_0 __pyx_mstate_global->__pyx_n_s_y_0
-#define __pyx_n_s_y_1 __pyx_mstate_global->__pyx_n_s_y_1
-#define __pyx_n_s_y_end __pyx_mstate_global->__pyx_n_s_y_end
 #define __pyx_n_s_y_max_grid __pyx_mstate_global->__pyx_n_s_y_max_grid
 #define __pyx_n_s_y_px __pyx_mstate_global->__pyx_n_s_y_px
-#define __pyx_n_s_y_start __pyx_mstate_global->__pyx_n_s_y_start
-#define __pyx_n_s_y_step __pyx_mstate_global->__pyx_n_s_y_step
 #define __pyx_n_s_zeros __pyx_mstate_global->__pyx_n_s_zeros
 #define __pyx_float_0_5 __pyx_mstate_global->__pyx_float_0_5
 #define __pyx_float_2_0 __pyx_mstate_global->__pyx_float_2_0
@@ -4656,17 +4592,16 @@ static int __pyx_m_traverse(PyObject *m, visitproc visit, void *arg) {
 #define __pyx_tuple__26 __pyx_mstate_global->__pyx_tuple__26
 #define __pyx_tuple__28 __pyx_mstate_global->__pyx_tuple__28
 #define __pyx_tuple__30 __pyx_mstate_global->__pyx_tuple__30
-#define __pyx_tuple__32 __pyx_mstate_global->__pyx_tuple__32
-#define __pyx_tuple__35 __pyx_mstate_global->__pyx_tuple__35
+#define __pyx_tuple__34 __pyx_mstate_global->__pyx_tuple__34
 #define __pyx_codeobj__21 __pyx_mstate_global->__pyx_codeobj__21
 #define __pyx_codeobj__23 __pyx_mstate_global->__pyx_codeobj__23
 #define __pyx_codeobj__25 __pyx_mstate_global->__pyx_codeobj__25
 #define __pyx_codeobj__27 __pyx_mstate_global->__pyx_codeobj__27
 #define __pyx_codeobj__29 __pyx_mstate_global->__pyx_codeobj__29
 #define __pyx_codeobj__31 __pyx_mstate_global->__pyx_codeobj__31
+#define __pyx_codeobj__32 __pyx_mstate_global->__pyx_codeobj__32
 #define __pyx_codeobj__33 __pyx_mstate_global->__pyx_codeobj__33
-#define __pyx_codeobj__34 __pyx_mstate_global->__pyx_codeobj__34
-#define __pyx_codeobj__36 __pyx_mstate_global->__pyx_codeobj__36
+#define __pyx_codeobj__35 __pyx_mstate_global->__pyx_codeobj__35
 /* #### Code section: module_code ### */
 
 /* "View.MemoryView":131
@@ -20074,171 +20009,15 @@ static PyObject *__pyx_f_6grid_c_4Grid_conv_grid_to_world(struct __pyx_obj_6grid
   return __pyx_r;
 }
 
-/* "grid_c.pyx":37
- *         return x_world, y_world
- * 
- *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+/* "grid_c.pyx":40
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
+ *     cdef add_value_along_line(self, float x_0, float y_0, float x_1, float y_1, int val):             # <<<<<<<<<<<<<<
+ *         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
+ *         cdef float error
  */
 
-/* Python wrapper */
-static PyObject *__pyx_pw_6grid_c_4Grid_3add_value_along_line(PyObject *__pyx_v_self, 
-#if CYTHON_METH_FASTCALL
-PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
-#else
-PyObject *__pyx_args, PyObject *__pyx_kwds
-#endif
-); /*proto*/
-static PyMethodDef __pyx_mdef_6grid_c_4Grid_3add_value_along_line = {"add_value_along_line", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_3add_value_along_line, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_6grid_c_4Grid_3add_value_along_line(PyObject *__pyx_v_self, 
-#if CYTHON_METH_FASTCALL
-PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
-#else
-PyObject *__pyx_args, PyObject *__pyx_kwds
-#endif
-) {
-  float __pyx_v_x_0;
-  float __pyx_v_y_0;
-  float __pyx_v_x_1;
-  float __pyx_v_y_1;
-  int __pyx_v_val;
-  #if !CYTHON_METH_FASTCALL
-  CYTHON_UNUSED Py_ssize_t __pyx_nargs;
-  #endif
-  CYTHON_UNUSED PyObject *const *__pyx_kwvalues;
-  PyObject* values[5] = {0,0,0,0,0};
-  int __pyx_lineno = 0;
-  const char *__pyx_filename = NULL;
-  int __pyx_clineno = 0;
-  PyObject *__pyx_r = 0;
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("add_value_along_line (wrapper)", 0);
-  #if !CYTHON_METH_FASTCALL
-  #if CYTHON_ASSUME_SAFE_MACROS
-  __pyx_nargs = PyTuple_GET_SIZE(__pyx_args);
-  #else
-  __pyx_nargs = PyTuple_Size(__pyx_args); if (unlikely(__pyx_nargs < 0)) return NULL;
-  #endif
-  #endif
-  __pyx_kwvalues = __Pyx_KwValues_FASTCALL(__pyx_args, __pyx_nargs);
-  {
-    PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x_0,&__pyx_n_s_y_0,&__pyx_n_s_x_1,&__pyx_n_s_y_1,&__pyx_n_s_val,0};
-    if (__pyx_kwds) {
-      Py_ssize_t kw_args;
-      switch (__pyx_nargs) {
-        case  5: values[4] = __Pyx_Arg_FASTCALL(__pyx_args, 4);
-        CYTHON_FALLTHROUGH;
-        case  4: values[3] = __Pyx_Arg_FASTCALL(__pyx_args, 3);
-        CYTHON_FALLTHROUGH;
-        case  3: values[2] = __Pyx_Arg_FASTCALL(__pyx_args, 2);
-        CYTHON_FALLTHROUGH;
-        case  2: values[1] = __Pyx_Arg_FASTCALL(__pyx_args, 1);
-        CYTHON_FALLTHROUGH;
-        case  1: values[0] = __Pyx_Arg_FASTCALL(__pyx_args, 0);
-        CYTHON_FALLTHROUGH;
-        case  0: break;
-        default: goto __pyx_L5_argtuple_error;
-      }
-      kw_args = __Pyx_NumKwargs_FASTCALL(__pyx_kwds);
-      switch (__pyx_nargs) {
-        case  0:
-        if (likely((values[0] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_x_0)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 37, __pyx_L3_error)
-        else goto __pyx_L5_argtuple_error;
-        CYTHON_FALLTHROUGH;
-        case  1:
-        if (likely((values[1] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_y_0)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[1]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 37, __pyx_L3_error)
-        else {
-          __Pyx_RaiseArgtupleInvalid("add_value_along_line", 1, 5, 5, 1); __PYX_ERR(0, 37, __pyx_L3_error)
-        }
-        CYTHON_FALLTHROUGH;
-        case  2:
-        if (likely((values[2] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_x_1)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[2]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 37, __pyx_L3_error)
-        else {
-          __Pyx_RaiseArgtupleInvalid("add_value_along_line", 1, 5, 5, 2); __PYX_ERR(0, 37, __pyx_L3_error)
-        }
-        CYTHON_FALLTHROUGH;
-        case  3:
-        if (likely((values[3] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_y_1)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[3]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 37, __pyx_L3_error)
-        else {
-          __Pyx_RaiseArgtupleInvalid("add_value_along_line", 1, 5, 5, 3); __PYX_ERR(0, 37, __pyx_L3_error)
-        }
-        CYTHON_FALLTHROUGH;
-        case  4:
-        if (likely((values[4] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_val)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[4]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 37, __pyx_L3_error)
-        else {
-          __Pyx_RaiseArgtupleInvalid("add_value_along_line", 1, 5, 5, 4); __PYX_ERR(0, 37, __pyx_L3_error)
-        }
-      }
-      if (unlikely(kw_args > 0)) {
-        const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "add_value_along_line") < 0)) __PYX_ERR(0, 37, __pyx_L3_error)
-      }
-    } else if (unlikely(__pyx_nargs != 5)) {
-      goto __pyx_L5_argtuple_error;
-    } else {
-      values[0] = __Pyx_Arg_FASTCALL(__pyx_args, 0);
-      values[1] = __Pyx_Arg_FASTCALL(__pyx_args, 1);
-      values[2] = __Pyx_Arg_FASTCALL(__pyx_args, 2);
-      values[3] = __Pyx_Arg_FASTCALL(__pyx_args, 3);
-      values[4] = __Pyx_Arg_FASTCALL(__pyx_args, 4);
-    }
-    __pyx_v_x_0 = __pyx_PyFloat_AsFloat(values[0]); if (unlikely((__pyx_v_x_0 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 40, __pyx_L3_error)
-    __pyx_v_y_0 = __pyx_PyFloat_AsFloat(values[1]); if (unlikely((__pyx_v_y_0 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 40, __pyx_L3_error)
-    __pyx_v_x_1 = __pyx_PyFloat_AsFloat(values[2]); if (unlikely((__pyx_v_x_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 40, __pyx_L3_error)
-    __pyx_v_y_1 = __pyx_PyFloat_AsFloat(values[3]); if (unlikely((__pyx_v_y_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 40, __pyx_L3_error)
-    __pyx_v_val = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_val == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 40, __pyx_L3_error)
-  }
-  goto __pyx_L6_skip;
-  __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("add_value_along_line", 1, 5, 5, __pyx_nargs); __PYX_ERR(0, 37, __pyx_L3_error)
-  __pyx_L6_skip:;
-  goto __pyx_L4_argument_unpacking_done;
-  __pyx_L3_error:;
-  {
-    Py_ssize_t __pyx_temp;
-    for (__pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
-      __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
-    }
-  }
-  __Pyx_AddTraceback("grid_c.Grid.add_value_along_line", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __Pyx_RefNannyFinishContext();
-  return NULL;
-  __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_6grid_c_4Grid_2add_value_along_line(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_x_0, __pyx_v_y_0, __pyx_v_x_1, __pyx_v_y_1, __pyx_v_val);
-
-  /* function exit code */
-  {
-    Py_ssize_t __pyx_temp;
-    for (__pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
-      __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
-    }
-  }
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-static PyObject *__pyx_pf_6grid_c_4Grid_2add_value_along_line(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, float __pyx_v_x_1, float __pyx_v_y_1, int __pyx_v_val) {
+static PyObject *__pyx_f_6grid_c_4Grid_add_value_along_line(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, float __pyx_v_x_1, float __pyx_v_y_1, int __pyx_v_val) {
   int __pyx_v_x_start;
   int __pyx_v_y_start;
   int __pyx_v_x_end;
@@ -20871,12 +20650,12 @@ static PyObject *__pyx_pf_6grid_c_4Grid_2add_value_along_line(struct __pyx_obj_6
     }
   }
 
-  /* "grid_c.pyx":37
- *         return x_world, y_world
- * 
- *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+  /* "grid_c.pyx":40
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
+ *     cdef add_value_along_line(self, float x_0, float y_0, float x_1, float y_1, int val):             # <<<<<<<<<<<<<<
+ *         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
+ *         cdef float error
  */
 
   /* function exit code */
@@ -20888,7 +20667,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_2add_value_along_line(struct __pyx_obj_6
   __Pyx_XDECREF(__pyx_t_5);
   __PYX_XCLEAR_MEMVIEW(&__pyx_t_9, 1);
   __Pyx_AddTraceback("grid_c.Grid.add_value_along_line", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __pyx_r = NULL;
+  __pyx_r = 0;
   __pyx_L0:;
   __PYX_XCLEAR_MEMVIEW(&__pyx_v_grid_view, 1);
   __Pyx_XGIVEREF(__pyx_r);
@@ -20905,16 +20684,16 @@ static PyObject *__pyx_pf_6grid_c_4Grid_2add_value_along_line(struct __pyx_obj_6
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6grid_c_4Grid_5add_points(PyObject *__pyx_v_self, 
+static PyObject *__pyx_pw_6grid_c_4Grid_3add_points(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_6grid_c_4Grid_4add_points, "\n        Add a value to an array of points, input coordinates in meters\n        points_x, points_y: arrays of x and y coordinates in m\n        val: value to add to the cells of the points\n        ");
-static PyMethodDef __pyx_mdef_6grid_c_4Grid_5add_points = {"add_points", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_5add_points, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_6grid_c_4Grid_4add_points};
-static PyObject *__pyx_pw_6grid_c_4Grid_5add_points(PyObject *__pyx_v_self, 
+PyDoc_STRVAR(__pyx_doc_6grid_c_4Grid_2add_points, "\n        Add a value to an array of points, input coordinates in meters\n        points_x, points_y: arrays of x and y coordinates in m\n        val: value to add to the cells of the points\n        ");
+static PyMethodDef __pyx_mdef_6grid_c_4Grid_3add_points = {"add_points", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_3add_points, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_6grid_c_4Grid_2add_points};
+static PyObject *__pyx_pw_6grid_c_4Grid_3add_points(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -21020,7 +20799,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_points_x), __pyx_ptype_5numpy_ndarray, 1, "points_x", 0))) __PYX_ERR(0, 96, __pyx_L1_error)
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_points_y), __pyx_ptype_5numpy_ndarray, 1, "points_y", 0))) __PYX_ERR(0, 96, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6grid_c_4Grid_4add_points(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_points_x, __pyx_v_points_y, __pyx_v_val);
+  __pyx_r = __pyx_pf_6grid_c_4Grid_2add_points(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_points_x, __pyx_v_points_y, __pyx_v_val);
 
   /* function exit code */
   goto __pyx_L0;
@@ -21037,7 +20816,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6grid_c_4Grid_4add_points(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyArrayObject *__pyx_v_points_x, PyArrayObject *__pyx_v_points_y, int __pyx_v_val) {
+static PyObject *__pyx_pf_6grid_c_4Grid_2add_points(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyArrayObject *__pyx_v_points_x, PyArrayObject *__pyx_v_points_y, int __pyx_v_val) {
   int __pyx_v_num_points;
   int __pyx_v_i;
   int __pyx_v_x_px;
@@ -21194,7 +20973,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_4add_points(struct __pyx_obj_6grid_c_Gri
  * 
  */
     __pyx_t_8 = __pyx_v_i;
-    __pyx_v_x_px = ((int)(((*__Pyx_BufPtrStrided1d(__pyx_t_6grid_c_DTYPE_t *, __pyx_pybuffernd_points_x.rcbuffer->pybuffer.buf, __pyx_t_8, __pyx_pybuffernd_points_x.diminfo[0].strides)) + __pyx_v_half_width) / __pyx_v_resolution));
+    __pyx_v_x_px = ((int)(((*__Pyx_BufPtrStrided1d(__pyx_t_6grid_c_DTYPE_t *, __pyx_pybuffernd_points_x.rcbuffer->pybuffer.buf, __pyx_t_8, __pyx_pybuffernd_points_x.diminfo[0].strides)) + __pyx_v_half_width) / ((__pyx_t_6grid_c_DTYPE_t)__pyx_v_resolution)));
 
     /* "grid_c.pyx":114
  *             # Convert world coordinates to grid coordinates manually
@@ -21204,7 +20983,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_4add_points(struct __pyx_obj_6grid_c_Gri
  *             # Bound checking and adding value
  */
     __pyx_t_8 = __pyx_v_i;
-    __pyx_v_y_px = ((int)(((-(*__Pyx_BufPtrStrided1d(__pyx_t_6grid_c_DTYPE_t *, __pyx_pybuffernd_points_y.rcbuffer->pybuffer.buf, __pyx_t_8, __pyx_pybuffernd_points_y.diminfo[0].strides))) + __pyx_v_half_height) / __pyx_v_resolution));
+    __pyx_v_y_px = ((int)(((-(*__Pyx_BufPtrStrided1d(__pyx_t_6grid_c_DTYPE_t *, __pyx_pybuffernd_points_y.rcbuffer->pybuffer.buf, __pyx_t_8, __pyx_pybuffernd_points_y.diminfo[0].strides))) + __pyx_v_half_height) / ((__pyx_t_6grid_c_DTYPE_t)__pyx_v_resolution)));
 
     /* "grid_c.pyx":117
  * 
@@ -21294,16 +21073,16 @@ static PyObject *__pyx_pf_6grid_c_4Grid_4add_points(struct __pyx_obj_6grid_c_Gri
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6grid_c_4Grid_7add_point(PyObject *__pyx_v_self, 
+static PyObject *__pyx_pw_6grid_c_4Grid_5add_point(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-PyDoc_STRVAR(__pyx_doc_6grid_c_4Grid_6add_point, "\n        Add a value to a point, input coordinates in meters\n        x, y :  x and y coordinates in m\n        val :  value to add to the cell of the point\n        ");
-static PyMethodDef __pyx_mdef_6grid_c_4Grid_7add_point = {"add_point", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_7add_point, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_6grid_c_4Grid_6add_point};
-static PyObject *__pyx_pw_6grid_c_4Grid_7add_point(PyObject *__pyx_v_self, 
+PyDoc_STRVAR(__pyx_doc_6grid_c_4Grid_4add_point, "\n        Add a value to a point, input coordinates in meters\n        x, y :  x and y coordinates in m\n        val :  value to add to the cell of the point\n        ");
+static PyMethodDef __pyx_mdef_6grid_c_4Grid_5add_point = {"add_point", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_5add_point, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_6grid_c_4Grid_4add_point};
+static PyObject *__pyx_pw_6grid_c_4Grid_5add_point(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -21407,7 +21186,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_6grid_c_4Grid_6add_point(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_x, __pyx_v_y, __pyx_v_val);
+  __pyx_r = __pyx_pf_6grid_c_4Grid_4add_point(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_x, __pyx_v_y, __pyx_v_val);
 
   /* function exit code */
   {
@@ -21420,7 +21199,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6grid_c_4Grid_6add_point(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x, float __pyx_v_y, int __pyx_v_val) {
+static PyObject *__pyx_pf_6grid_c_4Grid_4add_point(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x, float __pyx_v_y, int __pyx_v_val) {
   int __pyx_v_x_px;
   int __pyx_v_y_px;
   float __pyx_v_half_width;
@@ -21614,15 +21393,15 @@ static PyObject *__pyx_pf_6grid_c_4Grid_6add_point(struct __pyx_obj_6grid_c_Grid
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6grid_c_4Grid_9get_grid(PyObject *__pyx_v_self, 
+static PyObject *__pyx_pw_6grid_c_4Grid_7get_grid(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyMethodDef __pyx_mdef_6grid_c_4Grid_9get_grid = {"get_grid", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_9get_grid, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_6grid_c_4Grid_9get_grid(PyObject *__pyx_v_self, 
+static PyMethodDef __pyx_mdef_6grid_c_4Grid_7get_grid = {"get_grid", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_7get_grid, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_6grid_c_4Grid_7get_grid(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -21647,14 +21426,14 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   if (unlikely(__pyx_nargs > 0)) {
     __Pyx_RaiseArgtupleInvalid("get_grid", 1, 0, 0, __pyx_nargs); return NULL;}
   if (unlikely(__pyx_kwds) && __Pyx_NumKwargs_FASTCALL(__pyx_kwds) && unlikely(!__Pyx_CheckKeywordStrings(__pyx_kwds, "get_grid", 0))) return NULL;
-  __pyx_r = __pyx_pf_6grid_c_4Grid_8get_grid(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self));
+  __pyx_r = __pyx_pf_6grid_c_4Grid_6get_grid(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6grid_c_4Grid_8get_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self) {
+static PyObject *__pyx_pf_6grid_c_4Grid_6get_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_grid", 1);
@@ -21695,15 +21474,15 @@ static PyObject *__pyx_pf_6grid_c_4Grid_8get_grid(struct __pyx_obj_6grid_c_Grid 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_6grid_c_4Grid_11set_grid(PyObject *__pyx_v_self, 
+static PyObject *__pyx_pw_6grid_c_4Grid_9set_grid(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
 PyObject *__pyx_args, PyObject *__pyx_kwds
 #endif
 ); /*proto*/
-static PyMethodDef __pyx_mdef_6grid_c_4Grid_11set_grid = {"set_grid", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_11set_grid, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_6grid_c_4Grid_11set_grid(PyObject *__pyx_v_self, 
+static PyMethodDef __pyx_mdef_6grid_c_4Grid_9set_grid = {"set_grid", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_9set_grid, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_6grid_c_4Grid_9set_grid(PyObject *__pyx_v_self, 
 #if CYTHON_METH_FASTCALL
 PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
 #else
@@ -21778,7 +21557,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return NULL;
   __pyx_L4_argument_unpacking_done:;
   if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_grid), __pyx_ptype_5numpy_ndarray, 1, "grid", 0))) __PYX_ERR(0, 148, __pyx_L1_error)
-  __pyx_r = __pyx_pf_6grid_c_4Grid_10set_grid(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_grid);
+  __pyx_r = __pyx_pf_6grid_c_4Grid_8set_grid(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_grid);
 
   /* function exit code */
   goto __pyx_L0;
@@ -21795,7 +21574,7 @@ PyObject *__pyx_args, PyObject *__pyx_kwds
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_6grid_c_4Grid_10set_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyArrayObject *__pyx_v_grid) {
+static PyObject *__pyx_pf_6grid_c_4Grid_8set_grid(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, PyArrayObject *__pyx_v_grid) {
   __Pyx_LocalBuf_ND __pyx_pybuffernd_grid;
   __Pyx_Buffer __pyx_pybuffer_grid;
   PyObject *__pyx_r = NULL;
@@ -21856,171 +21635,15 @@ static PyObject *__pyx_pf_6grid_c_4Grid_10set_grid(struct __pyx_obj_6grid_c_Grid
   return __pyx_r;
 }
 
-/* "grid_c.pyx":151
- *         self.grid = grid
- * 
- *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+/* "grid_c.pyx":154
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
+ *     cdef add_value_along_line_confidence(self, float x_0, float y_0, float x_1, float y_1, int val):             # <<<<<<<<<<<<<<
+ *         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
+ *         cdef float error, added_value, inverse_dist
  */
 
-/* Python wrapper */
-static PyObject *__pyx_pw_6grid_c_4Grid_13add_value_along_line_confidence(PyObject *__pyx_v_self, 
-#if CYTHON_METH_FASTCALL
-PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
-#else
-PyObject *__pyx_args, PyObject *__pyx_kwds
-#endif
-); /*proto*/
-static PyMethodDef __pyx_mdef_6grid_c_4Grid_13add_value_along_line_confidence = {"add_value_along_line_confidence", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_13add_value_along_line_confidence, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
-static PyObject *__pyx_pw_6grid_c_4Grid_13add_value_along_line_confidence(PyObject *__pyx_v_self, 
-#if CYTHON_METH_FASTCALL
-PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
-#else
-PyObject *__pyx_args, PyObject *__pyx_kwds
-#endif
-) {
-  float __pyx_v_x_0;
-  float __pyx_v_y_0;
-  float __pyx_v_x_1;
-  float __pyx_v_y_1;
-  int __pyx_v_val;
-  #if !CYTHON_METH_FASTCALL
-  CYTHON_UNUSED Py_ssize_t __pyx_nargs;
-  #endif
-  CYTHON_UNUSED PyObject *const *__pyx_kwvalues;
-  PyObject* values[5] = {0,0,0,0,0};
-  int __pyx_lineno = 0;
-  const char *__pyx_filename = NULL;
-  int __pyx_clineno = 0;
-  PyObject *__pyx_r = 0;
-  __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("add_value_along_line_confidence (wrapper)", 0);
-  #if !CYTHON_METH_FASTCALL
-  #if CYTHON_ASSUME_SAFE_MACROS
-  __pyx_nargs = PyTuple_GET_SIZE(__pyx_args);
-  #else
-  __pyx_nargs = PyTuple_Size(__pyx_args); if (unlikely(__pyx_nargs < 0)) return NULL;
-  #endif
-  #endif
-  __pyx_kwvalues = __Pyx_KwValues_FASTCALL(__pyx_args, __pyx_nargs);
-  {
-    PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x_0,&__pyx_n_s_y_0,&__pyx_n_s_x_1,&__pyx_n_s_y_1,&__pyx_n_s_val,0};
-    if (__pyx_kwds) {
-      Py_ssize_t kw_args;
-      switch (__pyx_nargs) {
-        case  5: values[4] = __Pyx_Arg_FASTCALL(__pyx_args, 4);
-        CYTHON_FALLTHROUGH;
-        case  4: values[3] = __Pyx_Arg_FASTCALL(__pyx_args, 3);
-        CYTHON_FALLTHROUGH;
-        case  3: values[2] = __Pyx_Arg_FASTCALL(__pyx_args, 2);
-        CYTHON_FALLTHROUGH;
-        case  2: values[1] = __Pyx_Arg_FASTCALL(__pyx_args, 1);
-        CYTHON_FALLTHROUGH;
-        case  1: values[0] = __Pyx_Arg_FASTCALL(__pyx_args, 0);
-        CYTHON_FALLTHROUGH;
-        case  0: break;
-        default: goto __pyx_L5_argtuple_error;
-      }
-      kw_args = __Pyx_NumKwargs_FASTCALL(__pyx_kwds);
-      switch (__pyx_nargs) {
-        case  0:
-        if (likely((values[0] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_x_0)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 151, __pyx_L3_error)
-        else goto __pyx_L5_argtuple_error;
-        CYTHON_FALLTHROUGH;
-        case  1:
-        if (likely((values[1] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_y_0)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[1]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 151, __pyx_L3_error)
-        else {
-          __Pyx_RaiseArgtupleInvalid("add_value_along_line_confidence", 1, 5, 5, 1); __PYX_ERR(0, 151, __pyx_L3_error)
-        }
-        CYTHON_FALLTHROUGH;
-        case  2:
-        if (likely((values[2] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_x_1)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[2]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 151, __pyx_L3_error)
-        else {
-          __Pyx_RaiseArgtupleInvalid("add_value_along_line_confidence", 1, 5, 5, 2); __PYX_ERR(0, 151, __pyx_L3_error)
-        }
-        CYTHON_FALLTHROUGH;
-        case  3:
-        if (likely((values[3] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_y_1)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[3]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 151, __pyx_L3_error)
-        else {
-          __Pyx_RaiseArgtupleInvalid("add_value_along_line_confidence", 1, 5, 5, 3); __PYX_ERR(0, 151, __pyx_L3_error)
-        }
-        CYTHON_FALLTHROUGH;
-        case  4:
-        if (likely((values[4] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_val)) != 0)) {
-          (void)__Pyx_Arg_NewRef_FASTCALL(values[4]);
-          kw_args--;
-        }
-        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 151, __pyx_L3_error)
-        else {
-          __Pyx_RaiseArgtupleInvalid("add_value_along_line_confidence", 1, 5, 5, 4); __PYX_ERR(0, 151, __pyx_L3_error)
-        }
-      }
-      if (unlikely(kw_args > 0)) {
-        const Py_ssize_t kwd_pos_args = __pyx_nargs;
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "add_value_along_line_confidence") < 0)) __PYX_ERR(0, 151, __pyx_L3_error)
-      }
-    } else if (unlikely(__pyx_nargs != 5)) {
-      goto __pyx_L5_argtuple_error;
-    } else {
-      values[0] = __Pyx_Arg_FASTCALL(__pyx_args, 0);
-      values[1] = __Pyx_Arg_FASTCALL(__pyx_args, 1);
-      values[2] = __Pyx_Arg_FASTCALL(__pyx_args, 2);
-      values[3] = __Pyx_Arg_FASTCALL(__pyx_args, 3);
-      values[4] = __Pyx_Arg_FASTCALL(__pyx_args, 4);
-    }
-    __pyx_v_x_0 = __pyx_PyFloat_AsFloat(values[0]); if (unlikely((__pyx_v_x_0 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 154, __pyx_L3_error)
-    __pyx_v_y_0 = __pyx_PyFloat_AsFloat(values[1]); if (unlikely((__pyx_v_y_0 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 154, __pyx_L3_error)
-    __pyx_v_x_1 = __pyx_PyFloat_AsFloat(values[2]); if (unlikely((__pyx_v_x_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 154, __pyx_L3_error)
-    __pyx_v_y_1 = __pyx_PyFloat_AsFloat(values[3]); if (unlikely((__pyx_v_y_1 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 154, __pyx_L3_error)
-    __pyx_v_val = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_val == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 154, __pyx_L3_error)
-  }
-  goto __pyx_L6_skip;
-  __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("add_value_along_line_confidence", 1, 5, 5, __pyx_nargs); __PYX_ERR(0, 151, __pyx_L3_error)
-  __pyx_L6_skip:;
-  goto __pyx_L4_argument_unpacking_done;
-  __pyx_L3_error:;
-  {
-    Py_ssize_t __pyx_temp;
-    for (__pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
-      __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
-    }
-  }
-  __Pyx_AddTraceback("grid_c.Grid.add_value_along_line_confidence", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __Pyx_RefNannyFinishContext();
-  return NULL;
-  __pyx_L4_argument_unpacking_done:;
-  __pyx_r = __pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_x_0, __pyx_v_y_0, __pyx_v_x_1, __pyx_v_y_1, __pyx_v_val);
-
-  /* function exit code */
-  {
-    Py_ssize_t __pyx_temp;
-    for (__pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
-      __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
-    }
-  }
-  __Pyx_RefNannyFinishContext();
-  return __pyx_r;
-}
-
-static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, float __pyx_v_x_1, float __pyx_v_y_1, int __pyx_v_val) {
+static PyObject *__pyx_f_6grid_c_4Grid_add_value_along_line_confidence(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, float __pyx_v_x_1, float __pyx_v_y_1, int __pyx_v_val) {
   int __pyx_v_x_start;
   int __pyx_v_y_start;
   int __pyx_v_x_end;
@@ -22031,10 +21654,11 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   int __pyx_v_y_step;
   int __pyx_v_y;
   int __pyx_v_x;
-  int __pyx_v_added_value;
   float __pyx_v_error;
+  float __pyx_v_added_value;
+  float __pyx_v_inverse_dist;
+  int __pyx_v_dist_from_start;
   __Pyx_memviewslice __pyx_v_grid_view = { 0, 0, { 0 }, { 0 }, { 0 } };
-  PyObject *__pyx_v_dist_from_start = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   int __pyx_t_1;
@@ -22048,17 +21672,16 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   __Pyx_memviewslice __pyx_t_9 = { 0, 0, { 0 }, { 0 }, { 0 } };
   long __pyx_t_10;
   long __pyx_t_11;
-  PyObject *__pyx_t_12 = NULL;
-  PyObject *__pyx_t_13 = NULL;
-  long __pyx_t_14;
+  long __pyx_t_12;
+  long __pyx_t_13;
+  Py_ssize_t __pyx_t_14;
   Py_ssize_t __pyx_t_15;
-  Py_ssize_t __pyx_t_16;
   int __pyx_lineno = 0;
   const char *__pyx_filename = NULL;
   int __pyx_clineno = 0;
   __Pyx_RefNannySetupContext("add_value_along_line_confidence", 1);
 
-  /* "grid_c.pyx":160
+  /* "grid_c.pyx":161
  * 
  *         # Handle NaNs
  *         if isnan(x_0) or isnan(y_0) or isnan(x_1) or isnan(y_1):             # <<<<<<<<<<<<<<
@@ -22088,18 +21711,18 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   __pyx_L4_bool_binop_done:;
   if (__pyx_t_1) {
 
-    /* "grid_c.pyx":161
+    /* "grid_c.pyx":162
  *         # Handle NaNs
  *         if isnan(x_0) or isnan(y_0) or isnan(x_1) or isnan(y_1):
  *             return             # <<<<<<<<<<<<<<
  * 
- *         # Convert to grid coordinates
+ * 
  */
     __Pyx_XDECREF(__pyx_r);
     __pyx_r = Py_None; __Pyx_INCREF(Py_None);
     goto __pyx_L0;
 
-    /* "grid_c.pyx":160
+    /* "grid_c.pyx":161
  * 
  *         # Handle NaNs
  *         if isnan(x_0) or isnan(y_0) or isnan(x_1) or isnan(y_1):             # <<<<<<<<<<<<<<
@@ -22108,14 +21731,14 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   }
 
-  /* "grid_c.pyx":164
- * 
+  /* "grid_c.pyx":167
+ *         # Convert to grid coordinates and other setup...
  *         # Convert to grid coordinates
  *         x_start, y_start = self.conv_world_to_grid(x_0, y_0)             # <<<<<<<<<<<<<<
  *         x_end, y_end = self.conv_world_to_grid(x_1, y_1)
  * 
  */
-  __pyx_t_3 = ((struct __pyx_vtabstruct_6grid_c_Grid *)__pyx_v_self->__pyx_vtab)->conv_world_to_grid(__pyx_v_self, __pyx_v_x_0, __pyx_v_y_0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 164, __pyx_L1_error)
+  __pyx_t_3 = ((struct __pyx_vtabstruct_6grid_c_Grid *)__pyx_v_self->__pyx_vtab)->conv_world_to_grid(__pyx_v_self, __pyx_v_x_0, __pyx_v_y_0); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 167, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (likely(__pyx_t_3 != Py_None)) {
     PyObject* sequence = __pyx_t_3;
@@ -22123,7 +21746,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     if (unlikely(size != 2)) {
       if (size > 2) __Pyx_RaiseTooManyValuesError(2);
       else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-      __PYX_ERR(0, 164, __pyx_L1_error)
+      __PYX_ERR(0, 167, __pyx_L1_error)
     }
     #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
     __pyx_t_4 = PyTuple_GET_ITEM(sequence, 0); 
@@ -22131,30 +21754,30 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __Pyx_INCREF(__pyx_t_4);
     __Pyx_INCREF(__pyx_t_5);
     #else
-    __pyx_t_4 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 164, __pyx_L1_error)
+    __pyx_t_4 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 164, __pyx_L1_error)
+    __pyx_t_5 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 167, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     #endif
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 164, __pyx_L1_error)
+    __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 167, __pyx_L1_error)
   }
-  __pyx_t_6 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 164, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 167, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 164, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 167, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
   __pyx_v_x_start = __pyx_t_6;
   __pyx_v_y_start = __pyx_t_7;
 
-  /* "grid_c.pyx":165
+  /* "grid_c.pyx":168
  *         # Convert to grid coordinates
  *         x_start, y_start = self.conv_world_to_grid(x_0, y_0)
  *         x_end, y_end = self.conv_world_to_grid(x_1, y_1)             # <<<<<<<<<<<<<<
  * 
  *         # Check bounds
  */
-  __pyx_t_3 = ((struct __pyx_vtabstruct_6grid_c_Grid *)__pyx_v_self->__pyx_vtab)->conv_world_to_grid(__pyx_v_self, __pyx_v_x_1, __pyx_v_y_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 165, __pyx_L1_error)
+  __pyx_t_3 = ((struct __pyx_vtabstruct_6grid_c_Grid *)__pyx_v_self->__pyx_vtab)->conv_world_to_grid(__pyx_v_self, __pyx_v_x_1, __pyx_v_y_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 168, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   if (likely(__pyx_t_3 != Py_None)) {
     PyObject* sequence = __pyx_t_3;
@@ -22162,7 +21785,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     if (unlikely(size != 2)) {
       if (size > 2) __Pyx_RaiseTooManyValuesError(2);
       else if (size >= 0) __Pyx_RaiseNeedMoreValuesError(size);
-      __PYX_ERR(0, 165, __pyx_L1_error)
+      __PYX_ERR(0, 168, __pyx_L1_error)
     }
     #if CYTHON_ASSUME_SAFE_MACROS && !CYTHON_AVOID_BORROWED_REFS
     __pyx_t_5 = PyTuple_GET_ITEM(sequence, 0); 
@@ -22170,23 +21793,23 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __Pyx_INCREF(__pyx_t_5);
     __Pyx_INCREF(__pyx_t_4);
     #else
-    __pyx_t_5 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 165, __pyx_L1_error)
+    __pyx_t_5 = PySequence_ITEM(sequence, 0); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 168, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_4 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 165, __pyx_L1_error)
+    __pyx_t_4 = PySequence_ITEM(sequence, 1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 168, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     #endif
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 165, __pyx_L1_error)
+    __Pyx_RaiseNoneNotIterableError(); __PYX_ERR(0, 168, __pyx_L1_error)
   }
-  __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 165, __pyx_L1_error)
+  __pyx_t_7 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_7 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 168, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-  __pyx_t_6 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 165, __pyx_L1_error)
+  __pyx_t_6 = __Pyx_PyInt_As_int(__pyx_t_4); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 168, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __pyx_v_x_end = __pyx_t_7;
   __pyx_v_y_end = __pyx_t_6;
 
-  /* "grid_c.pyx":168
+  /* "grid_c.pyx":171
  * 
  *         # Check bounds
  *         if (x_start < 0 or x_start >= self.x_max_grid or y_start < 0 or y_start >= self.y_max_grid or             # <<<<<<<<<<<<<<
@@ -22218,7 +21841,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     goto __pyx_L9_bool_binop_done;
   }
 
-  /* "grid_c.pyx":169
+  /* "grid_c.pyx":172
  *         # Check bounds
  *         if (x_start < 0 or x_start >= self.x_max_grid or y_start < 0 or y_start >= self.y_max_grid or
  *             x_end < 0 or x_end >= self.x_max_grid or y_end < 0 or y_end >= self.y_max_grid):             # <<<<<<<<<<<<<<
@@ -22247,7 +21870,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   __pyx_t_1 = __pyx_t_2;
   __pyx_L9_bool_binop_done:;
 
-  /* "grid_c.pyx":168
+  /* "grid_c.pyx":171
  * 
  *         # Check bounds
  *         if (x_start < 0 or x_start >= self.x_max_grid or y_start < 0 or y_start >= self.y_max_grid or             # <<<<<<<<<<<<<<
@@ -22256,7 +21879,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   if (__pyx_t_1) {
 
-    /* "grid_c.pyx":170
+    /* "grid_c.pyx":173
  *         if (x_start < 0 or x_start >= self.x_max_grid or y_start < 0 or y_start >= self.y_max_grid or
  *             x_end < 0 or x_end >= self.x_max_grid or y_end < 0 or y_end >= self.y_max_grid):
  *             return             # <<<<<<<<<<<<<<
@@ -22267,7 +21890,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __pyx_r = Py_None; __Pyx_INCREF(Py_None);
     goto __pyx_L0;
 
-    /* "grid_c.pyx":168
+    /* "grid_c.pyx":171
  * 
  *         # Check bounds
  *         if (x_start < 0 or x_start >= self.x_max_grid or y_start < 0 or y_start >= self.y_max_grid or             # <<<<<<<<<<<<<<
@@ -22276,7 +21899,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   }
 
-  /* "grid_c.pyx":173
+  /* "grid_c.pyx":176
  * 
  *         # Setup for Bresenham's line algorithm
  *         dx = x_end - x_start             # <<<<<<<<<<<<<<
@@ -22285,7 +21908,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   __pyx_v_dx = (__pyx_v_x_end - __pyx_v_x_start);
 
-  /* "grid_c.pyx":174
+  /* "grid_c.pyx":177
  *         # Setup for Bresenham's line algorithm
  *         dx = x_end - x_start
  *         dy = y_end - y_start             # <<<<<<<<<<<<<<
@@ -22294,19 +21917,19 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   __pyx_v_dy = (__pyx_v_y_end - __pyx_v_y_start);
 
-  /* "grid_c.pyx":175
+  /* "grid_c.pyx":178
  *         dx = x_end - x_start
  *         dy = y_end - y_start
  *         if abs (dy) > abs(dx):             # <<<<<<<<<<<<<<
  *             is_steep = 1
  *         else:
  */
-  __pyx_t_6 = abs(__pyx_v_dy); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 175, __pyx_L1_error)
-  __pyx_t_7 = abs(__pyx_v_dx); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 175, __pyx_L1_error)
+  __pyx_t_6 = abs(__pyx_v_dy); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 178, __pyx_L1_error)
+  __pyx_t_7 = abs(__pyx_v_dx); if (unlikely(__pyx_t_7 == ((int)-1))) __PYX_ERR(0, 178, __pyx_L1_error)
   __pyx_t_1 = (__pyx_t_6 > __pyx_t_7);
   if (__pyx_t_1) {
 
-    /* "grid_c.pyx":176
+    /* "grid_c.pyx":179
  *         dy = y_end - y_start
  *         if abs (dy) > abs(dx):
  *             is_steep = 1             # <<<<<<<<<<<<<<
@@ -22315,7 +21938,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
     __pyx_v_is_steep = 1;
 
-    /* "grid_c.pyx":175
+    /* "grid_c.pyx":178
  *         dx = x_end - x_start
  *         dy = y_end - y_start
  *         if abs (dy) > abs(dx):             # <<<<<<<<<<<<<<
@@ -22325,7 +21948,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     goto __pyx_L17;
   }
 
-  /* "grid_c.pyx":178
+  /* "grid_c.pyx":181
  *             is_steep = 1
  *         else:
  *             is_steep = 0             # <<<<<<<<<<<<<<
@@ -22337,7 +21960,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   }
   __pyx_L17:;
 
-  /* "grid_c.pyx":179
+  /* "grid_c.pyx":182
  *         else:
  *             is_steep = 0
  *         if is_steep == 1:             # <<<<<<<<<<<<<<
@@ -22347,7 +21970,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   __pyx_t_1 = (__pyx_v_is_steep == 1);
   if (__pyx_t_1) {
 
-    /* "grid_c.pyx":180
+    /* "grid_c.pyx":183
  *             is_steep = 0
  *         if is_steep == 1:
  *             x_start, y_start = y_start, x_start             # <<<<<<<<<<<<<<
@@ -22359,7 +21982,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __pyx_v_x_start = __pyx_t_7;
     __pyx_v_y_start = __pyx_t_6;
 
-    /* "grid_c.pyx":181
+    /* "grid_c.pyx":184
  *         if is_steep == 1:
  *             x_start, y_start = y_start, x_start
  *             x_end, y_end = y_end, x_end             # <<<<<<<<<<<<<<
@@ -22371,7 +21994,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __pyx_v_x_end = __pyx_t_6;
     __pyx_v_y_end = __pyx_t_7;
 
-    /* "grid_c.pyx":179
+    /* "grid_c.pyx":182
  *         else:
  *             is_steep = 0
  *         if is_steep == 1:             # <<<<<<<<<<<<<<
@@ -22380,7 +22003,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   }
 
-  /* "grid_c.pyx":183
+  /* "grid_c.pyx":186
  *             x_end, y_end = y_end, x_end
  * 
  *         if x_start > x_end:             # <<<<<<<<<<<<<<
@@ -22390,7 +22013,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   __pyx_t_1 = (__pyx_v_x_start > __pyx_v_x_end);
   if (__pyx_t_1) {
 
-    /* "grid_c.pyx":184
+    /* "grid_c.pyx":187
  * 
  *         if x_start > x_end:
  *             x_start, x_end = x_end, x_start             # <<<<<<<<<<<<<<
@@ -22402,7 +22025,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __pyx_v_x_start = __pyx_t_7;
     __pyx_v_x_end = __pyx_t_6;
 
-    /* "grid_c.pyx":185
+    /* "grid_c.pyx":188
  *         if x_start > x_end:
  *             x_start, x_end = x_end, x_start
  *             y_start, y_end = y_end, y_start             # <<<<<<<<<<<<<<
@@ -22414,7 +22037,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __pyx_v_y_start = __pyx_t_6;
     __pyx_v_y_end = __pyx_t_7;
 
-    /* "grid_c.pyx":183
+    /* "grid_c.pyx":186
  *             x_end, y_end = y_end, x_end
  * 
  *         if x_start > x_end:             # <<<<<<<<<<<<<<
@@ -22423,7 +22046,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   }
 
-  /* "grid_c.pyx":187
+  /* "grid_c.pyx":190
  *             y_start, y_end = y_end, y_start
  * 
  *         dx = x_end - x_start             # <<<<<<<<<<<<<<
@@ -22432,7 +22055,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   __pyx_v_dx = (__pyx_v_x_end - __pyx_v_x_start);
 
-  /* "grid_c.pyx":188
+  /* "grid_c.pyx":191
  * 
  *         dx = x_end - x_start
  *         dy = y_end - y_start             # <<<<<<<<<<<<<<
@@ -22441,7 +22064,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   __pyx_v_dy = (__pyx_v_y_end - __pyx_v_y_start);
 
-  /* "grid_c.pyx":189
+  /* "grid_c.pyx":192
  *         dx = x_end - x_start
  *         dy = y_end - y_start
  *         error = int(dx / 2.0)             # <<<<<<<<<<<<<<
@@ -22451,7 +22074,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   __pyx_t_8 = trunc((((double)__pyx_v_dx) / 2.0)); 
   __pyx_v_error = __pyx_t_8;
 
-  /* "grid_c.pyx":190
+  /* "grid_c.pyx":193
  *         dy = y_end - y_start
  *         error = int(dx / 2.0)
  *         y_step = 1 if y_start < y_end else -1             # <<<<<<<<<<<<<<
@@ -22466,7 +22089,7 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   }
   __pyx_v_y_step = __pyx_t_7;
 
-  /* "grid_c.pyx":193
+  /* "grid_c.pyx":196
  * 
  *         # Perform drawing using Bresenham's line algorithm
  *         y = y_start             # <<<<<<<<<<<<<<
@@ -22475,143 +22098,68 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
   __pyx_v_y = __pyx_v_y_start;
 
-  /* "grid_c.pyx":194
+  /* "grid_c.pyx":197
  *         # Perform drawing using Bresenham's line algorithm
  *         y = y_start
  *         grid_view = self.grid  # Cast to a memoryview before loop to avoid repeated casting             # <<<<<<<<<<<<<<
  *         for x in range(x_start, x_end + 1):
- *             dist_from_start = (np.abs((x - x_0)) + np.abs((y - y_0)))
+ *             # Calculate the Manhattan distance and cast to int explicitly
  */
-  __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_dsds_nn___pyx_t_6grid_c_DTYPE_t(__pyx_v_self->grid, PyBUF_WRITABLE); if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 194, __pyx_L1_error)
+  __pyx_t_9 = __Pyx_PyObject_to_MemoryviewSlice_dsds_nn___pyx_t_6grid_c_DTYPE_t(__pyx_v_self->grid, PyBUF_WRITABLE); if (unlikely(!__pyx_t_9.memview)) __PYX_ERR(0, 197, __pyx_L1_error)
   __pyx_v_grid_view = __pyx_t_9;
   __pyx_t_9.memview = NULL;
   __pyx_t_9.data = NULL;
 
-  /* "grid_c.pyx":195
+  /* "grid_c.pyx":198
  *         y = y_start
  *         grid_view = self.grid  # Cast to a memoryview before loop to avoid repeated casting
  *         for x in range(x_start, x_end + 1):             # <<<<<<<<<<<<<<
- *             dist_from_start = (np.abs((x - x_0)) + np.abs((y - y_0)))
- *             added_value = val / max(1, dist_from_start)
+ *             # Calculate the Manhattan distance and cast to int explicitly
+ *             dist_from_start = int(abs(x - x_0) + abs(y - y_0))
  */
   __pyx_t_10 = (__pyx_v_x_end + 1);
   __pyx_t_11 = __pyx_t_10;
   for (__pyx_t_7 = __pyx_v_x_start; __pyx_t_7 < __pyx_t_11; __pyx_t_7+=1) {
     __pyx_v_x = __pyx_t_7;
 
-    /* "grid_c.pyx":196
- *         grid_view = self.grid  # Cast to a memoryview before loop to avoid repeated casting
+    /* "grid_c.pyx":200
  *         for x in range(x_start, x_end + 1):
- *             dist_from_start = (np.abs((x - x_0)) + np.abs((y - y_0)))             # <<<<<<<<<<<<<<
- *             added_value = val / max(1, dist_from_start)
- *             if is_steep == 1:
+ *             # Calculate the Manhattan distance and cast to int explicitly
+ *             dist_from_start = int(abs(x - x_0) + abs(y - y_0))             # <<<<<<<<<<<<<<
+ * 
+ *             # Inline max function and calculate inverse to avoid division
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 196, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_abs); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 196, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_5);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = PyFloat_FromDouble((__pyx_v_x - __pyx_v_x_0)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 196, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_12 = NULL;
-    __pyx_t_6 = 0;
-    #if CYTHON_UNPACK_METHODS
-    if (unlikely(PyMethod_Check(__pyx_t_5))) {
-      __pyx_t_12 = PyMethod_GET_SELF(__pyx_t_5);
-      if (likely(__pyx_t_12)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-        __Pyx_INCREF(__pyx_t_12);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_5, function);
-        __pyx_t_6 = 1;
-      }
-    }
-    #endif
-    {
-      PyObject *__pyx_callargs[2] = {__pyx_t_12, __pyx_t_4};
-      __pyx_t_3 = __Pyx_PyObject_FastCall(__pyx_t_5, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
-      __Pyx_XDECREF(__pyx_t_12); __pyx_t_12 = 0;
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 196, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_3);
-      __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    }
-    __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_np); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 196, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_12 = __Pyx_PyObject_GetAttrStr(__pyx_t_4, __pyx_n_s_abs); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 196, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_12);
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = PyFloat_FromDouble((__pyx_v_y - __pyx_v_y_0)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 196, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_13 = NULL;
-    __pyx_t_6 = 0;
-    #if CYTHON_UNPACK_METHODS
-    if (unlikely(PyMethod_Check(__pyx_t_12))) {
-      __pyx_t_13 = PyMethod_GET_SELF(__pyx_t_12);
-      if (likely(__pyx_t_13)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_12);
-        __Pyx_INCREF(__pyx_t_13);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_12, function);
-        __pyx_t_6 = 1;
-      }
-    }
-    #endif
-    {
-      PyObject *__pyx_callargs[2] = {__pyx_t_13, __pyx_t_4};
-      __pyx_t_5 = __Pyx_PyObject_FastCall(__pyx_t_12, __pyx_callargs+1-__pyx_t_6, 1+__pyx_t_6);
-      __Pyx_XDECREF(__pyx_t_13); __pyx_t_13 = 0;
-      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 196, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_5);
-      __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    }
-    __pyx_t_12 = PyNumber_Add(__pyx_t_3, __pyx_t_5); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 196, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_12);
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __Pyx_XDECREF_SET(__pyx_v_dist_from_start, __pyx_t_12);
-    __pyx_t_12 = 0;
+    __pyx_v_dist_from_start = ((int)(fabsf((__pyx_v_x - __pyx_v_x_0)) + fabsf((__pyx_v_y - __pyx_v_y_0))));
 
-    /* "grid_c.pyx":197
- *         for x in range(x_start, x_end + 1):
- *             dist_from_start = (np.abs((x - x_0)) + np.abs((y - y_0)))
- *             added_value = val / max(1, dist_from_start)             # <<<<<<<<<<<<<<
- *             if is_steep == 1:
- *                 if 0 <= y < self.x_max_grid and 0 <= x < self.y_max_grid:
+    /* "grid_c.pyx":203
+ * 
+ *             # Inline max function and calculate inverse to avoid division
+ *             inverse_dist = 1.0 / float(max(1, dist_from_start))             # <<<<<<<<<<<<<<
+ *             added_value = val * inverse_dist
+ * 
  */
-    __pyx_t_12 = __Pyx_PyInt_From_int(__pyx_v_val); if (unlikely(!__pyx_t_12)) __PYX_ERR(0, 197, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_12);
-    __Pyx_INCREF(__pyx_v_dist_from_start);
-    __pyx_t_5 = __pyx_v_dist_from_start;
-    __pyx_t_14 = 1;
-    __pyx_t_4 = __Pyx_PyInt_From_long(__pyx_t_14); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 197, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_13 = PyObject_RichCompare(__pyx_t_5, __pyx_t_4, Py_GT); __Pyx_XGOTREF(__pyx_t_13); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 197, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_13); if (unlikely((__pyx_t_1 < 0))) __PYX_ERR(0, 197, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_13); __pyx_t_13 = 0;
+    __pyx_t_6 = __pyx_v_dist_from_start;
+    __pyx_t_12 = 1;
+    __pyx_t_1 = (__pyx_t_6 > __pyx_t_12);
     if (__pyx_t_1) {
-      __Pyx_INCREF(__pyx_t_5);
-      __pyx_t_3 = __pyx_t_5;
+      __pyx_t_13 = __pyx_t_6;
     } else {
-      __pyx_t_13 = __Pyx_PyInt_From_long(__pyx_t_14); if (unlikely(!__pyx_t_13)) __PYX_ERR(0, 197, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_13);
-      __pyx_t_3 = __pyx_t_13;
-      __pyx_t_13 = 0;
+      __pyx_t_13 = __pyx_t_12;
     }
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_t_5 = __Pyx_PyNumber_Divide(__pyx_t_12, __pyx_t_3); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 197, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_5);
-    __Pyx_DECREF(__pyx_t_12); __pyx_t_12 = 0;
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __pyx_t_6 = __Pyx_PyInt_As_int(__pyx_t_5); if (unlikely((__pyx_t_6 == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 197, __pyx_L1_error)
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __pyx_v_added_value = __pyx_t_6;
+    __pyx_v_inverse_dist = (1.0 / ((double)__pyx_t_13));
 
-    /* "grid_c.pyx":198
- *             dist_from_start = (np.abs((x - x_0)) + np.abs((y - y_0)))
- *             added_value = val / max(1, dist_from_start)
+    /* "grid_c.pyx":204
+ *             # Inline max function and calculate inverse to avoid division
+ *             inverse_dist = 1.0 / float(max(1, dist_from_start))
+ *             added_value = val * inverse_dist             # <<<<<<<<<<<<<<
+ * 
+ *             # Check boundaries and add value
+ */
+    __pyx_v_added_value = (__pyx_v_val * __pyx_v_inverse_dist);
+
+    /* "grid_c.pyx":207
+ * 
+ *             # Check boundaries and add value
  *             if is_steep == 1:             # <<<<<<<<<<<<<<
  *                 if 0 <= y < self.x_max_grid and 0 <= x < self.y_max_grid:
  *                     grid_view[y, x] += added_value
@@ -22619,8 +22167,8 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __pyx_t_1 = (__pyx_v_is_steep == 1);
     if (__pyx_t_1) {
 
-      /* "grid_c.pyx":199
- *             added_value = val / max(1, dist_from_start)
+      /* "grid_c.pyx":208
+ *             # Check boundaries and add value
  *             if is_steep == 1:
  *                 if 0 <= y < self.x_max_grid and 0 <= x < self.y_max_grid:             # <<<<<<<<<<<<<<
  *                     grid_view[y, x] += added_value
@@ -22643,19 +22191,19 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
       __pyx_L24_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "grid_c.pyx":200
+        /* "grid_c.pyx":209
  *             if is_steep == 1:
  *                 if 0 <= y < self.x_max_grid and 0 <= x < self.y_max_grid:
  *                     grid_view[y, x] += added_value             # <<<<<<<<<<<<<<
  *             else:
  *                 if 0 <= x < self.x_max_grid and 0 <= y < self.y_max_grid:
  */
-        __pyx_t_15 = __pyx_v_y;
-        __pyx_t_16 = __pyx_v_x;
-        *((__pyx_t_6grid_c_DTYPE_t *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_grid_view.data + __pyx_t_15 * __pyx_v_grid_view.strides[0]) ) + __pyx_t_16 * __pyx_v_grid_view.strides[1]) )) += __pyx_v_added_value;
+        __pyx_t_14 = __pyx_v_y;
+        __pyx_t_15 = __pyx_v_x;
+        *((__pyx_t_6grid_c_DTYPE_t *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_grid_view.data + __pyx_t_14 * __pyx_v_grid_view.strides[0]) ) + __pyx_t_15 * __pyx_v_grid_view.strides[1]) )) += __pyx_v_added_value;
 
-        /* "grid_c.pyx":199
- *             added_value = val / max(1, dist_from_start)
+        /* "grid_c.pyx":208
+ *             # Check boundaries and add value
  *             if is_steep == 1:
  *                 if 0 <= y < self.x_max_grid and 0 <= x < self.y_max_grid:             # <<<<<<<<<<<<<<
  *                     grid_view[y, x] += added_value
@@ -22663,9 +22211,9 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
  */
       }
 
-      /* "grid_c.pyx":198
- *             dist_from_start = (np.abs((x - x_0)) + np.abs((y - y_0)))
- *             added_value = val / max(1, dist_from_start)
+      /* "grid_c.pyx":207
+ * 
+ *             # Check boundaries and add value
  *             if is_steep == 1:             # <<<<<<<<<<<<<<
  *                 if 0 <= y < self.x_max_grid and 0 <= x < self.y_max_grid:
  *                     grid_view[y, x] += added_value
@@ -22673,12 +22221,12 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
       goto __pyx_L22;
     }
 
-    /* "grid_c.pyx":202
+    /* "grid_c.pyx":211
  *                     grid_view[y, x] += added_value
  *             else:
  *                 if 0 <= x < self.x_max_grid and 0 <= y < self.y_max_grid:             # <<<<<<<<<<<<<<
  *                     grid_view[x, y] += added_value
- *             error -= abs(dy)
+ * 
  */
     /*else*/ {
       __pyx_t_2 = (0 <= __pyx_v_x);
@@ -22698,40 +22246,40 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
       __pyx_L27_bool_binop_done:;
       if (__pyx_t_1) {
 
-        /* "grid_c.pyx":203
+        /* "grid_c.pyx":212
  *             else:
  *                 if 0 <= x < self.x_max_grid and 0 <= y < self.y_max_grid:
  *                     grid_view[x, y] += added_value             # <<<<<<<<<<<<<<
+ * 
  *             error -= abs(dy)
- *             if error < 0:
  */
-        __pyx_t_16 = __pyx_v_x;
-        __pyx_t_15 = __pyx_v_y;
-        *((__pyx_t_6grid_c_DTYPE_t *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_grid_view.data + __pyx_t_16 * __pyx_v_grid_view.strides[0]) ) + __pyx_t_15 * __pyx_v_grid_view.strides[1]) )) += __pyx_v_added_value;
+        __pyx_t_15 = __pyx_v_x;
+        __pyx_t_14 = __pyx_v_y;
+        *((__pyx_t_6grid_c_DTYPE_t *) ( /* dim=1 */ (( /* dim=0 */ (__pyx_v_grid_view.data + __pyx_t_15 * __pyx_v_grid_view.strides[0]) ) + __pyx_t_14 * __pyx_v_grid_view.strides[1]) )) += __pyx_v_added_value;
 
-        /* "grid_c.pyx":202
+        /* "grid_c.pyx":211
  *                     grid_view[y, x] += added_value
  *             else:
  *                 if 0 <= x < self.x_max_grid and 0 <= y < self.y_max_grid:             # <<<<<<<<<<<<<<
  *                     grid_view[x, y] += added_value
- *             error -= abs(dy)
+ * 
  */
       }
     }
     __pyx_L22:;
 
-    /* "grid_c.pyx":204
- *                 if 0 <= x < self.x_max_grid and 0 <= y < self.y_max_grid:
+    /* "grid_c.pyx":214
  *                     grid_view[x, y] += added_value
+ * 
  *             error -= abs(dy)             # <<<<<<<<<<<<<<
  *             if error < 0:
  *                 y += y_step
  */
-    __pyx_t_6 = abs(__pyx_v_dy); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 204, __pyx_L1_error)
+    __pyx_t_6 = abs(__pyx_v_dy); if (unlikely(__pyx_t_6 == ((int)-1))) __PYX_ERR(0, 214, __pyx_L1_error)
     __pyx_v_error = (__pyx_v_error - __pyx_t_6);
 
-    /* "grid_c.pyx":205
- *                     grid_view[x, y] += added_value
+    /* "grid_c.pyx":215
+ * 
  *             error -= abs(dy)
  *             if error < 0:             # <<<<<<<<<<<<<<
  *                 y += y_step
@@ -22740,23 +22288,26 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     __pyx_t_1 = (__pyx_v_error < 0.0);
     if (__pyx_t_1) {
 
-      /* "grid_c.pyx":206
+      /* "grid_c.pyx":216
  *             error -= abs(dy)
  *             if error < 0:
  *                 y += y_step             # <<<<<<<<<<<<<<
  *                 error += dx
+ *     @cython.boundscheck(False)
  */
       __pyx_v_y = (__pyx_v_y + __pyx_v_y_step);
 
-      /* "grid_c.pyx":207
+      /* "grid_c.pyx":217
  *             if error < 0:
  *                 y += y_step
  *                 error += dx             # <<<<<<<<<<<<<<
+ *     @cython.boundscheck(False)
+ *     @cython.wraparound(False)
  */
       __pyx_v_error = (__pyx_v_error + __pyx_v_dx);
 
-      /* "grid_c.pyx":205
- *                     grid_view[x, y] += added_value
+      /* "grid_c.pyx":215
+ * 
  *             error -= abs(dy)
  *             if error < 0:             # <<<<<<<<<<<<<<
  *                 y += y_step
@@ -22765,12 +22316,12 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
     }
   }
 
-  /* "grid_c.pyx":151
- *         self.grid = grid
- * 
- *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+  /* "grid_c.pyx":154
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
+ *     cdef add_value_along_line_confidence(self, float x_0, float y_0, float x_1, float y_1, int val):             # <<<<<<<<<<<<<<
+ *         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
+ *         cdef float error, added_value, inverse_dist
  */
 
   /* function exit code */
@@ -22781,13 +22332,561 @@ static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_line_confidence(struct
   __Pyx_XDECREF(__pyx_t_4);
   __Pyx_XDECREF(__pyx_t_5);
   __PYX_XCLEAR_MEMVIEW(&__pyx_t_9, 1);
-  __Pyx_XDECREF(__pyx_t_12);
-  __Pyx_XDECREF(__pyx_t_13);
   __Pyx_AddTraceback("grid_c.Grid.add_value_along_line_confidence", __pyx_clineno, __pyx_lineno, __pyx_filename);
-  __pyx_r = NULL;
+  __pyx_r = 0;
   __pyx_L0:;
   __PYX_XCLEAR_MEMVIEW(&__pyx_v_grid_view, 1);
-  __Pyx_XDECREF(__pyx_v_dist_from_start);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "grid_c.pyx":218
+ *                 y += y_step
+ *                 error += dx
+ *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+ *     @cython.wraparound(False)
+ *     @cython.cdivision(True)
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6grid_c_4Grid_11add_value_along_lines_confidence(PyObject *__pyx_v_self, 
+#if CYTHON_METH_FASTCALL
+PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
+#else
+PyObject *__pyx_args, PyObject *__pyx_kwds
+#endif
+); /*proto*/
+static PyMethodDef __pyx_mdef_6grid_c_4Grid_11add_value_along_lines_confidence = {"add_value_along_lines_confidence", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_11add_value_along_lines_confidence, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_6grid_c_4Grid_11add_value_along_lines_confidence(PyObject *__pyx_v_self, 
+#if CYTHON_METH_FASTCALL
+PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
+#else
+PyObject *__pyx_args, PyObject *__pyx_kwds
+#endif
+) {
+  float __pyx_v_x_0;
+  float __pyx_v_y_0;
+  PyArrayObject *__pyx_v_points_x = 0;
+  PyArrayObject *__pyx_v_points_y = 0;
+  int __pyx_v_val;
+  #if !CYTHON_METH_FASTCALL
+  CYTHON_UNUSED Py_ssize_t __pyx_nargs;
+  #endif
+  CYTHON_UNUSED PyObject *const *__pyx_kwvalues;
+  PyObject* values[5] = {0,0,0,0,0};
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("add_value_along_lines_confidence (wrapper)", 0);
+  #if !CYTHON_METH_FASTCALL
+  #if CYTHON_ASSUME_SAFE_MACROS
+  __pyx_nargs = PyTuple_GET_SIZE(__pyx_args);
+  #else
+  __pyx_nargs = PyTuple_Size(__pyx_args); if (unlikely(__pyx_nargs < 0)) return NULL;
+  #endif
+  #endif
+  __pyx_kwvalues = __Pyx_KwValues_FASTCALL(__pyx_args, __pyx_nargs);
+  {
+    PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x_0,&__pyx_n_s_y_0,&__pyx_n_s_points_x,&__pyx_n_s_points_y,&__pyx_n_s_val,0};
+    if (__pyx_kwds) {
+      Py_ssize_t kw_args;
+      switch (__pyx_nargs) {
+        case  5: values[4] = __Pyx_Arg_FASTCALL(__pyx_args, 4);
+        CYTHON_FALLTHROUGH;
+        case  4: values[3] = __Pyx_Arg_FASTCALL(__pyx_args, 3);
+        CYTHON_FALLTHROUGH;
+        case  3: values[2] = __Pyx_Arg_FASTCALL(__pyx_args, 2);
+        CYTHON_FALLTHROUGH;
+        case  2: values[1] = __Pyx_Arg_FASTCALL(__pyx_args, 1);
+        CYTHON_FALLTHROUGH;
+        case  1: values[0] = __Pyx_Arg_FASTCALL(__pyx_args, 0);
+        CYTHON_FALLTHROUGH;
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = __Pyx_NumKwargs_FASTCALL(__pyx_kwds);
+      switch (__pyx_nargs) {
+        case  0:
+        if (likely((values[0] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_x_0)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 218, __pyx_L3_error)
+        else goto __pyx_L5_argtuple_error;
+        CYTHON_FALLTHROUGH;
+        case  1:
+        if (likely((values[1] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_y_0)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[1]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 218, __pyx_L3_error)
+        else {
+          __Pyx_RaiseArgtupleInvalid("add_value_along_lines_confidence", 1, 5, 5, 1); __PYX_ERR(0, 218, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  2:
+        if (likely((values[2] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_points_x)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[2]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 218, __pyx_L3_error)
+        else {
+          __Pyx_RaiseArgtupleInvalid("add_value_along_lines_confidence", 1, 5, 5, 2); __PYX_ERR(0, 218, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  3:
+        if (likely((values[3] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_points_y)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[3]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 218, __pyx_L3_error)
+        else {
+          __Pyx_RaiseArgtupleInvalid("add_value_along_lines_confidence", 1, 5, 5, 3); __PYX_ERR(0, 218, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  4:
+        if (likely((values[4] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_val)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[4]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 218, __pyx_L3_error)
+        else {
+          __Pyx_RaiseArgtupleInvalid("add_value_along_lines_confidence", 1, 5, 5, 4); __PYX_ERR(0, 218, __pyx_L3_error)
+        }
+      }
+      if (unlikely(kw_args > 0)) {
+        const Py_ssize_t kwd_pos_args = __pyx_nargs;
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "add_value_along_lines_confidence") < 0)) __PYX_ERR(0, 218, __pyx_L3_error)
+      }
+    } else if (unlikely(__pyx_nargs != 5)) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = __Pyx_Arg_FASTCALL(__pyx_args, 0);
+      values[1] = __Pyx_Arg_FASTCALL(__pyx_args, 1);
+      values[2] = __Pyx_Arg_FASTCALL(__pyx_args, 2);
+      values[3] = __Pyx_Arg_FASTCALL(__pyx_args, 3);
+      values[4] = __Pyx_Arg_FASTCALL(__pyx_args, 4);
+    }
+    __pyx_v_x_0 = __pyx_PyFloat_AsFloat(values[0]); if (unlikely((__pyx_v_x_0 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 221, __pyx_L3_error)
+    __pyx_v_y_0 = __pyx_PyFloat_AsFloat(values[1]); if (unlikely((__pyx_v_y_0 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 221, __pyx_L3_error)
+    __pyx_v_points_x = ((PyArrayObject *)values[2]);
+    __pyx_v_points_y = ((PyArrayObject *)values[3]);
+    __pyx_v_val = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_val == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 221, __pyx_L3_error)
+  }
+  goto __pyx_L6_skip;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("add_value_along_lines_confidence", 1, 5, 5, __pyx_nargs); __PYX_ERR(0, 218, __pyx_L3_error)
+  __pyx_L6_skip:;
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L3_error:;
+  {
+    Py_ssize_t __pyx_temp;
+    for (__pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
+      __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
+    }
+  }
+  __Pyx_AddTraceback("grid_c.Grid.add_value_along_lines_confidence", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_points_x), __pyx_ptype_5numpy_ndarray, 1, "points_x", 0))) __PYX_ERR(0, 221, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_points_y), __pyx_ptype_5numpy_ndarray, 1, "points_y", 0))) __PYX_ERR(0, 221, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6grid_c_4Grid_10add_value_along_lines_confidence(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_x_0, __pyx_v_y_0, __pyx_v_points_x, __pyx_v_points_y, __pyx_v_val);
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __pyx_r = NULL;
+  __pyx_L0:;
+  {
+    Py_ssize_t __pyx_temp;
+    for (__pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
+      __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
+    }
+  }
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6grid_c_4Grid_10add_value_along_lines_confidence(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, PyArrayObject *__pyx_v_points_x, PyArrayObject *__pyx_v_points_y, int __pyx_v_val) {
+  int __pyx_v_num_points;
+  int __pyx_v_i;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_points_x;
+  __Pyx_Buffer __pyx_pybuffer_points_x;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_points_y;
+  __Pyx_Buffer __pyx_pybuffer_points_y;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  npy_intp *__pyx_t_1;
+  int __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+  Py_ssize_t __pyx_t_5;
+  Py_ssize_t __pyx_t_6;
+  PyObject *__pyx_t_7 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("add_value_along_lines_confidence", 1);
+  __pyx_pybuffer_points_x.pybuffer.buf = NULL;
+  __pyx_pybuffer_points_x.refcount = 0;
+  __pyx_pybuffernd_points_x.data = NULL;
+  __pyx_pybuffernd_points_x.rcbuffer = &__pyx_pybuffer_points_x;
+  __pyx_pybuffer_points_y.pybuffer.buf = NULL;
+  __pyx_pybuffer_points_y.refcount = 0;
+  __pyx_pybuffernd_points_y.data = NULL;
+  __pyx_pybuffernd_points_y.rcbuffer = &__pyx_pybuffer_points_y;
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_points_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_points_x, &__Pyx_TypeInfo_nn___pyx_t_6grid_c_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 218, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_points_x.diminfo[0].strides = __pyx_pybuffernd_points_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_points_x.diminfo[0].shape = __pyx_pybuffernd_points_x.rcbuffer->pybuffer.shape[0];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_points_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_points_y, &__Pyx_TypeInfo_nn___pyx_t_6grid_c_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 218, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_points_y.diminfo[0].strides = __pyx_pybuffernd_points_y.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_points_y.diminfo[0].shape = __pyx_pybuffernd_points_y.rcbuffer->pybuffer.shape[0];
+
+  /* "grid_c.pyx":222
+ *     @cython.cdivision(True)
+ *     def add_value_along_lines_confidence(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, int val):
+ *         cdef int num_points = points_x.shape[0]             # <<<<<<<<<<<<<<
+ *         cdef int i
+ * 
+ */
+  __pyx_t_1 = __pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_points_x)); if (unlikely(__pyx_t_1 == ((npy_intp *)NULL) && PyErr_Occurred())) __PYX_ERR(0, 222, __pyx_L1_error)
+  __pyx_v_num_points = (__pyx_t_1[0]);
+
+  /* "grid_c.pyx":225
+ *         cdef int i
+ * 
+ *         for i in range(num_points):             # <<<<<<<<<<<<<<
+ *             self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)
+ * 
+ */
+  __pyx_t_2 = __pyx_v_num_points;
+  __pyx_t_3 = __pyx_t_2;
+  for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+    __pyx_v_i = __pyx_t_4;
+
+    /* "grid_c.pyx":226
+ * 
+ *         for i in range(num_points):
+ *             self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)             # <<<<<<<<<<<<<<
+ * 
+ *     @cython.boundscheck(False)
+ */
+    __pyx_t_5 = __pyx_v_i;
+    __pyx_t_6 = __pyx_v_i;
+    __pyx_t_7 = ((struct __pyx_vtabstruct_6grid_c_Grid *)__pyx_v_self->__pyx_vtab)->add_value_along_line_confidence(__pyx_v_self, __pyx_v_x_0, __pyx_v_y_0, (*__Pyx_BufPtrStrided1d(__pyx_t_6grid_c_DTYPE_t *, __pyx_pybuffernd_points_x.rcbuffer->pybuffer.buf, __pyx_t_5, __pyx_pybuffernd_points_x.diminfo[0].strides)), (*__Pyx_BufPtrStrided1d(__pyx_t_6grid_c_DTYPE_t *, __pyx_pybuffernd_points_y.rcbuffer->pybuffer.buf, __pyx_t_6, __pyx_pybuffernd_points_y.diminfo[0].strides)), __pyx_v_val); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 226, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_7);
+    __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+  }
+
+  /* "grid_c.pyx":218
+ *                 y += y_step
+ *                 error += dx
+ *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+ *     @cython.wraparound(False)
+ *     @cython.cdivision(True)
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_7);
+  { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_points_x.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_points_y.rcbuffer->pybuffer);
+  __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
+  __Pyx_AddTraceback("grid_c.Grid.add_value_along_lines_confidence", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  goto __pyx_L2;
+  __pyx_L0:;
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_points_x.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_points_y.rcbuffer->pybuffer);
+  __pyx_L2:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "grid_c.pyx":228
+ *             self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)
+ * 
+ *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+ *     @cython.wraparound(False)
+ *     @cython.cdivision(True)
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_6grid_c_4Grid_13add_value_along_lines(PyObject *__pyx_v_self, 
+#if CYTHON_METH_FASTCALL
+PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
+#else
+PyObject *__pyx_args, PyObject *__pyx_kwds
+#endif
+); /*proto*/
+static PyMethodDef __pyx_mdef_6grid_c_4Grid_13add_value_along_lines = {"add_value_along_lines", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_13add_value_along_lines, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0};
+static PyObject *__pyx_pw_6grid_c_4Grid_13add_value_along_lines(PyObject *__pyx_v_self, 
+#if CYTHON_METH_FASTCALL
+PyObject *const *__pyx_args, Py_ssize_t __pyx_nargs, PyObject *__pyx_kwds
+#else
+PyObject *__pyx_args, PyObject *__pyx_kwds
+#endif
+) {
+  float __pyx_v_x_0;
+  float __pyx_v_y_0;
+  PyArrayObject *__pyx_v_points_x = 0;
+  PyArrayObject *__pyx_v_points_y = 0;
+  int __pyx_v_val;
+  #if !CYTHON_METH_FASTCALL
+  CYTHON_UNUSED Py_ssize_t __pyx_nargs;
+  #endif
+  CYTHON_UNUSED PyObject *const *__pyx_kwvalues;
+  PyObject* values[5] = {0,0,0,0,0};
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("add_value_along_lines (wrapper)", 0);
+  #if !CYTHON_METH_FASTCALL
+  #if CYTHON_ASSUME_SAFE_MACROS
+  __pyx_nargs = PyTuple_GET_SIZE(__pyx_args);
+  #else
+  __pyx_nargs = PyTuple_Size(__pyx_args); if (unlikely(__pyx_nargs < 0)) return NULL;
+  #endif
+  #endif
+  __pyx_kwvalues = __Pyx_KwValues_FASTCALL(__pyx_args, __pyx_nargs);
+  {
+    PyObject **__pyx_pyargnames[] = {&__pyx_n_s_x_0,&__pyx_n_s_y_0,&__pyx_n_s_points_x,&__pyx_n_s_points_y,&__pyx_n_s_val,0};
+    if (__pyx_kwds) {
+      Py_ssize_t kw_args;
+      switch (__pyx_nargs) {
+        case  5: values[4] = __Pyx_Arg_FASTCALL(__pyx_args, 4);
+        CYTHON_FALLTHROUGH;
+        case  4: values[3] = __Pyx_Arg_FASTCALL(__pyx_args, 3);
+        CYTHON_FALLTHROUGH;
+        case  3: values[2] = __Pyx_Arg_FASTCALL(__pyx_args, 2);
+        CYTHON_FALLTHROUGH;
+        case  2: values[1] = __Pyx_Arg_FASTCALL(__pyx_args, 1);
+        CYTHON_FALLTHROUGH;
+        case  1: values[0] = __Pyx_Arg_FASTCALL(__pyx_args, 0);
+        CYTHON_FALLTHROUGH;
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = __Pyx_NumKwargs_FASTCALL(__pyx_kwds);
+      switch (__pyx_nargs) {
+        case  0:
+        if (likely((values[0] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_x_0)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[0]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 228, __pyx_L3_error)
+        else goto __pyx_L5_argtuple_error;
+        CYTHON_FALLTHROUGH;
+        case  1:
+        if (likely((values[1] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_y_0)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[1]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 228, __pyx_L3_error)
+        else {
+          __Pyx_RaiseArgtupleInvalid("add_value_along_lines", 1, 5, 5, 1); __PYX_ERR(0, 228, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  2:
+        if (likely((values[2] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_points_x)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[2]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 228, __pyx_L3_error)
+        else {
+          __Pyx_RaiseArgtupleInvalid("add_value_along_lines", 1, 5, 5, 2); __PYX_ERR(0, 228, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  3:
+        if (likely((values[3] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_points_y)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[3]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 228, __pyx_L3_error)
+        else {
+          __Pyx_RaiseArgtupleInvalid("add_value_along_lines", 1, 5, 5, 3); __PYX_ERR(0, 228, __pyx_L3_error)
+        }
+        CYTHON_FALLTHROUGH;
+        case  4:
+        if (likely((values[4] = __Pyx_GetKwValue_FASTCALL(__pyx_kwds, __pyx_kwvalues, __pyx_n_s_val)) != 0)) {
+          (void)__Pyx_Arg_NewRef_FASTCALL(values[4]);
+          kw_args--;
+        }
+        else if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 228, __pyx_L3_error)
+        else {
+          __Pyx_RaiseArgtupleInvalid("add_value_along_lines", 1, 5, 5, 4); __PYX_ERR(0, 228, __pyx_L3_error)
+        }
+      }
+      if (unlikely(kw_args > 0)) {
+        const Py_ssize_t kwd_pos_args = __pyx_nargs;
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_kwvalues, __pyx_pyargnames, 0, values + 0, kwd_pos_args, "add_value_along_lines") < 0)) __PYX_ERR(0, 228, __pyx_L3_error)
+      }
+    } else if (unlikely(__pyx_nargs != 5)) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = __Pyx_Arg_FASTCALL(__pyx_args, 0);
+      values[1] = __Pyx_Arg_FASTCALL(__pyx_args, 1);
+      values[2] = __Pyx_Arg_FASTCALL(__pyx_args, 2);
+      values[3] = __Pyx_Arg_FASTCALL(__pyx_args, 3);
+      values[4] = __Pyx_Arg_FASTCALL(__pyx_args, 4);
+    }
+    __pyx_v_x_0 = __pyx_PyFloat_AsFloat(values[0]); if (unlikely((__pyx_v_x_0 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 231, __pyx_L3_error)
+    __pyx_v_y_0 = __pyx_PyFloat_AsFloat(values[1]); if (unlikely((__pyx_v_y_0 == (float)-1) && PyErr_Occurred())) __PYX_ERR(0, 231, __pyx_L3_error)
+    __pyx_v_points_x = ((PyArrayObject *)values[2]);
+    __pyx_v_points_y = ((PyArrayObject *)values[3]);
+    __pyx_v_val = __Pyx_PyInt_As_int(values[4]); if (unlikely((__pyx_v_val == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 231, __pyx_L3_error)
+  }
+  goto __pyx_L6_skip;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("add_value_along_lines", 1, 5, 5, __pyx_nargs); __PYX_ERR(0, 228, __pyx_L3_error)
+  __pyx_L6_skip:;
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L3_error:;
+  {
+    Py_ssize_t __pyx_temp;
+    for (__pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
+      __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
+    }
+  }
+  __Pyx_AddTraceback("grid_c.Grid.add_value_along_lines", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_points_x), __pyx_ptype_5numpy_ndarray, 1, "points_x", 0))) __PYX_ERR(0, 231, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_points_y), __pyx_ptype_5numpy_ndarray, 1, "points_y", 0))) __PYX_ERR(0, 231, __pyx_L1_error)
+  __pyx_r = __pyx_pf_6grid_c_4Grid_12add_value_along_lines(((struct __pyx_obj_6grid_c_Grid *)__pyx_v_self), __pyx_v_x_0, __pyx_v_y_0, __pyx_v_points_x, __pyx_v_points_y, __pyx_v_val);
+
+  /* function exit code */
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __pyx_r = NULL;
+  __pyx_L0:;
+  {
+    Py_ssize_t __pyx_temp;
+    for (__pyx_temp=0; __pyx_temp < (Py_ssize_t)(sizeof(values)/sizeof(values[0])); ++__pyx_temp) {
+      __Pyx_Arg_XDECREF_FASTCALL(values[__pyx_temp]);
+    }
+  }
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_6grid_c_4Grid_12add_value_along_lines(struct __pyx_obj_6grid_c_Grid *__pyx_v_self, float __pyx_v_x_0, float __pyx_v_y_0, PyArrayObject *__pyx_v_points_x, PyArrayObject *__pyx_v_points_y, int __pyx_v_val) {
+  int __pyx_v_num_points;
+  int __pyx_v_i;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_points_x;
+  __Pyx_Buffer __pyx_pybuffer_points_x;
+  __Pyx_LocalBuf_ND __pyx_pybuffernd_points_y;
+  __Pyx_Buffer __pyx_pybuffer_points_y;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  npy_intp *__pyx_t_1;
+  int __pyx_t_2;
+  int __pyx_t_3;
+  int __pyx_t_4;
+  Py_ssize_t __pyx_t_5;
+  Py_ssize_t __pyx_t_6;
+  PyObject *__pyx_t_7 = NULL;
+  int __pyx_lineno = 0;
+  const char *__pyx_filename = NULL;
+  int __pyx_clineno = 0;
+  __Pyx_RefNannySetupContext("add_value_along_lines", 1);
+  __pyx_pybuffer_points_x.pybuffer.buf = NULL;
+  __pyx_pybuffer_points_x.refcount = 0;
+  __pyx_pybuffernd_points_x.data = NULL;
+  __pyx_pybuffernd_points_x.rcbuffer = &__pyx_pybuffer_points_x;
+  __pyx_pybuffer_points_y.pybuffer.buf = NULL;
+  __pyx_pybuffer_points_y.refcount = 0;
+  __pyx_pybuffernd_points_y.data = NULL;
+  __pyx_pybuffernd_points_y.rcbuffer = &__pyx_pybuffer_points_y;
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_points_x.rcbuffer->pybuffer, (PyObject*)__pyx_v_points_x, &__Pyx_TypeInfo_nn___pyx_t_6grid_c_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 228, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_points_x.diminfo[0].strides = __pyx_pybuffernd_points_x.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_points_x.diminfo[0].shape = __pyx_pybuffernd_points_x.rcbuffer->pybuffer.shape[0];
+  {
+    __Pyx_BufFmt_StackElem __pyx_stack[1];
+    if (unlikely(__Pyx_GetBufferAndValidate(&__pyx_pybuffernd_points_y.rcbuffer->pybuffer, (PyObject*)__pyx_v_points_y, &__Pyx_TypeInfo_nn___pyx_t_6grid_c_DTYPE_t, PyBUF_FORMAT| PyBUF_STRIDES, 1, 0, __pyx_stack) == -1)) __PYX_ERR(0, 228, __pyx_L1_error)
+  }
+  __pyx_pybuffernd_points_y.diminfo[0].strides = __pyx_pybuffernd_points_y.rcbuffer->pybuffer.strides[0]; __pyx_pybuffernd_points_y.diminfo[0].shape = __pyx_pybuffernd_points_y.rcbuffer->pybuffer.shape[0];
+
+  /* "grid_c.pyx":232
+ *     @cython.cdivision(True)
+ *     def add_value_along_lines(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, int val):
+ *         cdef int num_points = points_x.shape[0]             # <<<<<<<<<<<<<<
+ *         cdef int i
+ * 
+ */
+  __pyx_t_1 = __pyx_f_5numpy_7ndarray_5shape_shape(((PyArrayObject *)__pyx_v_points_x)); if (unlikely(__pyx_t_1 == ((npy_intp *)NULL) && PyErr_Occurred())) __PYX_ERR(0, 232, __pyx_L1_error)
+  __pyx_v_num_points = (__pyx_t_1[0]);
+
+  /* "grid_c.pyx":235
+ *         cdef int i
+ * 
+ *         for i in range(num_points):             # <<<<<<<<<<<<<<
+ *             self.add_value_along_line(x_0, y_0, points_x[i], points_y[i], val)
+ */
+  __pyx_t_2 = __pyx_v_num_points;
+  __pyx_t_3 = __pyx_t_2;
+  for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+    __pyx_v_i = __pyx_t_4;
+
+    /* "grid_c.pyx":236
+ * 
+ *         for i in range(num_points):
+ *             self.add_value_along_line(x_0, y_0, points_x[i], points_y[i], val)             # <<<<<<<<<<<<<<
+ */
+    __pyx_t_5 = __pyx_v_i;
+    __pyx_t_6 = __pyx_v_i;
+    __pyx_t_7 = ((struct __pyx_vtabstruct_6grid_c_Grid *)__pyx_v_self->__pyx_vtab)->add_value_along_line(__pyx_v_self, __pyx_v_x_0, __pyx_v_y_0, (*__Pyx_BufPtrStrided1d(__pyx_t_6grid_c_DTYPE_t *, __pyx_pybuffernd_points_x.rcbuffer->pybuffer.buf, __pyx_t_5, __pyx_pybuffernd_points_x.diminfo[0].strides)), (*__Pyx_BufPtrStrided1d(__pyx_t_6grid_c_DTYPE_t *, __pyx_pybuffernd_points_y.rcbuffer->pybuffer.buf, __pyx_t_6, __pyx_pybuffernd_points_y.diminfo[0].strides)), __pyx_v_val); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 236, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_7);
+    __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
+  }
+
+  /* "grid_c.pyx":228
+ *             self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)
+ * 
+ *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+ *     @cython.wraparound(False)
+ *     @cython.cdivision(True)
+ */
+
+  /* function exit code */
+  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_7);
+  { PyObject *__pyx_type, *__pyx_value, *__pyx_tb;
+    __Pyx_PyThreadState_declare
+    __Pyx_PyThreadState_assign
+    __Pyx_ErrFetch(&__pyx_type, &__pyx_value, &__pyx_tb);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_points_x.rcbuffer->pybuffer);
+    __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_points_y.rcbuffer->pybuffer);
+  __Pyx_ErrRestore(__pyx_type, __pyx_value, __pyx_tb);}
+  __Pyx_AddTraceback("grid_c.Grid.add_value_along_lines", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  goto __pyx_L2;
+  __pyx_L0:;
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_points_x.rcbuffer->pybuffer);
+  __Pyx_SafeReleaseBuffer(&__pyx_pybuffernd_points_y.rcbuffer->pybuffer);
+  __pyx_L2:;
   __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
@@ -23604,12 +23703,12 @@ static int __pyx_setprop_6grid_c_4Grid_grid(PyObject *o, PyObject *v, CYTHON_UNU
 }
 
 static PyMethodDef __pyx_methods_6grid_c_Grid[] = {
-  {"add_value_along_line", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_3add_value_along_line, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
-  {"add_points", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_5add_points, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_6grid_c_4Grid_4add_points},
-  {"add_point", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_7add_point, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_6grid_c_4Grid_6add_point},
-  {"get_grid", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_9get_grid, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
-  {"set_grid", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_11set_grid, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
-  {"add_value_along_line_confidence", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_13add_value_along_line_confidence, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
+  {"add_points", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_3add_points, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_6grid_c_4Grid_2add_points},
+  {"add_point", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_5add_point, __Pyx_METH_FASTCALL|METH_KEYWORDS, __pyx_doc_6grid_c_4Grid_4add_point},
+  {"get_grid", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_7get_grid, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
+  {"set_grid", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_9set_grid, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
+  {"add_value_along_lines_confidence", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_11add_value_along_lines_confidence, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
+  {"add_value_along_lines", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_13add_value_along_lines, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
   {"__reduce_cython__", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_15__reduce_cython__, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
   {"__setstate_cython__", (PyCFunction)(void*)(__Pyx_PyCFunction_FastCallWithKeywords)__pyx_pw_6grid_c_4Grid_17__setstate_cython__, __Pyx_METH_FASTCALL|METH_KEYWORDS, 0},
   {0, 0, 0, 0}
@@ -24705,8 +24804,8 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_Grid___setstate_cython, __pyx_k_Grid___setstate_cython, sizeof(__pyx_k_Grid___setstate_cython), 0, 0, 1, 1},
     {&__pyx_n_s_Grid_add_point, __pyx_k_Grid_add_point, sizeof(__pyx_k_Grid_add_point), 0, 0, 1, 1},
     {&__pyx_n_s_Grid_add_points, __pyx_k_Grid_add_points, sizeof(__pyx_k_Grid_add_points), 0, 0, 1, 1},
-    {&__pyx_n_s_Grid_add_value_along_line, __pyx_k_Grid_add_value_along_line, sizeof(__pyx_k_Grid_add_value_along_line), 0, 0, 1, 1},
-    {&__pyx_n_s_Grid_add_value_along_line_confid, __pyx_k_Grid_add_value_along_line_confid, sizeof(__pyx_k_Grid_add_value_along_line_confid), 0, 0, 1, 1},
+    {&__pyx_n_s_Grid_add_value_along_lines, __pyx_k_Grid_add_value_along_lines, sizeof(__pyx_k_Grid_add_value_along_lines), 0, 0, 1, 1},
+    {&__pyx_n_s_Grid_add_value_along_lines_confi, __pyx_k_Grid_add_value_along_lines_confi, sizeof(__pyx_k_Grid_add_value_along_lines_confi), 0, 0, 1, 1},
     {&__pyx_n_s_Grid_get_grid, __pyx_k_Grid_get_grid, sizeof(__pyx_k_Grid_get_grid), 0, 0, 1, 1},
     {&__pyx_n_s_Grid_set_grid, __pyx_k_Grid_set_grid, sizeof(__pyx_k_Grid_set_grid), 0, 0, 1, 1},
     {&__pyx_n_s_ImportError, __pyx_k_ImportError, sizeof(__pyx_k_ImportError), 0, 0, 1, 1},
@@ -24730,16 +24829,14 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_View_MemoryView, __pyx_k_View_MemoryView, sizeof(__pyx_k_View_MemoryView), 0, 0, 1, 1},
     {&__pyx_kp_u__2, __pyx_k__2, sizeof(__pyx_k__2), 0, 1, 0, 0},
     {&__pyx_n_s__3, __pyx_k__3, sizeof(__pyx_k__3), 0, 0, 1, 1},
-    {&__pyx_n_s__37, __pyx_k__37, sizeof(__pyx_k__37), 0, 0, 1, 1},
+    {&__pyx_n_s__36, __pyx_k__36, sizeof(__pyx_k__36), 0, 0, 1, 1},
     {&__pyx_kp_u__6, __pyx_k__6, sizeof(__pyx_k__6), 0, 1, 0, 0},
     {&__pyx_kp_u__7, __pyx_k__7, sizeof(__pyx_k__7), 0, 1, 0, 0},
     {&__pyx_n_s_abc, __pyx_k_abc, sizeof(__pyx_k_abc), 0, 0, 1, 1},
-    {&__pyx_n_s_abs, __pyx_k_abs, sizeof(__pyx_k_abs), 0, 0, 1, 1},
     {&__pyx_n_s_add_point, __pyx_k_add_point, sizeof(__pyx_k_add_point), 0, 0, 1, 1},
     {&__pyx_n_s_add_points, __pyx_k_add_points, sizeof(__pyx_k_add_points), 0, 0, 1, 1},
-    {&__pyx_n_s_add_value_along_line, __pyx_k_add_value_along_line, sizeof(__pyx_k_add_value_along_line), 0, 0, 1, 1},
-    {&__pyx_n_s_add_value_along_line_confidence, __pyx_k_add_value_along_line_confidence, sizeof(__pyx_k_add_value_along_line_confidence), 0, 0, 1, 1},
-    {&__pyx_n_s_added_value, __pyx_k_added_value, sizeof(__pyx_k_added_value), 0, 0, 1, 1},
+    {&__pyx_n_s_add_value_along_lines, __pyx_k_add_value_along_lines, sizeof(__pyx_k_add_value_along_lines), 0, 0, 1, 1},
+    {&__pyx_n_s_add_value_along_lines_confidence, __pyx_k_add_value_along_lines_confidence, sizeof(__pyx_k_add_value_along_lines_confidence), 0, 0, 1, 1},
     {&__pyx_n_s_allocate_buffer, __pyx_k_allocate_buffer, sizeof(__pyx_k_allocate_buffer), 0, 0, 1, 1},
     {&__pyx_kp_u_and, __pyx_k_and, sizeof(__pyx_k_and), 0, 1, 0, 0},
     {&__pyx_n_s_asyncio_coroutines, __pyx_k_asyncio_coroutines, sizeof(__pyx_k_asyncio_coroutines), 0, 0, 1, 1},
@@ -24756,11 +24853,9 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_count, __pyx_k_count, sizeof(__pyx_k_count), 0, 0, 1, 1},
     {&__pyx_n_s_dict, __pyx_k_dict, sizeof(__pyx_k_dict), 0, 0, 1, 1},
     {&__pyx_kp_u_disable, __pyx_k_disable, sizeof(__pyx_k_disable), 0, 1, 0, 0},
-    {&__pyx_n_s_dist_from_start, __pyx_k_dist_from_start, sizeof(__pyx_k_dist_from_start), 0, 0, 1, 1},
+    {&__pyx_n_s_double, __pyx_k_double, sizeof(__pyx_k_double), 0, 0, 1, 1},
     {&__pyx_n_s_dtype, __pyx_k_dtype, sizeof(__pyx_k_dtype), 0, 0, 1, 1},
     {&__pyx_n_s_dtype_is_object, __pyx_k_dtype_is_object, sizeof(__pyx_k_dtype_is_object), 0, 0, 1, 1},
-    {&__pyx_n_s_dx, __pyx_k_dx, sizeof(__pyx_k_dx), 0, 0, 1, 1},
-    {&__pyx_n_s_dy, __pyx_k_dy, sizeof(__pyx_k_dy), 0, 0, 1, 1},
     {&__pyx_kp_u_enable, __pyx_k_enable, sizeof(__pyx_k_enable), 0, 1, 0, 0},
     {&__pyx_n_s_encode, __pyx_k_encode, sizeof(__pyx_k_encode), 0, 0, 1, 1},
     {&__pyx_n_s_enumerate, __pyx_k_enumerate, sizeof(__pyx_k_enumerate), 0, 0, 1, 1},
@@ -24784,9 +24879,7 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
     {&__pyx_n_s_index, __pyx_k_index, sizeof(__pyx_k_index), 0, 0, 1, 1},
     {&__pyx_n_s_initializing, __pyx_k_initializing, sizeof(__pyx_k_initializing), 0, 0, 1, 1},
-    {&__pyx_n_s_int16, __pyx_k_int16, sizeof(__pyx_k_int16), 0, 0, 1, 1},
     {&__pyx_n_s_is_coroutine, __pyx_k_is_coroutine, sizeof(__pyx_k_is_coroutine), 0, 0, 1, 1},
-    {&__pyx_n_s_is_steep, __pyx_k_is_steep, sizeof(__pyx_k_is_steep), 0, 0, 1, 1},
     {&__pyx_kp_u_isenabled, __pyx_k_isenabled, sizeof(__pyx_k_isenabled), 0, 1, 0, 0},
     {&__pyx_n_s_itemsize, __pyx_k_itemsize, sizeof(__pyx_k_itemsize), 0, 0, 1, 1},
     {&__pyx_kp_s_itemsize_0_for_cython_array, __pyx_k_itemsize_0_for_cython_array, sizeof(__pyx_k_itemsize_0_for_cython_array), 0, 0, 1, 0},
@@ -24848,19 +24941,12 @@ static int __Pyx_CreateStringTabAndInitStrings(void) {
     {&__pyx_n_s_version_info, __pyx_k_version_info, sizeof(__pyx_k_version_info), 0, 0, 1, 1},
     {&__pyx_n_s_x, __pyx_k_x, sizeof(__pyx_k_x), 0, 0, 1, 1},
     {&__pyx_n_s_x_0, __pyx_k_x_0, sizeof(__pyx_k_x_0), 0, 0, 1, 1},
-    {&__pyx_n_s_x_1, __pyx_k_x_1, sizeof(__pyx_k_x_1), 0, 0, 1, 1},
-    {&__pyx_n_s_x_end, __pyx_k_x_end, sizeof(__pyx_k_x_end), 0, 0, 1, 1},
     {&__pyx_n_s_x_max_grid, __pyx_k_x_max_grid, sizeof(__pyx_k_x_max_grid), 0, 0, 1, 1},
     {&__pyx_n_s_x_px, __pyx_k_x_px, sizeof(__pyx_k_x_px), 0, 0, 1, 1},
-    {&__pyx_n_s_x_start, __pyx_k_x_start, sizeof(__pyx_k_x_start), 0, 0, 1, 1},
     {&__pyx_n_s_y, __pyx_k_y, sizeof(__pyx_k_y), 0, 0, 1, 1},
     {&__pyx_n_s_y_0, __pyx_k_y_0, sizeof(__pyx_k_y_0), 0, 0, 1, 1},
-    {&__pyx_n_s_y_1, __pyx_k_y_1, sizeof(__pyx_k_y_1), 0, 0, 1, 1},
-    {&__pyx_n_s_y_end, __pyx_k_y_end, sizeof(__pyx_k_y_end), 0, 0, 1, 1},
     {&__pyx_n_s_y_max_grid, __pyx_k_y_max_grid, sizeof(__pyx_k_y_max_grid), 0, 0, 1, 1},
     {&__pyx_n_s_y_px, __pyx_k_y_px, sizeof(__pyx_k_y_px), 0, 0, 1, 1},
-    {&__pyx_n_s_y_start, __pyx_k_y_start, sizeof(__pyx_k_y_start), 0, 0, 1, 1},
-    {&__pyx_n_s_y_step, __pyx_k_y_step, sizeof(__pyx_k_y_step), 0, 0, 1, 1},
     {&__pyx_n_s_zeros, __pyx_k_zeros, sizeof(__pyx_k_zeros), 0, 0, 1, 1},
     {0, 0, 0, 0, 0, 0, 0}
   };
@@ -25048,18 +25134,6 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GIVEREF(__pyx_tuple__20);
   __pyx_codeobj__21 = (PyObject*)__Pyx_PyCode_New(3, 0, 0, 5, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__20, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_stringsource, __pyx_n_s_pyx_unpickle_Enum, 1, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__21)) __PYX_ERR(1, 1, __pyx_L1_error)
 
-  /* "grid_c.pyx":37
- *         return x_world, y_world
- * 
- *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
- *     @cython.wraparound(False)
- *     @cython.cdivision(True)
- */
-  __pyx_tuple__22 = PyTuple_Pack(18, __pyx_n_s_self, __pyx_n_s_x_0, __pyx_n_s_y_0, __pyx_n_s_x_1, __pyx_n_s_y_1, __pyx_n_s_val, __pyx_n_s_x_start, __pyx_n_s_y_start, __pyx_n_s_x_end, __pyx_n_s_y_end, __pyx_n_s_dx, __pyx_n_s_dy, __pyx_n_s_is_steep, __pyx_n_s_y_step, __pyx_n_s_y, __pyx_n_s_x, __pyx_n_s_error, __pyx_n_s_grid_view); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(0, 37, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__22);
-  __Pyx_GIVEREF(__pyx_tuple__22);
-  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(6, 0, 0, 18, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_add_value_along_line, 37, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) __PYX_ERR(0, 37, __pyx_L1_error)
-
   /* "grid_c.pyx":93
  *                 error += dx
  * 
@@ -25067,10 +25141,10 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
  */
-  __pyx_tuple__24 = PyTuple_Pack(14, __pyx_n_s_self, __pyx_n_s_points_x, __pyx_n_s_points_y, __pyx_n_s_val, __pyx_n_s_num_points, __pyx_n_s_i, __pyx_n_s_x_px, __pyx_n_s_y_px, __pyx_n_s_grid_view, __pyx_n_s_x_max_grid, __pyx_n_s_y_max_grid, __pyx_n_s_resolution, __pyx_n_s_half_width, __pyx_n_s_half_height); if (unlikely(!__pyx_tuple__24)) __PYX_ERR(0, 93, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__24);
-  __Pyx_GIVEREF(__pyx_tuple__24);
-  __pyx_codeobj__25 = (PyObject*)__Pyx_PyCode_New(4, 0, 0, 14, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__24, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_add_points, 93, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__25)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __pyx_tuple__22 = PyTuple_Pack(14, __pyx_n_s_self, __pyx_n_s_points_x, __pyx_n_s_points_y, __pyx_n_s_val, __pyx_n_s_num_points, __pyx_n_s_i, __pyx_n_s_x_px, __pyx_n_s_y_px, __pyx_n_s_grid_view, __pyx_n_s_x_max_grid, __pyx_n_s_y_max_grid, __pyx_n_s_resolution, __pyx_n_s_half_width, __pyx_n_s_half_height); if (unlikely(!__pyx_tuple__22)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__22);
+  __Pyx_GIVEREF(__pyx_tuple__22);
+  __pyx_codeobj__23 = (PyObject*)__Pyx_PyCode_New(4, 0, 0, 14, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__22, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_add_points, 93, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__23)) __PYX_ERR(0, 93, __pyx_L1_error)
 
   /* "grid_c.pyx":120
  *                 grid_view[x_px, y_px] += val
@@ -25079,10 +25153,10 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
  */
-  __pyx_tuple__26 = PyTuple_Pack(12, __pyx_n_s_self, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_val, __pyx_n_s_x_px, __pyx_n_s_y_px, __pyx_n_s_half_width, __pyx_n_s_half_height, __pyx_n_s_grid_view, __pyx_n_s_x_max_grid, __pyx_n_s_y_max_grid, __pyx_n_s_resolution); if (unlikely(!__pyx_tuple__26)) __PYX_ERR(0, 120, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__26);
-  __Pyx_GIVEREF(__pyx_tuple__26);
-  __pyx_codeobj__27 = (PyObject*)__Pyx_PyCode_New(4, 0, 0, 12, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__26, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_add_point, 120, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__27)) __PYX_ERR(0, 120, __pyx_L1_error)
+  __pyx_tuple__24 = PyTuple_Pack(12, __pyx_n_s_self, __pyx_n_s_x, __pyx_n_s_y, __pyx_n_s_val, __pyx_n_s_x_px, __pyx_n_s_y_px, __pyx_n_s_half_width, __pyx_n_s_half_height, __pyx_n_s_grid_view, __pyx_n_s_x_max_grid, __pyx_n_s_y_max_grid, __pyx_n_s_resolution); if (unlikely(!__pyx_tuple__24)) __PYX_ERR(0, 120, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__24);
+  __Pyx_GIVEREF(__pyx_tuple__24);
+  __pyx_codeobj__25 = (PyObject*)__Pyx_PyCode_New(4, 0, 0, 12, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__24, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_add_point, 120, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__25)) __PYX_ERR(0, 120, __pyx_L1_error)
 
   /* "grid_c.pyx":145
  *             grid_view[x_px, y_px] += val
@@ -25091,10 +25165,10 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *         return self.grid
  * 
  */
-  __pyx_tuple__28 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 145, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__28);
-  __Pyx_GIVEREF(__pyx_tuple__28);
-  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_get_grid, 145, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_tuple__26 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__26)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__26);
+  __Pyx_GIVEREF(__pyx_tuple__26);
+  __pyx_codeobj__27 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__26, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_get_grid, 145, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__27)) __PYX_ERR(0, 145, __pyx_L1_error)
 
   /* "grid_c.pyx":148
  *         return self.grid
@@ -25103,29 +25177,38 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  *         self.grid = grid
  * 
  */
-  __pyx_tuple__30 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_grid); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_tuple__28 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_grid); if (unlikely(!__pyx_tuple__28)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__28);
+  __Pyx_GIVEREF(__pyx_tuple__28);
+  __pyx_codeobj__29 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_set_grid, 148, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__29)) __PYX_ERR(0, 148, __pyx_L1_error)
+
+  /* "grid_c.pyx":218
+ *                 y += y_step
+ *                 error += dx
+ *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+ *     @cython.wraparound(False)
+ *     @cython.cdivision(True)
+ */
+  __pyx_tuple__30 = PyTuple_Pack(8, __pyx_n_s_self, __pyx_n_s_x_0, __pyx_n_s_y_0, __pyx_n_s_points_x, __pyx_n_s_points_y, __pyx_n_s_val, __pyx_n_s_num_points, __pyx_n_s_i); if (unlikely(!__pyx_tuple__30)) __PYX_ERR(0, 218, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__30);
   __Pyx_GIVEREF(__pyx_tuple__30);
-  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_set_grid, 148, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_codeobj__31 = (PyObject*)__Pyx_PyCode_New(6, 0, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_add_value_along_lines_confidence, 218, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__31)) __PYX_ERR(0, 218, __pyx_L1_error)
 
-  /* "grid_c.pyx":151
- *         self.grid = grid
+  /* "grid_c.pyx":228
+ *             self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)
  * 
  *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
  */
-  __pyx_tuple__32 = PyTuple_Pack(20, __pyx_n_s_self, __pyx_n_s_x_0, __pyx_n_s_y_0, __pyx_n_s_x_1, __pyx_n_s_y_1, __pyx_n_s_val, __pyx_n_s_x_start, __pyx_n_s_y_start, __pyx_n_s_x_end, __pyx_n_s_y_end, __pyx_n_s_dx, __pyx_n_s_dy, __pyx_n_s_is_steep, __pyx_n_s_y_step, __pyx_n_s_y, __pyx_n_s_x, __pyx_n_s_added_value, __pyx_n_s_error, __pyx_n_s_grid_view, __pyx_n_s_dist_from_start); if (unlikely(!__pyx_tuple__32)) __PYX_ERR(0, 151, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__32);
-  __Pyx_GIVEREF(__pyx_tuple__32);
-  __pyx_codeobj__33 = (PyObject*)__Pyx_PyCode_New(6, 0, 0, 20, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__32, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_add_value_along_line_confidence, 151, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__33)) __PYX_ERR(0, 151, __pyx_L1_error)
+  __pyx_codeobj__32 = (PyObject*)__Pyx_PyCode_New(6, 0, 0, 8, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__30, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_src_grid_c_pyx, __pyx_n_s_add_value_along_lines, 228, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__32)) __PYX_ERR(0, 228, __pyx_L1_error)
 
   /* "(tree fragment)":1
  * def __reduce_cython__(self):             # <<<<<<<<<<<<<<
  *     raise TypeError, "no default __reduce__ due to non-trivial __cinit__"
  * def __setstate_cython__(self, __pyx_state):
  */
-  __pyx_codeobj__34 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__28, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_stringsource, __pyx_n_s_reduce_cython, 1, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__34)) __PYX_ERR(1, 1, __pyx_L1_error)
+  __pyx_codeobj__33 = (PyObject*)__Pyx_PyCode_New(1, 0, 0, 1, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__26, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_stringsource, __pyx_n_s_reduce_cython, 1, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__33)) __PYX_ERR(1, 1, __pyx_L1_error)
 
   /* "(tree fragment)":3
  * def __reduce_cython__(self):
@@ -25133,10 +25216,10 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  * def __setstate_cython__(self, __pyx_state):             # <<<<<<<<<<<<<<
  *     raise TypeError, "no default __reduce__ due to non-trivial __cinit__"
  */
-  __pyx_tuple__35 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_pyx_state); if (unlikely(!__pyx_tuple__35)) __PYX_ERR(1, 3, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__35);
-  __Pyx_GIVEREF(__pyx_tuple__35);
-  __pyx_codeobj__36 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__35, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_stringsource, __pyx_n_s_setstate_cython, 3, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__36)) __PYX_ERR(1, 3, __pyx_L1_error)
+  __pyx_tuple__34 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_pyx_state); if (unlikely(!__pyx_tuple__34)) __PYX_ERR(1, 3, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__34);
+  __Pyx_GIVEREF(__pyx_tuple__34);
+  __pyx_codeobj__35 = (PyObject*)__Pyx_PyCode_New(2, 0, 0, 2, 0, CO_OPTIMIZED|CO_NEWLOCALS, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__34, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_stringsource, __pyx_n_s_setstate_cython, 3, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__35)) __PYX_ERR(1, 3, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -25224,6 +25307,8 @@ static int __Pyx_modinit_type_init_code(void) {
   __pyx_vtabptr_6grid_c_Grid = &__pyx_vtable_6grid_c_Grid;
   __pyx_vtable_6grid_c_Grid.conv_world_to_grid = (PyObject *(*)(struct __pyx_obj_6grid_c_Grid *, float, float))__pyx_f_6grid_c_4Grid_conv_world_to_grid;
   __pyx_vtable_6grid_c_Grid.conv_grid_to_world = (PyObject *(*)(struct __pyx_obj_6grid_c_Grid *, int, int))__pyx_f_6grid_c_4Grid_conv_grid_to_world;
+  __pyx_vtable_6grid_c_Grid.add_value_along_line = (PyObject *(*)(struct __pyx_obj_6grid_c_Grid *, float, float, float, float, int))__pyx_f_6grid_c_4Grid_add_value_along_line;
+  __pyx_vtable_6grid_c_Grid.add_value_along_line_confidence = (PyObject *(*)(struct __pyx_obj_6grid_c_Grid *, float, float, float, float, int))__pyx_f_6grid_c_4Grid_add_value_along_line_confidence;
   #if CYTHON_USE_TYPE_SPECS
   __pyx_ptype_6grid_c_Grid = (PyTypeObject *) __Pyx_PyType_FromModuleAndSpec(__pyx_m, &__pyx_type_6grid_c_Grid_spec, NULL); if (unlikely(!__pyx_ptype_6grid_c_Grid)) __PYX_ERR(0, 12, __pyx_L1_error)
   if (__Pyx_fix_up_extension_type_from_spec(&__pyx_type_6grid_c_Grid_spec, __pyx_ptype_6grid_c_Grid) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
@@ -26274,37 +26359,24 @@ if (!__Pyx_RefNanny) {
  * 
  * cnp.import_array()  # Necessary to call when using NumPy with Cython             # <<<<<<<<<<<<<<
  * 
- * DTYPE = np.int16
+ * DTYPE = np.double
  */
   __pyx_t_9 = __pyx_f_5numpy_import_array(); if (unlikely(__pyx_t_9 == ((int)-1))) __PYX_ERR(0, 6, __pyx_L1_error)
 
   /* "grid_c.pyx":8
  * cnp.import_array()  # Necessary to call when using NumPy with Cython
  * 
- * DTYPE = np.int16             # <<<<<<<<<<<<<<
- * ctypedef cnp.int16_t DTYPE_t
+ * DTYPE = np.double             # <<<<<<<<<<<<<<
+ * ctypedef cnp.double_t DTYPE_t
  * cimport cython
  */
   __Pyx_GetModuleGlobalName(__pyx_t_7, __pyx_n_s_np); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 8, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_7);
-  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_int16); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 8, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_GetAttrStr(__pyx_t_7, __pyx_n_s_double); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 8, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_DTYPE, __pyx_t_4) < 0) __PYX_ERR(0, 8, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-
-  /* "grid_c.pyx":37
- *         return x_world, y_world
- * 
- *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
- *     @cython.wraparound(False)
- *     @cython.cdivision(True)
- */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_3add_value_along_line, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_add_value_along_line, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__23)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 37, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_6grid_c_Grid, __pyx_n_s_add_value_along_line, __pyx_t_4) < 0) __PYX_ERR(0, 37, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-  PyType_Modified(__pyx_ptype_6grid_c_Grid);
 
   /* "grid_c.pyx":93
  *                 error += dx
@@ -26313,7 +26385,7 @@ if (!__Pyx_RefNanny) {
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
  */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_5add_points, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_add_points, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__25)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 93, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_3add_points, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_add_points, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__23)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 93, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_6grid_c_Grid, __pyx_n_s_add_points, __pyx_t_4) < 0) __PYX_ERR(0, 93, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -26326,7 +26398,7 @@ if (!__Pyx_RefNanny) {
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
  */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_7add_point, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_add_point, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__27)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 120, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_5add_point, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_add_point, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__25)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 120, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_6grid_c_Grid, __pyx_n_s_add_point, __pyx_t_4) < 0) __PYX_ERR(0, 120, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -26339,7 +26411,7 @@ if (!__Pyx_RefNanny) {
  *         return self.grid
  * 
  */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_9get_grid, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_get_grid, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__29)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 145, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_7get_grid, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_get_grid, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__27)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_6grid_c_Grid, __pyx_n_s_get_grid, __pyx_t_4) < 0) __PYX_ERR(0, 145, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -26352,22 +26424,35 @@ if (!__Pyx_RefNanny) {
  *         self.grid = grid
  * 
  */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_11set_grid, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_set_grid, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__31)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_9set_grid, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_set_grid, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__29)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 148, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_6grid_c_Grid, __pyx_n_s_set_grid, __pyx_t_4) < 0) __PYX_ERR(0, 148, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   PyType_Modified(__pyx_ptype_6grid_c_Grid);
 
-  /* "grid_c.pyx":151
- *         self.grid = grid
+  /* "grid_c.pyx":218
+ *                 y += y_step
+ *                 error += dx
+ *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
+ *     @cython.wraparound(False)
+ *     @cython.cdivision(True)
+ */
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_11add_value_along_lines_confidence, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_add_value_along_lines_confi, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__31)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 218, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_4);
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_6grid_c_Grid, __pyx_n_s_add_value_along_lines_confidence, __pyx_t_4) < 0) __PYX_ERR(0, 218, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+  PyType_Modified(__pyx_ptype_6grid_c_Grid);
+
+  /* "grid_c.pyx":228
+ *             self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)
  * 
  *     @cython.boundscheck(False)             # <<<<<<<<<<<<<<
  *     @cython.wraparound(False)
  *     @cython.cdivision(True)
  */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_13add_value_along_line_confidence, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_add_value_along_line_confid, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__33)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 151, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_13add_value_along_lines, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid_add_value_along_lines, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__32)); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 228, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
-  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_6grid_c_Grid, __pyx_n_s_add_value_along_line_confidence, __pyx_t_4) < 0) __PYX_ERR(0, 151, __pyx_L1_error)
+  if (__Pyx_SetItemOnTypeDict((PyObject *)__pyx_ptype_6grid_c_Grid, __pyx_n_s_add_value_along_lines, __pyx_t_4) < 0) __PYX_ERR(0, 228, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   PyType_Modified(__pyx_ptype_6grid_c_Grid);
 
@@ -26376,7 +26461,7 @@ if (!__Pyx_RefNanny) {
  *     raise TypeError, "no default __reduce__ due to non-trivial __cinit__"
  * def __setstate_cython__(self, __pyx_state):
  */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_15__reduce_cython__, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid___reduce_cython, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__34)); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 1, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_15__reduce_cython__, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid___reduce_cython, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__33)); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 1, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_reduce_cython, __pyx_t_4) < 0) __PYX_ERR(1, 1, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -26387,7 +26472,7 @@ if (!__Pyx_RefNanny) {
  * def __setstate_cython__(self, __pyx_state):             # <<<<<<<<<<<<<<
  *     raise TypeError, "no default __reduce__ due to non-trivial __cinit__"
  */
-  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_17__setstate_cython__, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid___setstate_cython, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__36)); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 3, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_CyFunction_New(&__pyx_mdef_6grid_c_4Grid_17__setstate_cython__, __Pyx_CYFUNCTION_CCLASS, __pyx_n_s_Grid___setstate_cython, NULL, __pyx_n_s_grid_c, __pyx_d, ((PyObject *)__pyx_codeobj__35)); if (unlikely(!__pyx_t_4)) __PYX_ERR(1, 3, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_setstate_cython, __pyx_t_4) < 0) __PYX_ERR(1, 3, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -33728,7 +33813,7 @@ __Pyx_PyType_GetName(PyTypeObject* tp)
     if (unlikely(name == NULL) || unlikely(!PyUnicode_Check(name))) {
         PyErr_Clear();
         Py_XDECREF(name);
-        name = __Pyx_NewRef(__pyx_n_s__37);
+        name = __Pyx_NewRef(__pyx_n_s__36);
     }
     return name;
 }

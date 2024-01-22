@@ -460,6 +460,8 @@ class FrontierDrone(DroneAbstract):
             self.rescue_center_position = self.drone_position.copy()
 
     def control(self):
+        print("-----------NEW ITERATION-----------")
+        gt1 = time.process_time()
         self.iteration += 1
         self.get_localization()
         self.found_center, self.command_semantic = self.process_semantic_sensor()
@@ -480,7 +482,6 @@ class FrontierDrone(DroneAbstract):
         t1 = time.process_time()
         self.update_mapping()
         t2 = time.process_time()
-        print("Time to update map in (ms) : ", (t2-t1)*1000)
         self.keep_distance_from_walls()
             
         if self.roaming:
@@ -495,6 +496,9 @@ class FrontierDrone(DroneAbstract):
                self.controller.command["forward"] /=2
                self.controller.command["lateral"] /=2
             self.command = self.controller.command.copy()
+        gt2 = time.process_time()
+        print("Time to update map in (ms) : ", (t2-t1)*1000, "Percentage", 100*(t2-t1)/(gt2-gt1))
+        print("Time to update GOBAL in (ms) : ", (gt2-gt1)*1000)
         return self.command
     
     def keep_distance_from_walls(self):
@@ -518,23 +522,18 @@ class FrontierDrone(DroneAbstract):
         """
         updates the map
         """
-       # t1 = time.process_time()
-        detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
         # max_vel_angle = 0.08
         # if abs(self.measured_angular_velocity()) < max_vel_angle:
         self.map.update(self.estimated_pose)
-       # t2 = time.process_time()
 
-        #print("Time to update map in (ms) : ", (t2-t1)*1000)
         # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_map()
         # self.newmap.display_map()
-            
-        for other_drone in self.drone_list:
-            if other_drone.id == self.identifier: continue
-            self.map.merge(other_drone.map)
+        # for other_drone in self.drone_list:
+        #     if other_drone.id == self.identifier: continue
+        #     self.map.merge(other_drone.map)
 
 
     def draw_top_layer(self):

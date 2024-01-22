@@ -5,8 +5,8 @@ from libc.stdlib cimport malloc, free
 
 cnp.import_array()  # Necessary to call when using NumPy with Cython
 
-DTYPE = np.int16
-ctypedef cnp.int16_t DTYPE_t
+DTYPE = np.double
+ctypedef cnp.double_t DTYPE_t
 cimport cython
 
 cdef class Grid:
@@ -37,7 +37,7 @@ cdef class Grid:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def add_value_along_line(self, float x_0, float y_0, float x_1, float y_1, int val):
+    cdef add_value_along_line(self, float x_0, float y_0, float x_1, float y_1, int val):
         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
         cdef float error
         cdef DTYPE_t[:, :] grid_view  # Declare memoryview for direct array access
@@ -151,15 +151,17 @@ cdef class Grid:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def add_value_along_line_confidence(self, float x_0, float y_0, float x_1, float y_1, int val):
-        cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x, added_value
-        cdef float error
-        cdef DTYPE_t[:, :] grid_view  # Declare memoryview for direct array access
+    cdef add_value_along_line_confidence(self, float x_0, float y_0, float x_1, float y_1, int val):
+        cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
+        cdef float error, added_value, inverse_dist
+        cdef int dist_from_start
+        cdef DTYPE_t[:, :] grid_view  # Assuming DTYPE_t is defined as a float or double
 
         # Handle NaNs
         if isnan(x_0) or isnan(y_0) or isnan(x_1) or isnan(y_1):
             return
 
+        # Convert to grid coordinates and other setup...
         # Convert to grid coordinates
         x_start, y_start = self.conv_world_to_grid(x_0, y_0)
         x_end, y_end = self.conv_world_to_grid(x_1, y_1)
@@ -188,20 +190,46 @@ cdef class Grid:
         dy = y_end - y_start
         error = int(dx / 2.0)
         y_step = 1 if y_start < y_end else -1
-        
+
         # Perform drawing using Bresenham's line algorithm
         y = y_start
         grid_view = self.grid  # Cast to a memoryview before loop to avoid repeated casting
         for x in range(x_start, x_end + 1):
-            dist_from_start = (np.abs((x - x_0)) + np.abs((y - y_0)))
-            added_value = val / max(1, dist_from_start) 
+            # Calculate the Manhattan distance and cast to int explicitly
+            dist_from_start = int(abs(x - x_0) + abs(y - y_0))
+            
+            # Inline max function and calculate inverse to avoid division
+            inverse_dist = 1.0 / float(max(1, dist_from_start))
+            added_value = val * inverse_dist
+            
+            # Check boundaries and add value
             if is_steep == 1:
                 if 0 <= y < self.x_max_grid and 0 <= x < self.y_max_grid:
                     grid_view[y, x] += added_value
             else:
                 if 0 <= x < self.x_max_grid and 0 <= y < self.y_max_grid:
                     grid_view[x, y] += added_value
+                
             error -= abs(dy)
             if error < 0:
                 y += y_step
                 error += dx
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.cdivision(True)
+    def add_value_along_lines_confidence(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, int val):
+        cdef int num_points = points_x.shape[0]
+        cdef int i
+
+        for i in range(num_points):
+            self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)
+        
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.cdivision(True)
+    def add_value_along_lines(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, int val):
+        cdef int num_points = points_x.shape[0]
+        cdef int i
+
+        for i in range(num_points):
+            self.add_value_along_line(x_0, y_0, points_x[i], points_y[i], val)
