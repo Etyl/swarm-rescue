@@ -57,13 +57,13 @@ class FrontierDrone(DroneAbstract):
         ## Debug controls
 
         self.debug_path = False # True if the path must be displayed
-        self.debug_wounded = True
-        self.debug_positions = True
+        self.debug_wounded = False
+        self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = True
+        self.debug_repulsion = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -489,14 +489,19 @@ class FrontierDrone(DroneAbstract):
 
     def control(self):
         self.iteration += 1
+
+        times = []
+        t0 = time.process_time()
+
         self.get_localization()
         self.found_center, self.command_semantic = self.process_semantic_sensor()
         self.process_communicator()
         self.check_wounded_available()
-        
+               
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
         
+        times.append(time.process_time())
 
         if self.roaming:
             try:
@@ -505,10 +510,11 @@ class FrontierDrone(DroneAbstract):
                 pass
         
         self.controller.cycle()
-        t1 = time.process_time()
+        times.append(time.process_time())
         self.update_mapping()
-        t2 = time.process_time()
+        times.append(time.process_time())
         self.keep_distance_from_walls()
+        times.append(time.process_time())
             
         if self.roaming:
             if self.gps_disabled:
@@ -523,11 +529,16 @@ class FrontierDrone(DroneAbstract):
                self.controller.command["lateral"] /=2
             self.command = self.controller.command.copy()
 
+
         self.drone_repulsion()
         self.command["forward"] += self.repulsion[0]
         self.command["lateral"] += self.repulsion[1]
         self.command["forward"] = min(1,max(-1,self.command["forward"]))
         self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
+
+        times.append(time.process_time())
+        total = time.process_time()-t0
+        print(f"Total time: {total:.2E} | {round(100*(times[0]-t0)/total)} | {' | '.join(map(lambda i : str(round(100*(times[i]-times[i-1])/total)),range(1,len(times))))} ")
         
         return self.command
     

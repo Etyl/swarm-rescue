@@ -12,9 +12,12 @@ from scipy.ndimage import binary_dilation
 from scipy.ndimage import convolve
 from solutions.pathfinder.pathfinder import *
 
+import math
 import numpy as np
 import os
 import cv2
+
+from spg_overlay.utils.utils import normalize_angle
 
 # OTHER IMPL - ASYNC
 # import asyncio
@@ -273,6 +276,7 @@ class Roamer:
         max_distance = np.inf
         selected_frontiers_id = []
         selected_frontiers_distance = []
+        selected_frontiers_repulsion_angle = []
         
         # select the closest frontiers
         for idx, frontier in enumerate(frontiers):
@@ -301,13 +305,15 @@ class Roamer:
                 sum(point[0] for point in frontier) / len(frontier),
                 sum(point[1] for point in frontier) / len(frontier)
             )
-            distance = self.get_path_length(frontier_center)
+            distance, repulsion_angle = self.get_path_length(frontier_center)
             selected_frontiers_distance[id] = distance
+            selected_frontiers_repulsion_angle.append(repulsion_angle)
 
         # parameters
         frontiers = [frontiers[idx] for idx in selected_frontiers_id]
         frontier_count = np.array([frontier_count[idx] for idx in selected_frontiers_id])
         selected_frontiers_distance = np.array(selected_frontiers_distance)
+        selected_frontiers_repulsion_angle = np.array(selected_frontiers_repulsion_angle)
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
         
         # normalize
@@ -320,8 +326,8 @@ class Roamer:
         frontier_count_max = np.max(frontiers_size)
         frontiers_size = 0 if frontier_count_max == 0 else frontiers_size / frontier_count_max
 
-        # score
-        score = 2*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size
+        # score (the higher the better)
+        score = 2*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size + 2*(1-selected_frontiers_repulsion_angle)
 
         # select the best frontier
         best_frontier_idx = np.argmax(score)
@@ -508,16 +514,32 @@ class Roamer:
         params:
             - target: the target
         """
-        if target is None: return np.inf
+        if target is None: return np.inf, 1
 
         path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
 
         # TODO change implementation
         if path is None:
-            return np.inf
+            return np.inf, 1
         
         path_length = np.sum(np.linalg.norm(np.diff(path, axis=0), axis=1))
-        return path_length
+
+        def compute_angle(v1, v2):
+            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
+        
+        repulsion = self.drone.repulsion
+        if np.linalg.norm(repulsion)>0 : repulsion /= np.linalg.norm(repulsion)
+        
+        nextWaypoint = path[-1]
+        waypointDirection = nextWaypoint - self.drone.get_position()
+        waypointDirection /= np.linalg.norm(waypointDirection)
+
+        angleWaypoint = compute_angle(waypointDirection, np.array([1,0]))
+        angleWaypoint = normalize_angle(angleWaypoint+self.drone.get_angle())
+        angleRepulsion = compute_angle(repulsion, np.array([1,0]))
+        angle = normalize_angle(angleRepulsion-angleWaypoint)
+
+        return path_length, abs(angle)/np.pi
 
 
 
