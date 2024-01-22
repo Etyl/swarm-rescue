@@ -73,7 +73,7 @@ class FrontierDrone(DroneAbstract):
                         "grasper": 0}
 
         #self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
-        self.map = Map(area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, identifier=self.identifier, debug_mode=True)
+        self.map = Map(area_world=self.size_area, drone_lidar=self.lidar(), resolution=10, identifier=self.identifier, debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
