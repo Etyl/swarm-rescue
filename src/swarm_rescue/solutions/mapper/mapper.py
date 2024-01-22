@@ -10,7 +10,7 @@ from solutions.mapper.grid import Grid
 from solutions.pathfinder.pathfinder import *
 from solutions.mapper.utils import display_grid
 
-EVERY_N = 1
+EVERY_N = 2
 LIDAR_DIST_CLIP = 40.0
 EMPTY_ZONE_VALUE = -1
 OBSTACLE_ZONE_VALUE = 2
@@ -59,16 +59,27 @@ class Map():
         lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
 
-        world_points = np.column_stack((pose.position[0] + np.multiply(lidar_dist, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist, np.sin(lidar_angles + pose.orientation))))
+        downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
+        downsample_indices = downsample_indices[downsample_indices % 2 == 0]
+
+        mask = np.zeros(lidar_dist.shape, dtype=bool)
+        mask[downsample_indices] = True
+        mask[lidar_dist > MAX_RANGE_LIDAR_SENSOR/2] = True
+
+        downsampled_lidar_dist = lidar_dist[mask]
+        downsampled_lidar_angles = lidar_angles[mask]
+
+        world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
         for x, y in world_points:
             self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 
         self.confidence_grid_downsampled.set_grid(np.clip(self.confidence_grid_downsampled.get_grid(), 0, CONFIDENCE_THRESHOLD))
         #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(self.drone_id))
-        #display_grid(self.confidence_grid, pose, title="Confidence grid of drone {}".format(self.drone_id))
         # Resize confidence_grid_downsampled to the size of the confidence_grid
         self.confidence_grid.set_grid(cv2.resize(self.confidence_grid_downsampled.get_grid(), (self.height, self.width), interpolation=cv2.INTER_LINEAR_EXACT).astype(np.int16))
+
+        #display_grid(self.confidence_grid_downsampled, pose, title="Confidence grid of drone {}".format(self.drone_id))
 
     def update_occupancy_grid(self, pose):
         """
@@ -81,18 +92,31 @@ class Map():
         lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
 
+        lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
+        lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
+
+        downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
+        downsample_indices = downsample_indices[downsample_indices % 2 == 0]
+
+        mask = np.zeros(lidar_dist.shape, dtype=bool)
+        mask[downsample_indices] = True
+        mask[lidar_dist > MAX_RANGE_LIDAR_SENSOR/2] = True
+
+        downsampled_lidar_dist = lidar_dist[mask]
+        downsampled_lidar_angles = lidar_angles[mask]
+
         max_range = 0.9 * MAX_RANGE_LIDAR_SENSOR
         
-        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), max_range)
+        lidar_dist_clip = np.minimum(np.maximum(downsampled_lidar_dist - LIDAR_DIST_CLIP, 0.0), max_range)
 
-        world_points_free = np.column_stack((pose.position[0] + np.multiply(lidar_dist_clip, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_clip, np.sin(lidar_angles + pose.orientation))))
+        world_points_free = np.column_stack((pose.position[0] + np.multiply(lidar_dist_clip, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_clip, np.sin(downsampled_lidar_angles + pose.orientation))))
 
 
         for x, y in world_points_free:
             self.occupancy_grid.add_value_along_line(pose.position[0], pose.position[1], x, y, EMPTY_ZONE_VALUE)
 
-        lidar_dist_hit = lidar_dist[lidar_dist < max_range]
-        lidar_angles_hit = lidar_angles[lidar_dist < max_range]
+        lidar_dist_hit = downsampled_lidar_dist[downsampled_lidar_dist < max_range]
+        lidar_angles_hit = downsampled_lidar_angles[downsampled_lidar_dist < max_range]
 
         world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation)))).astype(np.int16)
 

@@ -105,7 +105,7 @@ class RoamerController(StateMachine):
         if self.drone.nextWaypoint is None: return True
 
         # TODO fix this
-        if self.target is None: return True
+        if self.target is None or self.target==0: return True
 
         dist = np.linalg.norm(self.drone.get_position() - self.target)
         if len(self.drone.path) == 0: return dist < 20
