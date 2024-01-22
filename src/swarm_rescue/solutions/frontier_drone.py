@@ -403,16 +403,12 @@ class FrontierDrone(DroneAbstract):
         return found_rescue_center, command
 
 
-    def get_path(self, pos, destination):
+    def get_path(self, pos):
         """
         returns the path to the destination
         """
-        if destination == 0:
-            return [[-320,-180],[-260,138],[-200,150], [20, -200]]
+        return self.map.shortest_path(self.drone_position, pos)
         
-        path = self.map.shortest_path(self.drone_position, pos)
-        return path
-
 
     def get_control_from_path(self, pos):
         """
