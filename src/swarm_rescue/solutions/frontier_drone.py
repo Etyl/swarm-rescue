@@ -57,13 +57,14 @@ class FrontierDrone(DroneAbstract):
         ## Debug controls
 
         self.debug_path = False # True if the path must be displayed
-        self.debug_wounded = True
-        self.debug_positions = True
+        self.debug_wounded = False
+        self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = True
+        self.debug_repulsion = False
+        self.debug_kill_zones = True
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -86,6 +87,9 @@ class FrontierDrone(DroneAbstract):
         self.controller = solutions.drone_controller.DroneController(self, debug_mode=self.debug_controller)
         self.controller.force_transition()
         self.gps_disabled = True
+
+        self.last_other_drones_position = {}
+        self.kill_zones = []
 
         self.iteration = 0
 
@@ -140,6 +144,7 @@ class FrontierDrone(DroneAbstract):
         data.id = self.identifier
         data.position = self.get_position()
         data.angle = self.get_angle()
+        data.vel_angle = self.compute_vel_angle()
         data.wounded_found = self.wounded_found
         data.wounded_target = self.wounded_target
         data.map = self.map
@@ -270,6 +275,7 @@ class FrontierDrone(DroneAbstract):
         """
         updates the data of the drones
         """
+
         if drone_data.wounded_target is not None:
             for k in range(len(self.wounded_found)):
                 if np.linalg.norm(self.wounded_found[k]["position"] - drone_data.wounded_target) < self.wounded_distance:
@@ -287,6 +293,7 @@ class FrontierDrone(DroneAbstract):
         process the information from the communicator
         """
         data_list  = self.communicator.received_messages
+        self.drone_list = []
         for (drone_communicator,drone_data) in data_list:
             self.update_drones(drone_data)
 
@@ -486,55 +493,88 @@ class FrontierDrone(DroneAbstract):
 
         self.repulsion = repulsion
 
+    def compute_vel_angle(self):
+        """
+        compute the velocity angle
+        """
+        # use previous position to calculate velocity
+        vel = self.measured_velocity()
+        if vel is None:
+            return 0
+        vel_angle = math.atan2(vel[1], vel[0])
+        return vel_angle
+    
+    def check_other_drones_killed(self):
+        """
+        checks if the other drones are killed
+        """
+        # update other drones distance
+        for drone in self.drone_list:
+            if drone.id == self.identifier: continue
+            self.last_other_drones_position[drone.id] = [drone.position, drone.vel_angle]
+        
+        # check if other drones are killed by checking it's not in drone_list anymore and have last seen distance < MAX_RANGE_LIDAR_SENSOR / 2
+        killed_ids = []
+        for id in self.last_other_drones_position:
+            if id not in [drone.id for drone in self.drone_list]:
+                if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < MAX_RANGE_LIDAR_SENSOR * 0.7:
+                    print(f"Drone {id} killed")
+                    kill_zone_x = self.last_other_drones_position[id][0][0] + 50*math.cos(self.last_other_drones_position[id][1])
+                    kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
+                    self.kill_zones.append([kill_zone_x, kill_zone_y])
+                    killed_ids.append(id)
+                else:
+                    print(f"Drone {id} left")
+                    killed_ids.append(id)
+            
+        for id in killed_ids:
+            self.last_other_drones_position.pop(id)
 
     def control(self):
-        print("-----------NEW ITERATION-----------")
-        gt1 = time.process_time()
-        self.iteration += 1
-        self.get_localization()
-        self.found_center, self.command_semantic = self.process_semantic_sensor()
-        self.process_communicator()
-        self.check_wounded_available()
-        
-        if self.rescue_center_position is None:
-            self.compute_rescue_center_position()
-        
-
-        if self.roaming:
-            try:
-                self.roamer_controller.cycle()
-            except exceptions.TransitionNotAllowed:
-                pass
-        
-        self.controller.cycle()
-        t1 = time.process_time()
-        self.update_mapping()
-        t2 = time.process_time()
-        self.keep_distance_from_walls()
+        if not self.odometer_values() is None:
+            self.iteration += 1
+            self.get_localization()
+            self.found_center, self.command_semantic = self.process_semantic_sensor()
+            self.process_communicator()
+            self.check_wounded_available()
+            self.check_other_drones_killed()
             
-        if self.roaming:
-            if self.gps_disabled:
-               self.roamer_controller.command["rotation"] /=2
-               self.roamer_controller.command["forward"] /=2
-               self.roamer_controller.command["lateral"] /=2
-            self.command = self.roamer_controller.command.copy()
-        else:
-            if self.gps_disabled:
-               self.controller.command["rotation"] /=2
-               self.controller.command["forward"] /=2
-               self.controller.command["lateral"] /=2
-            self.command = self.controller.command.copy()
-        gt2 = time.process_time()
-        print("Time to update map in (ms) : ", (t2-t1)*1000, "Percentage", 100*(t2-t1)/(gt2-gt1))
-        print("Time to update GOBAL in (ms) : ", (gt2-gt1)*1000)
+            if self.rescue_center_position is None:
+                self.compute_rescue_center_position()
+            
 
-        self.drone_repulsion()
-        self.command["forward"] += self.repulsion[0]
-        self.command["lateral"] += self.repulsion[1]
-        self.command["forward"] = min(1,max(-1,self.command["forward"]))
-        self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
-        
-        return self.command
+            if self.roaming:
+                try:
+                    self.roamer_controller.cycle()
+                except exceptions.TransitionNotAllowed:
+                    pass
+            
+            self.controller.cycle()
+            self.update_mapping()
+            self.keep_distance_from_walls()
+                
+            if self.roaming:
+                if self.gps_disabled:
+                    self.roamer_controller.command["rotation"] /=2
+                    self.roamer_controller.command["forward"] /=2
+                    self.roamer_controller.command["lateral"] /=2
+                self.command = self.roamer_controller.command.copy()
+            else:
+                if self.gps_disabled:
+                    self.controller.command["rotation"] /=2
+                    self.controller.command["forward"] /=2
+                    self.controller.command["lateral"] /=2
+                self.command = self.controller.command.copy()
+
+            self.drone_repulsion()
+            self.command["forward"] += self.repulsion[0]
+            self.command["lateral"] += self.repulsion[1]
+            self.command["forward"] = min(1,max(-1,self.command["forward"]))
+            self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
+
+            self.drone_prev_position = self.drone_position.copy()
+            
+            return self.command
     
     def keep_distance_from_walls(self):
         """
@@ -618,3 +658,9 @@ class FrontierDrone(DroneAbstract):
                 pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
                 pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
                 arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
+
+        if self.debug_kill_zones:
+            for killed_drone_pos in self.kill_zones:
+                pos = np.array(killed_drone_pos) + np.array(self.size_area)/2
+                # draw a rectangle
+                arcade.draw_rectangle_filled(pos[0], pos[1], 100, 100, arcade.color.RED)

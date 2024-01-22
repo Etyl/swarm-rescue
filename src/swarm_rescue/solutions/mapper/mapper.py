@@ -57,7 +57,6 @@ class Map():
         """
         Update confidence grid with drone's semantic sensor data
         """
-        gt1 = time.process_time()
         lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
 
@@ -73,20 +72,14 @@ class Map():
 
         world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
-        t1 = time.process_time()
         self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE)
         # for x, y in world_points:
         #     self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
-        t2 = time.process_time()
 
         self.confidence_grid_downsampled.set_grid(np.clip(self.confidence_grid_downsampled.get_grid(), 0, CONFIDENCE_THRESHOLD))
         #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(self.drone_id))
         # Resize confidence_grid_downsampled to the size of the confidence_grid
         self.confidence_grid.set_grid(cv2.resize(self.confidence_grid_downsampled.get_grid(), (self.height, self.width), interpolation=cv2.INTER_LINEAR_EXACT))
-        gt2 = time.process_time()
-        print("[MAPPER]Time to update confidence grid : ", (gt2 - gt1)*1000)
-        print("[MAPPER]Time to draw line confidence grid : ", (t2 - t1)*1000, "Percentage : ", (t2 - t1) / (gt2 - gt1) * 100, "%")
-        print("-----------------")
 
         #display_grid(self.confidence_grid_downsampled, pose, title="Confidence grid of drone {}".format(self.drone_id))
 
@@ -94,7 +87,6 @@ class Map():
         """
         Update occupancy grid with drone's semantic sensor data
         """
-        gt1 = time.process_time()
          # Save values at the boundaries
         boundary_mask = np.logical_or(self.occupancy_grid.get_grid() == THRESHOLD_MIN, self.occupancy_grid.get_grid() == THRESHOLD_MAX)
         buffer = self.occupancy_grid.get_grid().copy()
@@ -121,9 +113,7 @@ class Map():
 
         world_points_free = np.column_stack((pose.position[0] + np.multiply(lidar_dist_clip, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_clip, np.sin(downsampled_lidar_angles + pose.orientation))))
 
-        t1 = time.process_time()
         self.occupancy_grid.add_value_along_lines(pose.position[0], pose.position[1], world_points_free[:,0], world_points_free[:,1], EMPTY_ZONE_VALUE)
-        t2 = time.process_time()
 
         lidar_dist_hit = downsampled_lidar_dist[downsampled_lidar_dist < max_range]
         lidar_angles_hit = downsampled_lidar_angles[downsampled_lidar_dist < max_range]
@@ -138,10 +128,6 @@ class Map():
         self.occupancy_grid.set_grid(np.clip(self.occupancy_grid.get_grid(), THRESHOLD_MIN, THRESHOLD_MAX))
         self.binary_occupancy_grid = np.where(self.occupancy_grid.get_grid() > 0, 1, -1)
 
-        gt2 = time.process_time()
-        print("[OCCUPENCY]Time to update confidence grid : ", (gt2 - gt1)*1000, "ms")
-        print("[OCCUPENCY]Time to draw line confidence grid : ", (t2 - t1)*1000, "Percentage : ", (t2 - t1) / (gt2 - gt1) * 100, "%")
-        print("-----------------")
         #self.filter_occupancy_grid()
         #self.occupancy_grid.display(pose, title="Occupancy grid of drone {}".format(self.drone_id))
         #display_grid(self.occupancy_grid, pose, title="Occupancy grid of drone {}".format(self.drone_id))
@@ -158,12 +144,8 @@ class Map():
         Update the map with the occupancy grid and the confidence grid
         """
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
-        t1 = time.process_time()
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        t2 = time.process_time()
-        print("[MAP]Time to update map : ", (t2 - t1)*1000)
-        print("-----------------")
         # if self.drone_id == 0:
         #     self.display_map()
 
