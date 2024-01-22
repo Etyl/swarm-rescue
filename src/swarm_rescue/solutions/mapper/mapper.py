@@ -21,6 +21,7 @@ THRESHOLD_MAX = 40
 CONFIDENCE_VALUE = 500
 CONFIDENCE_THRESHOLD = 1000
 CONFIDENCE_THRESHOLD_MIN = 0
+KILL_ZONE_SIZE = 10
 
 class Zone(Enum):
     EMPTY = 0
@@ -146,8 +147,7 @@ class Map():
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        # if self.drone_id == 0:
-        #     self.display_map()
+        self.display_map()
 
     def __setitem__(self, pos, zone):
         x,y = pos
@@ -159,6 +159,13 @@ class Map():
     
     def get_map_matrix(self):
         return self.map
+    
+    def add_kill_zone(self, kill_zone):
+        """
+        Add a kill zone to the map
+        """
+        kill_zone = self.world_to_grid(kill_zone)
+        self.kill_zones.append(kill_zone)
 
     def display_map(self):
         """
@@ -180,6 +187,10 @@ class Map():
         for x in range(self.width):
             for y in range(self.height):
                 img[x][y] = np.array(color_map[self[x, y]]) * self.confidence_grid.get_grid()[x][y] / CONFIDENCE_THRESHOLD
+
+        # draw kill zones as rectangles
+        for kill_zone in self.kill_zones:
+            img = cv2.rectangle(img, (kill_zone[1] - KILL_ZONE_SIZE, kill_zone[0] - KILL_ZONE_SIZE), (kill_zone[1] + KILL_ZONE_SIZE, kill_zone[0] + KILL_ZONE_SIZE), (255, 0, 0), 1)
 
         # # Display the image
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
@@ -221,6 +232,7 @@ class Map():
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
         self.occupancy_grid.set_grid(np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(), self.occupancy_grid.get_grid(), other_map.occupancy_grid.get_grid()))
+        self.kill_zones = self.kill_zones + other_map.kill_zones
         #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         #self.update_map()
     
@@ -234,8 +246,17 @@ class Map():
             - path: list of positions (world coordinates)
         """
         # self.binary_occupancy_grid = 1 if obstacle or unexplored, 0 if free
-        obstacle_grid = np.where(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.INEXPLORED), 2, 0).astype(np.uint8)
+        obstacle_grid = np.where(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.INEXPLORED), 2, 0).astype(np.float64)
+        kill_zone_grid = np.zeros((self.width, self.height)).astype(np.float64)
+        # put kill zones as obstacles
+        for kill_zone in self.kill_zones:
+            kill_zone_grid[kill_zone[0] - KILL_ZONE_SIZE:kill_zone[0] + KILL_ZONE_SIZE, kill_zone[1] - KILL_ZONE_SIZE:kill_zone[1] + KILL_ZONE_SIZE] = 2
+        #cv2.imwrite("./kill_zones.png", kill_zone_grid * 255)
+        # gaussian blur tp smooth kill zones
+        #kill_zone_grid = cv2.GaussianBlur(kill_zone_grid, (15, 15), 0)
+        #cv2.imwrite("./kill_zones_smooth.png", kill_zone_grid * 255)
 
+        obstacle_grid = obstacle_grid + kill_zone_grid
         # plt.imshow(obstacle_grid)
         # plt.savefig("./map.png")
 
@@ -247,8 +268,7 @@ class Map():
             # kernel = np.ones((2,2),np.uint8)
             # obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
         # save obstacle grid as image
-        #cv2.imwrite("./map.png", obstacle_grid * 255)
-
+        cv2.imwrite("./map.png", obstacle_grid.T * 255)
         adjusted_start = [start[0], start[1]]
         grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
         grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]

@@ -522,6 +522,7 @@ class FrontierDrone(DroneAbstract):
                     kill_zone_x = self.last_other_drones_position[id][0][0] + 50*math.cos(self.last_other_drones_position[id][1])
                     kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
                     self.kill_zones.append([kill_zone_x, kill_zone_y])
+                    self.map.add_kill_zone([kill_zone_x, kill_zone_y])
                     killed_ids.append(id)
                 else:
                     print(f"Drone {id} left")
