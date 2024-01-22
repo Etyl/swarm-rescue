@@ -3,12 +3,16 @@ import random
 import cv2
 import numpy as np
 
+data_path = "./generated_code/data_generated_map.py"
+wall_path = "./generated_code/walls_generated_map.py"
+debug_mode = False
 
 class ImageToMap:
     def __init__(self, image_source: cv2.Mat, auto_resized: bool = True):
         self._img_src = image_source
-        cv2.imshow("image_source", self._img_src)
-        cv2.waitKey(0)
+        if debug_mode:
+            cv2.imshow("image_source", self._img_src)
+            cv2.waitKey(0)
 
         img_hsv = cv2.cvtColor(self._img_src, cv2.COLOR_BGR2HSV)
         # lower bound and upper bound for all color except black
@@ -73,16 +77,16 @@ class ImageToMap:
         # Detect blobs.
         keypoints = detector.detect(scaled_mask_people)
 
-        print("Code to add in map_xxx.py:")
-        txt_people_position = "\tself._wounded_persons_pos = ["
+        txt_people_position = "data['wounded_persons_pos'] = ["
         for i, keyPoint in enumerate(keypoints):
             x = self.factor * keyPoint.pt[0] - self.width_map / 2
             y = self.height_map / 2 - self.factor * keyPoint.pt[1]
             txt_people_position += "({0:.0f},{1:.0f})".format(x, y)
             if i < len(keypoints) - 1:
                 txt_people_position += ", "
-        txt_people_position += "]"
-        print(txt_people_position)
+        txt_people_position += "]\n"
+        with open(data_path, "a") as f:
+            f.write(txt_people_position)
 
         # # Draw detected blobs as red circles.
         # # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
@@ -141,23 +145,23 @@ class ImageToMap:
                                                (0, 255, 0), 2)
 
         # display the image with bounding rectangle drawn on it
-        cv2.imshow("Bounding Rectangle", mask_rescue_center_rbg)
-        cv2.waitKey(0)
+        if debug_mode:
+            cv2.imshow("Bounding Rectangle", mask_rescue_center_rbg)
+            cv2.waitKey(0)
 
         # self._rescue_center = RescueCenter(size=(90, 170))
         # self._rescue_center_pos = ((-505, -285), 0)
 
-        print("Code to add in map_xxx.py:")
         x_rec *= self.factor
         y_rec *= self.factor
         h_rec *= self.factor
         w_rec *= self.factor
         x = x_rec + w_rec * 0.5 - self.width_map * 0.5
         y = self.height_map * 0.5 - (y_rec + h_rec * 0.5)
-        txt_rescue1 = "\tself._rescue_center = RescueCenter(size=({0:.0f},{1:.0f}))".format(w_rec, h_rec)
-        txt_rescue2 = "\tself._rescue_center_pos = (({0:.0f},{1:.0f}), 0)".format(x, y)
-        print(txt_rescue1)
-        print(txt_rescue2)
+        with open(data_path, "a") as f:
+            f.write("data['rescue_center'] = RescueCenter(size=({0:.0f},{1:.0f}))\n".format(w_rec, h_rec))
+            f.write("data['rescue_center_pos'] = (({0:.0f},{1:.0f}), 0)\n".format(x, y))
+
 
     def compute_dim(self):
         self.height_map = 750
@@ -172,19 +176,23 @@ class ImageToMap:
         self.width_map = int(round(self.factor * self._img_src_walls.shape[1]))
         print("Used dim map : ({}, {}) with factor {}".format(self.width_map, self.height_map, self.factor))
 
-        print("Code to add in map_xxx.py:")
-        print("\tself._size_area = ({0:.0f},{1:.0f})".format(self.width_map, self.height_map))
+        with open(data_path, "w") as f:
+            f.write("from spg_overlay.entities.rescue_center import RescueCenter\n\n")
+            f.write("data = {}\n")
+            f.write("data['size_area'] = ({0:.0f},{1:.0f})\n".format(self.width_map, self.height_map))
 
     def img_to_segments(self):
         fld = cv2.ximgproc.createFastLineDetector(canny_aperture_size=7, do_merge=True)
         size_kernel = 9
         kernel = np.ones((size_kernel, size_kernel), np.uint8)
         img_erode = cv2.erode(self._img_src_walls, kernel, iterations=1)
-        cv2.imshow("img_erode", img_erode)
+        if debug_mode:
+            cv2.imshow("img_erode", img_erode)
 
         self.lines = fld.detect(img_erode)
         result_img = fld.drawSegments(self._img_src_walls, self.lines)
-        cv2.imshow("result_img", result_img)
+        if debug_mode:
+            cv2.imshow("result_img", result_img)
 
         only_lines_image = np.zeros((self._img_src_walls.shape[0], self._img_src_walls.shape[1], 3), dtype=np.uint8)
 
@@ -205,18 +213,20 @@ class ImageToMap:
         #     y1 = int(round(line[0][3]))
         #     self.y_max = max(y0, y1, self.y_max)
 
-        cv2.imshow("only_lines_image", only_lines_image)
-
-        cv2.waitKey(0)
+        if debug_mode:
+            cv2.imshow("only_lines_image", only_lines_image)
+            cv2.waitKey(0)
 
     def img_to_boxes(self):
         size_kernel = 50
         kernel = np.ones((size_kernel, size_kernel), np.uint8)
         img_box = cv2.morphologyEx(self._img_src_walls, cv2.MORPH_OPEN, kernel)
-        cv2.imshow("img_box", img_box)
+        if debug_mode:
+            cv2.imshow("img_box", img_box)
         thresh_value, thresh_img = cv2.threshold(src=img_box, thresh=127, maxval=255, type=0)
         contours, hierarchy = cv2.findContours(image=thresh_img, mode=cv2.RETR_LIST, method=cv2.CHAIN_APPROX_SIMPLE)
-        cv2.imshow("thresh_img_box", thresh_img)
+        if debug_mode:
+            cv2.imshow("thresh_img_box", thresh_img)
 
         contours_poly = []
         self.boxes = []
@@ -264,12 +274,12 @@ class ImageToMap:
         #     y1 = int(round(box[1] + box[3]))
         #     self.y_max = max(y0, y1, self.y_max)
 
-        cv2.imshow("only_boxes_image", only_boxes_image)
-
-        cv2.waitKey(0)
+        if debug_mode:
+            cv2.imshow("only_boxes_image", only_boxes_image)
+            cv2.waitKey(0)
 
     def write_lines_and_boxes(self):
-        f = open("generated_code.py", "w")
+        f = open(wall_path, "w")
 
         f.write("\"\"\"\n")
         f.write("This file was generated by the tool 'image_to_map.py' in the directory tools.\n")
@@ -388,9 +398,11 @@ class ImageToMap:
         print("nombre de lignes =", len(self.lines))
 
 
-img_path = "../../../map_data/map_medium_02_color.png"
-should_auto_resized = False
-# img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-img = cv2.imread(img_path)
-image_to_map = ImageToMap(image_source=img, auto_resized=should_auto_resized)
-image_to_map.launch()
+
+if __name__ == "__main__":
+    img_path = "../../../map_data/map_custom01_color.png"
+    should_auto_resized = False
+    # img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(img_path)
+    image_to_map = ImageToMap(image_source=img, auto_resized=should_auto_resized)
+    image_to_map.launch()

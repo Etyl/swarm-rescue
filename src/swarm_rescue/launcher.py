@@ -16,6 +16,8 @@ from maps.map_final_2023 import MyMapFinal
 from maps.map_medium_01 import MyMapMedium01
 from maps.map_medium_02 import MyMapMedium02
 
+from maps.generated_maps.map_generated import GeneratedMap
+
 from solutions.my_drone_eval import MyDroneEval
 
 

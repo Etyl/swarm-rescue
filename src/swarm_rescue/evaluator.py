@@ -20,31 +20,38 @@ from maps.map_medium_02 import MyMapMedium02
 from solutions.my_drone_eval import MyDroneEval
 
 
-"""eval_config = EvalConfig(map_type=MyMapIntermediate01, nb_rounds=1)
-        self.eval_plan.add(eval_config=eval_config)
-
-        eval_config = EvalConfig(map_type=MyMapIntermediate02)
-        self.eval_plan.add(eval_config=eval_config)
-
-        zones_config: ZonesConfig = ()
-        eval_config = EvalConfig(map_type=MyMapMedium01, zones_config=zones_config, nb_rounds=1, config_weight=1)
-        self.eval_plan.add(eval_config=eval_config)
-
-        zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
-        eval_config = EvalConfig(map_type=MyMapMedium01, zones_config=zones_config, nb_rounds=1, config_weight=1)
-        self.eval_plan.add(eval_config=eval_config)
-
-        zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
-        eval_config = EvalConfig(map_type=MyMapMedium02, zones_config=zones_config, nb_rounds=1, config_weight=1)
-        self.eval_plan.add(eval_config=eval_config)
 """
+eval_config = EvalConfig(map_type=MyMapIntermediate01, nb_rounds=1)
+self.eval_plan.add(eval_config=eval_config)
 
+eval_config = EvalConfig(map_type=MyMapIntermediate02)
+self.eval_plan.add(eval_config=eval_config)
 
+zones_config: ZonesConfig = ()
+eval_config = EvalConfig(map_type=MyMapMedium01, zones_config=zones_config, nb_rounds=1, config_weight=1)
+self.eval_plan.add(eval_config=eval_config)
+
+zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
+eval_config = EvalConfig(map_type=MyMapMedium01, zones_config=zones_config, nb_rounds=1, config_weight=1)
+self.eval_plan.add(eval_config=eval_config)
+
+zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
+eval_config = EvalConfig(map_type=MyMapMedium02, zones_config=zones_config, nb_rounds=1, config_weight=1)
+self.eval_plan.add(eval_config=eval_config)
+"""
 
 
 class MyDrone(MyDroneEval):
     pass
 
+
+def multiprocessing_func(func):
+    def wrapper(*args, **kwargs):
+        try :
+            func(*args, **kwargs)
+        except :
+            print("Error: function failed")
+    return wrapper     
 
 class Evaluator:
     """
@@ -116,7 +123,8 @@ class Evaluator:
                 my_gui.real_time_elapsed,
                 my_gui.real_time_limit_reached)
 
-    def evaluate_single_drone(self, id: int = 0):
+    @multiprocessing_func
+    def evaluate_single_drone(self,results, id):
         gc.disable()
 
         """
@@ -149,23 +157,59 @@ class Evaluator:
         if real_time_limit_reached:
             return None
         
-        return (round_score, score_exploration, rescued_number/number_wounded_persons, rescued_all_time_step, mean_drones_health, elapsed_time_step / real_time_elapsed)
+        results[id] = (round_score, score_exploration, rescued_number/number_wounded_persons, rescued_all_time_step)
+  
+
+def evaluate(total_processes: int = 16, number_processes: int = 4) -> 'list[float]':
+    """
+    Evaluate the drone on the map multiple times and return the average score.
+    Args:
+        total_processes: The total number of processes to run.
+        number_processes: The number of processes to run in parallel.
+    Returns:
+        results_avg: The score of the drone.
+            results_avg[0]: The score of the drone.
+            results_avg[1]: The exploration score.
+            results_avg[2]: The ratio of wounded persons rescued.
+            results_avg[3]: The time to rescue the wounded persons.
+            results_avg[4]: The process success rate.
+    """
+    manager = multiprocessing.Manager()
+    return_dict = manager.dict()
+
+    evaluator = Evaluator()
+
+    jobs = []
+    for i in range(total_processes//number_processes):
+        for j in range(number_processes):
+            proc = multiprocessing.Process(target=evaluator.evaluate_single_drone, args=(return_dict,number_processes*i+j,))
+            jobs.append(proc)
+            proc.start()
+    
+        for proc in jobs:
+            proc.join()
+
+    results_avg = np.mean(return_dict.values(), axis=0)
+    results_avg[0] /= 100
+    results_avg[1] /= 100
+    results_avg = list(results_avg)
+    results_avg.append(len(return_dict.values())/(total_processes-total_processes%number_processes))
+
+    return results_avg
+
 
 def main() -> None:
-    evaluator = Evaluator()
-    pool = multiprocessing.Pool(4)
-    t0 = time.time()
-    results = pool.map(evaluator.evaluate_single_drone, range(16))
-    t = time.time() - t0
 
-    results = [results[i] for i in range(len(results)) if results[i] is not None]
-    results_avg = np.mean(results, axis=0)
+    t0 = time.perf_counter()
+    results_avg = evaluate(16)
+    t = time.perf_counter() - t0
 
-    print(f"Score: {results_avg[0]:.1f}")
-    print(f"Exploration: {results_avg[1]:.1f}")
-    print("Rescued: ", results_avg[2])
-    print("Rescue time: ", int(results_avg[3]))
-    print(f"Total time: {t:.f}")
+    print(f"Score: {results_avg[0]:.3f}")
+    print(f"Exploration: {results_avg[1]:.3f}")
+    print(f"Rescued: {results_avg[2]:.3f}")
+    print(f"Rescue time: {int(results_avg[3])}")
+    print(f"Process success rate: {results_avg[4]:.3f}")
+    print(f"Total time: {t:.1f}")
 
             
 if __name__ == "__main__":

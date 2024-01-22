@@ -111,6 +111,7 @@ class RoamerController(StateMachine):
         if len(self.drone.path) == 0: return dist < 20
 
         v1 = self.target- self.drone.get_position()
+
         v2 = np.array(self.drone.path[-1]) - np.array(self.map.grid_to_world(self.target))
         
         if np.linalg.norm(v1) == 0 or np.linalg.norm(v2) == 0: 
