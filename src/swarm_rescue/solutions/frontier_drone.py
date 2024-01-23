@@ -56,7 +56,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_wounded = False
@@ -65,8 +65,8 @@ class FrontierDrone(DroneAbstract):
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = False
-        self.debug_kill_zones = False
+        self.debug_repulsion = True
+        self.debug_kill_zones = True
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -140,7 +140,6 @@ class FrontierDrone(DroneAbstract):
         return dist < 20 + (1+turning_angle)*20
         
 
-    # TODO: implement communication
     def define_message_for_all(self):
         data = DroneData()
         data.id = self.identifier

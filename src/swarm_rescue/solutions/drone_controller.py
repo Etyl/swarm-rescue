@@ -83,7 +83,6 @@ class DroneController(StateMachine):
 
     @roaming.enter
     def on_enter_roaming(self):
-        # TODO: implement exploration
         # self.drone.onRoute = False
         self.drone.roaming = True
 
@@ -125,27 +124,20 @@ class DroneController(StateMachine):
             self.command["grasper"] = 0
 
     def before_going_to_center(self):
+        # TODO : fix if path is None
         self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
+        if self.drone.path is None: 
+            self.drone.path = []
+            return
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
 
+    # TODO : retry path if drone stuck
+    # TODO : verify if wounded is in front of drone
     @going_to_center.enter
     def on_enter_going_to_center(self):
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
-        
-        # ret = self.drone.keep_distance_from_walls()
-        # if ret is not None:
-        #     min_angle, min_dist = ret
-        #     cos_angle = math.cos(min_angle)
-        #     sin_angle = math.sin(min_angle)
-
-        #     norm = max(abs(cos_angle),abs(sin_angle))
-        #     cos_angle = cos_angle/norm
-        #     sin_angle = sin_angle/norm 
-
-        #     self.command["forward"] = cos_angle
-        #     self.command["lateral"] = -sin_angle
 
     def before_approaching_center(self):
         self.drone.onRoute = False

@@ -26,7 +26,7 @@ class RoamerController(StateMachine):
 
     # maximum number of times the drone can be in the same position
     # i.e the maximum number of times the check_target_reached function can return False
-    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 500
+    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 100
 
     # maximum number of times the drone can be close to the previous searching start point
     # i.e the maximum number of times the test_position_close_start_point function can return True
@@ -94,7 +94,7 @@ class RoamerController(StateMachine):
         checks if the drone has reached the waypoint
         """
 
-        # TODO change implementation
+        # TODO change implementation, use velocity (check if stuck)
         # right now, we only increment a counter each time the check is called
         # if the counter reaches a certain threshold, we restart the search
         if self.loop_count_going_to_target >= self._LOOP_COUNT_GOING_TO_TARGET_THRESHOLD: return True
