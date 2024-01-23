@@ -17,6 +17,7 @@ class DroneController(StateMachine):
     # transitions
     cycle = (
         roaming.to(approaching_wounded, cond="found_wounded", on="before_approaching_wounded") |
+        roaming.to(going_to_wounded, cond="found_wounded_in_list", on="before_going_to_wounded") |
         going_to_wounded.to(approaching_wounded, cond="found_wounded", on="before_approaching_wounded") |
 
         going_to_wounded.to(roaming, cond="lost_route") |
@@ -54,6 +55,9 @@ class DroneController(StateMachine):
     def found_wounded(self):
         return self.drone.found_wounded
     
+    def found_wounded_in_list(self):
+        return len(self.drone.wounded_found) > 0
+    
     def lost_route(self):
         return self.drone.onRoute and self.drone.nextWaypoint is None
     
@@ -84,7 +88,22 @@ class DroneController(StateMachine):
         self.drone.roaming = True
 
     def before_going_to_wounded(self):
-        self.drone.path = self.drone.get_path(self.drone.rescue_center_position, 0)
+        min_dist = np.inf
+        target, target_path = None, None
+        for wounded in self.drone.wounded_found:
+            path = self.drone.get_path(wounded["position"])
+            if path is None: continue
+            dist = 0
+            for i in range(len(path)-1):
+                dist += np.sqrt((path[i+1][0] - path[i][0])**2 + (path[i+1][1] - path[i][1])**2)
+            if dist < min_dist:
+                min_dist = dist
+                target = wounded["position"]
+                target_path = path
+        if target is None: return
+
+        self.drone.wounded_target = target
+        self.drone.path = target_path
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
 
@@ -106,7 +125,7 @@ class DroneController(StateMachine):
             self.command["grasper"] = 0
 
     def before_going_to_center(self):
-        self.drone.path = self.drone.get_path(self.drone.rescue_center_position, 1)
+        self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
 

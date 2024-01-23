@@ -59,12 +59,14 @@ class FrontierDrone(DroneAbstract):
         self.debug_path = False # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
+        self.debug_wounded = False
+        self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = False
-        self.debug_kill_zones = True
+        self.debug_repulsion = True
+        self.debug_kill_zones = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -410,16 +412,12 @@ class FrontierDrone(DroneAbstract):
         return found_rescue_center, command
 
 
-    def get_path(self, pos, destination):
+    def get_path(self, pos):
         """
         returns the path to the destination
         """
-        if destination == 0:
-            return [[-320,-180],[-260,138],[-200,150], [20, -200]]
+        return self.map.shortest_path(self.drone_position, pos)
         
-        path = self.map.shortest_path(self.drone_position, pos)
-        return path
-
 
     def get_control_from_path(self, pos):
         """
@@ -519,6 +517,9 @@ class FrontierDrone(DroneAbstract):
             if id not in [drone.id for drone in self.drone_list]:
                 if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < MAX_RANGE_LIDAR_SENSOR * 0.7:
                     print(f"Drone {id} killed")
+                    self.path = []
+                    self.nextWaypoint = None
+                    self.onRoute = False
                     kill_zone_x = self.last_other_drones_position[id][0][0] + 50*math.cos(self.last_other_drones_position[id][1])
                     kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
                     self.kill_zones.append([kill_zone_x, kill_zone_y])
