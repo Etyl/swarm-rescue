@@ -612,56 +612,60 @@ class FrontierDrone(DroneAbstract):
 
 
     def draw_top_layer(self):
-        if not self.odometer_values() is None:
-            if self.debug_repulsion:
+        # check if drone is dead
+        if self.odometer_values() is None: return
+
+        if self.debug_repulsion:
+            pos = self.get_position() + np.array(self.size_area)/2
+            arcade.draw_line(pos[0], pos[1], pos[0]+self.repulsion[0]*20, pos[1]+self.repulsion[1]*20, arcade.color.PURPLE)
+
+        if self.debug_lidar:
+            lidar_dist = self.lidar().get_sensor_values()[::].copy()
+            lidar_angles = self.lidar().ray_angles[::].copy()
+            for k in range(len(lidar_dist)):
                 pos = self.get_position() + np.array(self.size_area)/2
-                arcade.draw_line(pos[0], pos[1], pos[0]+self.repulsion[0]*20, pos[1]+self.repulsion[1]*20, arcade.color.PURPLE)
+                pos[0] += lidar_dist[k]*math.cos(lidar_angles[k]+self.get_angle())
+                pos[1] += lidar_dist[k]*math.sin(lidar_angles[k]+self.get_angle())
+                arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
 
-            if self.debug_lidar:
-                lidar_dist = self.lidar().get_sensor_values()[::].copy()
-                lidar_angles = self.lidar().ray_angles[::].copy()
-                for k in range(len(lidar_dist)):
-                    pos = self.get_position() + np.array(self.size_area)/2
-                    pos[0] += lidar_dist[k]*math.cos(lidar_angles[k]+self.get_angle())
-                    pos[1] += lidar_dist[k]*math.sin(lidar_angles[k]+self.get_angle())
-                    arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
+        if self.debug_wounded:
+            for wounded in self.wounded_found:
+                pos = np.array(wounded["position"]) + np.array(self.size_area)/2
+                arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
+                arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
 
-            if self.debug_wounded:
-                for wounded in self.wounded_found:
-                    pos = np.array(wounded["position"]) + np.array(self.size_area)/2
-                    arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
-                    arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
+        if self.debug_positions:
+            pos = np.array(self.drone_position) + np.array(self.size_area)/2
+            if self.command["grasper"] == 1:
+                arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
+            else:
+                arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
 
-            if self.debug_positions:
-                pos = np.array(self.drone_position) + np.array(self.size_area)/2
-                if self.command["grasper"] == 1:
-                    arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
-                else:
-                    arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
+            direction = np.array([1,0])
+            rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
+            direction = direction@rot
+            arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
 
-                direction = np.array([1,0])
-                rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
-                direction = direction@rot
-                arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
-
-                direction = self.theorical_velocity
-                arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*20, pos[1]+direction[1]*20, arcade.color.GREEN)
+            direction = self.theorical_velocity
+            arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*20, pos[1]+direction[1]*20, arcade.color.GREEN)
 
 
     def draw_bottom_layer(self):
-        if not self.odometer_values() is None:
-            if self.debug_path: 
-                drawn_path = self.path.copy()
-                if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
-                drawn_path.append(self.get_position())
-                for k in range(len(drawn_path)-1):
-                    pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
-                    pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
-                    arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
+        # check if drone is dead
+        if self.odometer_values() is None: return
 
-            if self.debug_kill_zones:
-                for killed_drone_pos_grid in self.map.kill_zones.values():
-                    killed_drone_pos = self.map.grid_to_world(killed_drone_pos_grid)
-                    pos = np.array(killed_drone_pos) + np.array(self.size_area)/2
-                    # draw a rectangle
-                    arcade.draw_rectangle_filled(pos[0], pos[1], 100, 100, arcade.color.RED)
+        if self.debug_path: 
+            drawn_path = self.path.copy()
+            if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
+            drawn_path.append(self.get_position())
+            for k in range(len(drawn_path)-1):
+                pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
+                pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
+                arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
+
+        if self.debug_kill_zones:
+            for killed_drone_pos_grid in self.map.kill_zones.values():
+                killed_drone_pos = self.map.grid_to_world(killed_drone_pos_grid)
+                pos = np.array(killed_drone_pos) + np.array(self.size_area)/2
+                # draw a rectangle
+                arcade.draw_rectangle_filled(pos[0], pos[1], 100, 100, arcade.color.RED)
