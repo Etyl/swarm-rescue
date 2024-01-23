@@ -311,14 +311,15 @@ class Roamer:
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
         
         # normalize
-        frontier_count_max = np.max(frontier_count)
-        frontier_cout = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
-        
-        selected_frontiers_distance_max = np.max(selected_frontiers_distance)
-        selected_frontiers_distance = 0 if selected_frontiers_distance_max == 0 else selected_frontiers_distance / selected_frontiers_distance_max
+        frontier_distance_noInf = [x for x in selected_frontiers_distance if x != np.inf]
+        if len(frontier_distance_noInf) == 0: return None
+        selected_frontiers_distance = selected_frontiers_distance / max(frontier_distance_noInf)
 
-        frontier_count_max = np.max(frontiers_size)
-        frontiers_size = 0 if frontier_count_max == 0 else frontiers_size / frontier_count_max
+        frontier_size_max = np.max(frontiers_size)
+        frontiers_size = 0 if frontier_size_max == 0 else frontiers_size / frontier_size_max
+
+        frontier_count_max = np.max(frontier_count)
+        frontier_count = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
 
         # score
         score = 2*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size

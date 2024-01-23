@@ -57,13 +57,13 @@ class FrontierDrone(DroneAbstract):
         ## Debug controls
 
         self.debug_path = False # True if the path must be displayed
-        self.debug_wounded = True
-        self.debug_positions = True
+        self.debug_wounded = False
+        self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = True
+        self.debug_repulsion = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
