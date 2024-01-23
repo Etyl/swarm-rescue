@@ -56,7 +56,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_wounded = False
@@ -65,8 +65,8 @@ class FrontierDrone(DroneAbstract):
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = True
-        self.debug_kill_zones = False
+        self.debug_repulsion = False
+        self.debug_kill_zones = True
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -655,7 +655,7 @@ class FrontierDrone(DroneAbstract):
         if self.debug_path: 
             drawn_path = self.path.copy()
             if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
-            if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
+            drawn_path.append(self.get_position())
             for k in range(len(drawn_path)-1):
                 pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
                 pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
