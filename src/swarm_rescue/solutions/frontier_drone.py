@@ -20,7 +20,7 @@ from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
 from solutions.localizer.localizer import Localizer
-from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
+from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR
 from solutions.types.types import DroneData
 import solutions
 
@@ -56,7 +56,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = True # True if the path must be displayed
+        self.debug_path = False # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_wounded = False
@@ -66,7 +66,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_controller = False 
         self.debug_lidar = False
         self.debug_repulsion = False
-        self.debug_kill_zones = True
+        self.debug_kill_zones = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -78,7 +78,7 @@ class FrontierDrone(DroneAbstract):
                         "grasper": 0}
 
         #self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
-        self.map = Map(area_world=self.size_area, drone_lidar=self.lidar(), resolution=10, identifier=self.identifier, debug_mode=True)
+        self.map = Map(drone=self, area_world=self.size_area, drone_lidar=self.lidar(), resolution=10, identifier=self.identifier, debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
@@ -515,18 +515,17 @@ class FrontierDrone(DroneAbstract):
         killed_ids = []
         for id in self.last_other_drones_position:
             if id not in [drone.id for drone in self.drone_list]:
-                if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < MAX_RANGE_LIDAR_SENSOR * 0.7:
-                    print(f"Drone {id} killed")
+                if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < RANGE_COMMUNICATION * 0.85:
+                    #print(f"Drone {id} killed")
                     self.path = []
                     self.nextWaypoint = None
-                    self.onRoute = False
                     kill_zone_x = self.last_other_drones_position[id][0][0] + 50*math.cos(self.last_other_drones_position[id][1])
                     kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
-                    self.kill_zones.append([kill_zone_x, kill_zone_y])
-                    self.map.add_kill_zone([kill_zone_x, kill_zone_y])
+                    self.kill_zones.append([kill_zone_x, kill_zone_y]) # only for debug
+                    self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
                     killed_ids.append(id)
                 else:
-                    print(f"Drone {id} left")
+                    #print(f"Drone {id} left")
                     killed_ids.append(id)
             
         for id in killed_ids:
@@ -608,61 +607,62 @@ class FrontierDrone(DroneAbstract):
         # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_map()
         # self.newmap.display_map()
-        # for other_drone in self.drone_list:
-        #     if other_drone.id == self.identifier: continue
-        #     self.map.merge(other_drone.map)
+        for other_drone in self.drone_list:
+            if other_drone.id == self.identifier: continue
+            self.map.merge(other_drone.map)
 
 
     def draw_top_layer(self):
-
-        if self.debug_repulsion:
-            pos = self.get_position() + np.array(self.size_area)/2
-            arcade.draw_line(pos[0], pos[1], pos[0]+self.repulsion[0]*20, pos[1]+self.repulsion[1]*20, arcade.color.PURPLE)
-
-        if self.debug_lidar:
-            lidar_dist = self.lidar().get_sensor_values()[::].copy()
-            lidar_angles = self.lidar().ray_angles[::].copy()
-            for k in range(len(lidar_dist)):
+        if not self.odometer_values() is None:
+            if self.debug_repulsion:
                 pos = self.get_position() + np.array(self.size_area)/2
-                pos[0] += lidar_dist[k]*math.cos(lidar_angles[k]+self.get_angle())
-                pos[1] += lidar_dist[k]*math.sin(lidar_angles[k]+self.get_angle())
-                arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
+                arcade.draw_line(pos[0], pos[1], pos[0]+self.repulsion[0]*20, pos[1]+self.repulsion[1]*20, arcade.color.PURPLE)
 
-        if self.debug_wounded:
-            for wounded in self.wounded_found:
-                pos = np.array(wounded["position"]) + np.array(self.size_area)/2
-                arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
-                arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
+            if self.debug_lidar:
+                lidar_dist = self.lidar().get_sensor_values()[::].copy()
+                lidar_angles = self.lidar().ray_angles[::].copy()
+                for k in range(len(lidar_dist)):
+                    pos = self.get_position() + np.array(self.size_area)/2
+                    pos[0] += lidar_dist[k]*math.cos(lidar_angles[k]+self.get_angle())
+                    pos[1] += lidar_dist[k]*math.sin(lidar_angles[k]+self.get_angle())
+                    arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
 
-        if self.debug_positions:
-            pos = np.array(self.drone_position) + np.array(self.size_area)/2
-            if self.command["grasper"] == 1:
-                arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
-            else:
-                arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
+            if self.debug_wounded:
+                for wounded in self.wounded_found:
+                    pos = np.array(wounded["position"]) + np.array(self.size_area)/2
+                    arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
+                    arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
 
-            direction = np.array([1,0])
-            rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
-            direction = direction@rot
-            arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
+            if self.debug_positions:
+                pos = np.array(self.drone_position) + np.array(self.size_area)/2
+                if self.command["grasper"] == 1:
+                    arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
+                else:
+                    arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
 
-            direction = self.theorical_velocity
-            arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*20, pos[1]+direction[1]*20, arcade.color.GREEN)
+                direction = np.array([1,0])
+                rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
+                direction = direction@rot
+                arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
+
+                direction = self.theorical_velocity
+                arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*20, pos[1]+direction[1]*20, arcade.color.GREEN)
 
 
     def draw_bottom_layer(self):
+        if not self.odometer_values() is None:
+            if self.debug_path: 
+                drawn_path = self.path.copy()
+                if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
+                drawn_path.append(self.get_position())
+                for k in range(len(drawn_path)-1):
+                    pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
+                    pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
+                    arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
 
-        if self.debug_path: 
-            drawn_path = self.path.copy()
-            if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
-            drawn_path.append(self.get_position())
-            for k in range(len(drawn_path)-1):
-                pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
-                pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
-                arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
-
-        if self.debug_kill_zones:
-            for killed_drone_pos in self.kill_zones:
-                pos = np.array(killed_drone_pos) + np.array(self.size_area)/2
-                # draw a rectangle
-                arcade.draw_rectangle_filled(pos[0], pos[1], 100, 100, arcade.color.RED)
+            if self.debug_kill_zones:
+                for killed_drone_pos_grid in self.map.kill_zones.values():
+                    killed_drone_pos = self.map.grid_to_world(killed_drone_pos_grid)
+                    pos = np.array(killed_drone_pos) + np.array(self.size_area)/2
+                    # draw a rectangle
+                    arcade.draw_rectangle_filled(pos[0], pos[1], 100, 100, arcade.color.RED)
