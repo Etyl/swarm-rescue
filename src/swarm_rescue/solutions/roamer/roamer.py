@@ -29,7 +29,7 @@ class RoamerController(StateMachine):
 
     # maximum number of times the drone can be in the same position
     # i.e the maximum number of times the check_target_reached function can return False
-    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 500
+    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 100
 
     # maximum number of times the drone can be close to the previous searching start point
     # i.e the maximum number of times the test_position_close_start_point function can return True
@@ -97,7 +97,7 @@ class RoamerController(StateMachine):
         checks if the drone has reached the waypoint
         """
 
-        # TODO change implementation
+        # TODO change implementation, use velocity (check if stuck)
         # right now, we only increment a counter each time the check is called
         # if the counter reaches a certain threshold, we restart the search
         if self.loop_count_going_to_target >= self._LOOP_COUNT_GOING_TO_TARGET_THRESHOLD: return True
@@ -108,7 +108,7 @@ class RoamerController(StateMachine):
         if self.drone.nextWaypoint is None: return True
 
         # TODO fix this
-        if self.target is None or self.target == 0: return True
+        if self.target is None or self.target==0: return True
 
         dist = np.linalg.norm(self.drone.get_position() - self.target)
         if len(self.drone.path) == 0: return dist < 20
@@ -317,14 +317,15 @@ class Roamer:
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
         
         # normalize
-        frontier_count_max = np.max(frontier_count)
-        frontier_cout = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
-        
-        selected_frontiers_distance_max = np.max(selected_frontiers_distance)
-        selected_frontiers_distance = 0 if selected_frontiers_distance_max == 0 else selected_frontiers_distance / selected_frontiers_distance_max
+        frontier_distance_noInf = [x for x in selected_frontiers_distance if x != np.inf]
+        if len(frontier_distance_noInf) == 0: return None
+        selected_frontiers_distance = selected_frontiers_distance / max(frontier_distance_noInf)
 
-        frontier_count_max = np.max(frontiers_size)
-        frontiers_size = 0 if frontier_count_max == 0 else frontiers_size / frontier_count_max
+        frontier_size_max = np.max(frontiers_size)
+        frontiers_size = 0 if frontier_size_max == 0 else frontiers_size / frontier_size_max
+
+        frontier_count_max = np.max(frontier_count)
+        frontier_count = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
 
         # score (the higher the better)
         score = 2*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size + 2*(1-selected_frontiers_repulsion_angle)

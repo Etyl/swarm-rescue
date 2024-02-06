@@ -20,7 +20,7 @@ from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
 from solutions.localizer.localizer import Localizer
-from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
+from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR
 from solutions.types.types import DroneData
 import solutions
 
@@ -56,14 +56,15 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = False
+        self.debug_repulsion = True
+        self.debug_kill_zones = True
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -75,7 +76,7 @@ class FrontierDrone(DroneAbstract):
                         "grasper": 0}
 
         #self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
-        self.map = Map(area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, identifier=self.identifier, debug_mode=True)
+        self.map = Map(drone=self, area_world=self.size_area, drone_lidar=self.lidar(), resolution=10, identifier=self.identifier, debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
@@ -86,6 +87,9 @@ class FrontierDrone(DroneAbstract):
         self.controller = solutions.drone_controller.DroneController(self, debug_mode=self.debug_controller)
         self.controller.force_transition()
         self.gps_disabled = True
+
+        self.last_other_drones_position = {}
+        self.kill_zones = []
 
         self.iteration = 0
 
@@ -134,12 +138,12 @@ class FrontierDrone(DroneAbstract):
         return dist < 20 + (1+turning_angle)*20
         
 
-    # TODO: implement communication
     def define_message_for_all(self):
         data = DroneData()
         data.id = self.identifier
         data.position = self.get_position()
         data.angle = self.get_angle()
+        data.vel_angle = self.compute_vel_angle()
         data.wounded_found = self.wounded_found
         data.wounded_target = self.wounded_target
         data.map = self.map
@@ -270,6 +274,7 @@ class FrontierDrone(DroneAbstract):
         """
         updates the data of the drones
         """
+
         if drone_data.wounded_target is not None:
             for k in range(len(self.wounded_found)):
                 if np.linalg.norm(self.wounded_found[k]["position"] - drone_data.wounded_target) < self.wounded_distance:
@@ -287,6 +292,7 @@ class FrontierDrone(DroneAbstract):
         process the information from the communicator
         """
         data_list  = self.communicator.received_messages
+        self.drone_list = []
         for (drone_communicator,drone_data) in data_list:
             self.update_drones(drone_data)
 
@@ -403,16 +409,12 @@ class FrontierDrone(DroneAbstract):
         return found_rescue_center, command
 
 
-    def get_path(self, pos, destination):
+    def get_path(self, pos):
         """
         returns the path to the destination
         """
-        if destination == 0:
-            return [[-320,-180],[-260,138],[-200,150], [20, -200]]
+        return self.map.shortest_path(self.drone_position, pos)
         
-        path = self.map.shortest_path(self.drone_position, pos)
-        return path
-
 
     def get_control_from_path(self, pos):
         """
@@ -486,60 +488,90 @@ class FrontierDrone(DroneAbstract):
 
         self.repulsion = repulsion
 
+    def compute_vel_angle(self):
+        """
+        compute the velocity angle
+        """
+        # use previous position to calculate velocity
+        vel = self.measured_velocity()
+        if vel is None:
+            return 0
+        vel_angle = math.atan2(vel[1], vel[0])
+        return vel_angle
+    
+    def check_other_drones_killed(self):
+        """
+        checks if the other drones are killed
+        """
+        # update other drones distance
+        for drone in self.drone_list:
+            if drone.id == self.identifier: continue
+            self.last_other_drones_position[drone.id] = [drone.position, drone.vel_angle]
+        
+        # check if other drones are killed by checking it's not in drone_list anymore and have last seen distance < MAX_RANGE_LIDAR_SENSOR / 2
+        killed_ids = []
+        for id in self.last_other_drones_position:
+            if id not in [drone.id for drone in self.drone_list]:
+                if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < RANGE_COMMUNICATION * 0.85:
+                    #print(f"Drone {id} killed")
+                    self.path = []
+                    self.nextWaypoint = None
+                    kill_zone_x = self.last_other_drones_position[id][0][0] + 50*math.cos(self.last_other_drones_position[id][1])
+                    kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
+                    self.kill_zones.append([kill_zone_x, kill_zone_y]) # only for debug
+                    self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
+                    killed_ids.append(id)
+                else:
+                    #print(f"Drone {id} left")
+                    killed_ids.append(id)
+            
+        for id in killed_ids:
+            self.last_other_drones_position.pop(id)
 
     def control(self):
-        self.iteration += 1
-
-        times = []
-        t0 = time.process_time()
-
-        self.get_localization()
-        self.found_center, self.command_semantic = self.process_semantic_sensor()
-        self.process_communicator()
-        self.check_wounded_available()
-               
-        if self.rescue_center_position is None:
-            self.compute_rescue_center_position()
-        
-        times.append(time.process_time())
-
-        if self.roaming:
-            try:
-                self.roamer_controller.cycle()
-            except exceptions.TransitionNotAllowed:
-                pass
-        
-        self.controller.cycle()
-        times.append(time.process_time())
-        self.update_mapping()
-        times.append(time.process_time())
-        self.keep_distance_from_walls()
-        times.append(time.process_time())
+        if not self.odometer_values() is None:
+            self.iteration += 1
+            self.get_localization()
+            self.found_center, self.command_semantic = self.process_semantic_sensor()
+            self.process_communicator()
+            self.check_wounded_available()
+            self.check_other_drones_killed()
             
-        if self.roaming:
-            if self.gps_disabled:
-               self.roamer_controller.command["rotation"] /=2
-               self.roamer_controller.command["forward"] /=2
-               self.roamer_controller.command["lateral"] /=2
-            self.command = self.roamer_controller.command.copy()
-        else:
-            if self.gps_disabled:
-               self.controller.command["rotation"] /=2
-               self.controller.command["forward"] /=2
-               self.controller.command["lateral"] /=2
-            self.command = self.controller.command.copy()
+            if self.rescue_center_position is None:
+                self.compute_rescue_center_position()
+            
 
+            if self.roaming:
+                try:
+                    self.roamer_controller.cycle()
+                except exceptions.TransitionNotAllowed:
+                    pass
+            
+            self.controller.cycle()
+            self.update_mapping()
+            self.keep_distance_from_walls()
+                
+            if self.roaming:
+                if self.gps_disabled:
+                    self.roamer_controller.command["rotation"] /=2
+                    self.roamer_controller.command["forward"] /=2
+                    self.roamer_controller.command["lateral"] /=2
+                self.command = self.roamer_controller.command.copy()
+            else:
+                if self.gps_disabled:
+                    self.controller.command["rotation"] /=2
+                    self.controller.command["forward"] /=2
+                    self.controller.command["lateral"] /=2
+                self.command = self.controller.command.copy()
 
-        self.drone_repulsion()
-        self.command["forward"] += self.repulsion[0]
-        self.command["lateral"] += self.repulsion[1]
-        self.command["forward"] = min(1,max(-1,self.command["forward"]))
-        self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
+            self.drone_repulsion()
+            self.command["forward"] += self.repulsion[0]
+            self.command["lateral"] += self.repulsion[1]
+            self.command["forward"] = min(1,max(-1,self.command["forward"]))
+            self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
 
-        times.append(time.process_time())
-        total = time.process_time()-t0
-        print(f"Total time: {total:.2E} | {round(100*(times[0]-t0)/total)} | {' | '.join(map(lambda i : str(round(100*(times[i]-times[i-1])/total)),range(1,len(times))))} ")
-        
+            self.drone_prev_position = self.drone_position.copy()
+            
         return self.command
     
     def keep_distance_from_walls(self):
@@ -563,26 +595,23 @@ class FrontierDrone(DroneAbstract):
         """
         updates the map
         """
-       # t1 = time.process_time()
-        detection_semantic = self.semantic_values()
         self.estimated_pose = Pose(self.drone_position, self.drone_angle)
         # max_vel_angle = 0.08
         # if abs(self.measured_angular_velocity()) < max_vel_angle:
         self.map.update(self.estimated_pose)
-       # t2 = time.process_time()
 
-        #print("Time to update map in (ms) : ", (t2-t1)*1000)
         # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_map()
         # self.newmap.display_map()
-            
         for other_drone in self.drone_list:
             if other_drone.id == self.identifier: continue
             self.map.merge(other_drone.map)
 
 
     def draw_top_layer(self):
+        # check if drone is dead
+        if self.odometer_values() is None: return
 
         if self.debug_repulsion:
             pos = self.get_position() + np.array(self.size_area)/2
@@ -620,12 +649,21 @@ class FrontierDrone(DroneAbstract):
 
 
     def draw_bottom_layer(self):
+        # check if drone is dead
+        if self.odometer_values() is None: return
 
         if self.debug_path: 
             drawn_path = self.path.copy()
             if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
-            if self.lastWaypoint != None: drawn_path.append(self.lastWaypoint)
+            drawn_path.append(self.get_position())
             for k in range(len(drawn_path)-1):
                 pt1 = np.array(drawn_path[k]) + np.array(self.size_area)/2
                 pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
                 arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
+
+        if self.debug_kill_zones:
+            for killed_drone_pos_grid in self.map.kill_zones.values():
+                killed_drone_pos = self.map.grid_to_world(killed_drone_pos_grid)
+                pos = np.array(killed_drone_pos) + np.array(self.size_area)/2
+                # draw a rectangle
+                arcade.draw_rectangle_filled(pos[0], pos[1], 100, 100, arcade.color.RED)

@@ -32,13 +32,13 @@ class MyMapIntermediate02(MapAbstract):
         self._no_com_zone_pos = ((-159, 0), 0)
 
         self._kill_zone = KillZone(size=(68, 360))
-        self._kill_zone_pos = ((-484, 0), 0)
+        self._kill_zone_pos = ((284, 0), 0)
 
-        self._wounded_persons_pos = [(-555, 188), (-420, 188), (-285, 188), (-150, 188), (-15, 188), (120, 188),
-                                     (255, 188), (-555, 63), (-420, 63), (-285, 63), (-150, 63), (-15, 63), (120, 63),
-                                     (255, 63), (-555, -62), (-420, -62), (-285, -62), (-150, -62), (-15, -62),
-                                     (120, -62), (255, -62), (-555, -187), (-420, -187), (-285, -187), (-150, -187),
-                                     (-15, -187), (120, -187), (255, -187)]
+        self._wounded_persons_pos = [(-555, 188), (-420, 188), (-285, 188), (-150, 188), (-15, 188),
+                                     (-555, 63), (-420, 63), (-285, 63), (-150, 63), (-15, 63),
+                                     (-555, -62), (-420, -62), (-285, -62), (-150, -62), (-15, -62)
+                                     , (-555, -187), (-420, -187), (-285, -187), (-150, -187),
+                                     (-15, -187)]
         self._number_wounded_persons = len(self._wounded_persons_pos)
         self._wounded_persons: List[WoundedPerson] = []
 
@@ -84,6 +84,7 @@ class MyMapIntermediate02(MapAbstract):
 
         if ZoneType.KILL_ZONE in self._zones_config:
             playground.add(self._kill_zone, self._kill_zone_pos)
+        playground.add(self._kill_zone, self._kill_zone_pos)
 
         # POSITIONS OF THE WOUNDED PERSONS
         for i in range(self._number_wounded_persons):
