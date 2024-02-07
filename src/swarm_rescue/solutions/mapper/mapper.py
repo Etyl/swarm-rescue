@@ -205,6 +205,9 @@ class Map():
         """
         y =  self.height - int(pos[1] / self.resolution + self.height / 2)
         x = int(pos[0] / self.resolution + self.width / 2)
+        # make sure the coordinates are within the map
+        x = max(0, min(x, self.width - 1))
+        y = max(0, min(y, self.height - 1))
         return np.array([x, y])
 
     def grid_to_world(self, pos):
