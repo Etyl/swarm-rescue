@@ -42,6 +42,7 @@ class FrontierDrone(DroneAbstract):
         self.nextWaypoint = np.array([0,0]) # The next waypoint to go to
         self.drone_position = np.array([0,0]) # The position of the drone
         self.drone_angle = 0 # The angle of the drone
+        self.drone_angle_offset = 0 # The angle offset of the drone that can be changed by the states
         self.found_wounded = False # True if the drone has found a wounded person
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
@@ -99,7 +100,7 @@ class FrontierDrone(DroneAbstract):
         gives the angle to turn to in order to go to the next waypoint
         """
 
-        if self.drone_angle is not None and self.nextWaypoint is not None:
+        if self.get_angle() is not None and self.nextWaypoint is not None:
             
             def angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
@@ -108,9 +109,8 @@ class FrontierDrone(DroneAbstract):
             waypoint = np.array(self.nextWaypoint)
             waypoint_vect = waypoint - pos
             ref_vect = np.array([1, 0])
-
-            
-            drone_angle = normalize_angle(self.drone_angle)
+ 
+            drone_angle = normalize_angle(self.get_angle())
             waypoint_angle = normalize_angle(angle(ref_vect, waypoint_vect))
 
             return normalize_angle(waypoint_angle - drone_angle)
@@ -244,7 +244,7 @@ class FrontierDrone(DroneAbstract):
 
         def get_wounded_position():
             wounded_pos = self.drone_position.copy()
-            angle = normalize_angle(self.drone_angle + data_wounded.angle)
+            angle = normalize_angle(self.get_angle() + data_wounded.angle)
             wounded_pos[0] += data_wounded.distance * math.cos(angle)
             wounded_pos[1] += data_wounded.distance * math.sin(angle)
             return wounded_pos
@@ -426,16 +426,17 @@ class FrontierDrone(DroneAbstract):
                    "rotation": 0.0,
                    "grasper": 0}
         
-        angle_from_waypoint = self.adapt_angle_direction(pos)
+        angle_from_waypoint = self.adapt_angle_direction(pos) + self.drone_angle_offset
         angle_from_waypoint = normalize_angle(angle_from_waypoint)
 
-        if angle_from_waypoint > 0.5:
+        if angle_from_waypoint > 0.8:
             command["rotation"] =  1.0
-        elif angle_from_waypoint < -0.5:
+        elif angle_from_waypoint < -0.8:
             command["rotation"] =  -1.0
         else:
             command["rotation"] = angle_from_waypoint
 
+        angle_from_waypoint = normalize_angle(angle_from_waypoint - self.drone_angle_offset)
         command["forward"] = math.cos(angle_from_waypoint)
         command["lateral"] = math.sin(angle_from_waypoint)
         norm = max(abs(command["forward"]),abs(command["lateral"]))
@@ -595,7 +596,7 @@ class FrontierDrone(DroneAbstract):
         """
         updates the map
         """
-        self.estimated_pose = Pose(self.drone_position, self.drone_angle)
+        self.estimated_pose = Pose(self.get_position(), self.get_angle())
         # max_vel_angle = 0.08
         # if abs(self.measured_angular_velocity()) < max_vel_angle:
         self.map.update(self.estimated_pose)
@@ -640,7 +641,7 @@ class FrontierDrone(DroneAbstract):
                 arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
 
             direction = np.array([1,0])
-            rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
+            rot = np.array([[math.cos(self.get_anlge()), math.sin(self.get_anlge())],[-math.sin(self.get_anlge()), math.cos(self.get_anlge())]])
             direction = direction@rot
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
 

@@ -27,12 +27,7 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
     Returns:
         new_map: 2D numpy array of R+ -> 0=free, inf=occupied
     """
-    if save_images:
-        plt.figure()
-        plt.imshow(map/2)
-        plt.colorbar()
-        plt.savefig("./map_init.png")
-
+    
     new_map = np.zeros(map.shape).astype(np.float32)
     new_map[map > 1.5] = 1
     for _ in range(robot_radius):
@@ -48,19 +43,13 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
         new_map += roll_map
 
     new_map[map > 1.5] = np.inf
-    new_map += map*robot_radius
+    new_map = new_map*robot_radius
     
-    bump_map = len(map)*len(map[0])*np.ones(map.shape).astype(np.float32)
+    bump_map = (len(map)+len(map[0]))*np.ones(map.shape).astype(np.float32)
     bump_map[new_map < 0.5] = 0
     new_map += bump_map
 
     new_map += np.ones(map.shape)
-
-    if save_images:
-        plt.figure()
-        plt.imshow(new_map)
-        plt.colorbar()
-        plt.savefig("./map_border.png")
 
     return new_map
 
@@ -74,12 +63,16 @@ cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_
     cdef int n = int(np.sum(np.abs(point2-point1)))
     cdef int[2] b = point1
     cdef int[2] a = point2-point1
-    cdef int x,y
-    for t in range(n+2):
-        x = b[0] + (a[0]*t)/(n+1)
-        y = b[1] + (a[1]*t)/(n+1)
-        if map[x][y] > map[b[0]][b[1]]:
+    cdef int x1,y1,x2,y2
+    x1 = b[0]
+    y1 = b[1]
+    for t in range(1,n+2):
+        x2 = b[0] + (a[0]*t)/(n+1)
+        y2 = b[1] + (a[1]*t)/(n+1)
+        if map[x2][y2] > map[x1][y1]:
             return False
+        x1 = x2
+        y1 = y2
     return True
 
 @cython.boundscheck(False) # turn off bounds-checking for entire function
@@ -245,8 +238,6 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30
         
         start,end = findPointsAvailable(map_border, start, end)
 
-        # assert map_border.min() > 0.5, "cost of moving must be at least 1"
-
         path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
         if path is None:
             return None
@@ -262,17 +253,14 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30
        
     if save_images:
         img_border = map_border.astype(np.float32).copy()
-        img_border[img_border==np.inf] = robot_radius
-        img_border /= robot_radius
-        plt.imshow(np.stack((img_border, img_border, img_border), axis=2).astype(np.float32))
+        plt.imshow(img_border)
         plt.savefig("./border.png")
-        map = np.stack((map, map, map), axis=2)
 
         current_output = output+"-raw.png"
         plt.figure()
         path_plot = np.array(path)
         plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-        plt.imshow(map)
+        plt.imshow(img_border)
         print(f"Plotting path to {current_output}, {len(path)} points)")
         plt.savefig(current_output)
 
@@ -280,7 +268,7 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30
         plt.figure()
         path_plot = np.array(path_smooth)
         plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-        plt.imshow(map)
+        plt.imshow(img_border)
         print(f"Plotting path to {current_output}, {len(path_smooth)} points)")
         plt.savefig(current_output)
 
@@ -288,7 +276,7 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30
         plt.figure()
         path_plot = np.array(path_refined)
         plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-        plt.imshow(map)
+        plt.imshow(img_border)
         print(f"Plotting path to {current_output}, {len(path_refined)} points)")
         plt.savefig(current_output)
 

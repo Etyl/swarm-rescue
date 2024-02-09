@@ -125,6 +125,7 @@ class DroneController(StateMachine):
 
     def before_going_to_center(self):
         # TODO : fix if path is None
+        self.drone.drone_angle_offset = np.pi
         self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
         if self.drone.path is None: 
             self.drone.path = []
@@ -136,8 +137,13 @@ class DroneController(StateMachine):
     # TODO : verify if wounded is in front of drone
     @going_to_center.enter
     def on_enter_going_to_center(self):
+        self.drone.drone_angle_offset = np.pi
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
+
+    @going_to_center.exit
+    def on_exit_going_to_center(self):
+        self.drone.drone_angle_offset = 0
 
     def before_approaching_center(self):
         self.drone.onRoute = False
@@ -146,4 +152,5 @@ class DroneController(StateMachine):
     def enter_approaching_center(self):
         self.command = self.drone.command_semantic
         self.command["grasper"] = 1
+
 
