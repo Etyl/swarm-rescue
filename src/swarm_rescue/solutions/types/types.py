@@ -10,3 +10,4 @@ class DroneData:
         self.wounded_found : list = None
         self.wounded_target : np.ndarray = None
         self.map : Map = None
+        self.semantic_values: np.ndarray = None

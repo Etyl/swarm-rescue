@@ -147,6 +147,7 @@ class FrontierDrone(DroneAbstract):
         data.wounded_found = self.wounded_found
         data.wounded_target = self.wounded_target
         data.map = self.map
+        data.semantic_values = self.semantic_values()
         return data
 
     def get_position(self):
@@ -505,15 +506,19 @@ class FrontierDrone(DroneAbstract):
         checks if the other drones are killed
         """
         # update other drones distance
+        drone_list_alt = []
         for drone in self.drone_list:
+            if np.linalg.norm(drone.position - self.drone_position) < RANGE_COMMUNICATION:
+                drone_list_alt.append(drone)
+        for drone in drone_list_alt:
             if drone.id == self.identifier: continue
             self.last_other_drones_position[drone.id] = [drone.position, drone.vel_angle]
         
         # check if other drones are killed by checking it's not in drone_list anymore and have last seen distance < MAX_RANGE_LIDAR_SENSOR / 2
         killed_ids = []
         for id in self.last_other_drones_position:
-            if id not in [drone.id for drone in self.drone_list]:
-                if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < RANGE_COMMUNICATION * 0.75:
+            if id not in [drone.id for drone in drone_list_alt]:
+                if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < RANGE_COMMUNICATION * 0.85:
                     #print(f"Drone {id} killed")
                     self.path = []
                     self.nextWaypoint = None
@@ -521,12 +526,13 @@ class FrontierDrone(DroneAbstract):
                     kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
        
                     is_kill_zone = True
-                    for data in self.semantic_values():
-                        if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
-                            drone_x = self.drone_position[0] + data.distance * math.cos(data.angle + self.get_angle())
-                            drone_y = self.drone_position[1] + data.distance * math.sin(data.angle + self.get_angle())
-                            if np.linalg.norm(np.array([drone_x, drone_y]) - np.array([kill_zone_x, kill_zone_y])) < 50:
-                                is_kill_zone = False
+                    for drone in self.drone_list:
+                        for data in drone.semantic_values:
+                            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+                                drone_x = drone.position[0] + data.distance * math.cos(data.angle + drone.angle)
+                                drone_y = drone.position[1] + data.distance * math.sin(data.angle + drone.angle)
+                                if np.linalg.norm(np.array([drone_x, drone_y]) - np.array([self.last_other_drones_position[id][0][0],  self.last_other_drones_position[id][0][1]])) < 50:
+                                    is_kill_zone = False
                     if is_kill_zone:
                         self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
                 killed_ids.append(id)
@@ -541,8 +547,11 @@ class FrontierDrone(DroneAbstract):
             self.found_center, self.command_semantic = self.process_semantic_sensor()
             self.process_communicator()
             self.check_wounded_available()
-            self.check_other_drones_killed()
-            
+            if not self.communicator_is_disabled():
+                self.check_other_drones_killed()
+            else:
+                self.last_other_drones_position = {}
+                
             if self.rescue_center_position is None:
                 self.compute_rescue_center_position()
             
