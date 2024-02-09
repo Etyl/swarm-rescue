@@ -23,24 +23,25 @@ class MyMapIntermediate03(MapAbstract):
         self._real_time_limit = 120
 
         # PARAMETERS MAP
-        self._size_area = (1000, 1000)
+        self._size_area = (500, 750)
 
         self._rescue_center = RescueCenter(size=(145,77))
-        self._rescue_center_pos =  ((14,462), 0)
+        self._rescue_center_pos =  ((14,200), 0)
 
-        self._no_com_zone = NoComZone(size=(330, 500))
-        self._no_com_zone_pos = ((-159, 0), 0)
+        self._no_com_zone = NoComZone(size=(300, 100))
+        self._no_com_zone_pos = ((-100, -200), 0)
 
-        self._kill_zone = KillZone(size=(68, 360))
-        self._kill_zone_pos = ((284, 0), 0)
+        self._kill_zone = KillZone(size=(300, 100))
+        self._kill_zone_pos = ((-100, -100), 0)
 
-        self._wounded_persons_pos = [(-290,-432), (417,-428), (-122,-427), (240,-423), (-433,-361), (-306,-325), (334,-324), (437,-240), (-421,-227), (204,-204), (-14,-181), (-102,-115), (76,-110), (-421,-76), (-277,-75), (-19,-73), (450,-28), (-129,-2), (88,-1), (-20,16), (-418,57), (260,74), (428,175), (-437,201), (-435,324), (439,403), (-330,419), (-432,421)]
+        # self._wounded_persons_pos = [(-290,-432), (417,-428), (-122,-427), (240,-423), (-433,-361), (-306,-325), (334,-324), (437,-240), (-421,-227), (204,-204), (-14,-181), (-102,-115), (76,-110), (-421,-76), (-277,-75), (-19,-73), (450,-28), (-129,-2), (88,-1), (-20,16), (-418,57), (260,74), (428,175), (-437,201), (-435,324), (439,403), (-330,419), (-432,421)]
+        self._wounded_persons_pos = []
         self._number_wounded_persons = len(self._wounded_persons_pos)
         self._wounded_persons: List[WoundedPerson] = []
 
         self._number_drones = 10
         # They are positioned in a square whose side size depends on the total number of drones.
-        start_area_drones = (0, 350)
+        start_area_drones = (0, 250)
         nb_per_side = math.ceil(math.sqrt(float(self._number_drones)))
         dist_inter_drone = 50.0
         # print("nb_per_side", nb_per_side)

@@ -513,18 +513,23 @@ class FrontierDrone(DroneAbstract):
         killed_ids = []
         for id in self.last_other_drones_position:
             if id not in [drone.id for drone in self.drone_list]:
-                if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < RANGE_COMMUNICATION * 0.85:
+                if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < RANGE_COMMUNICATION * 0.75:
                     #print(f"Drone {id} killed")
                     self.path = []
                     self.nextWaypoint = None
                     kill_zone_x = self.last_other_drones_position[id][0][0] + 50*math.cos(self.last_other_drones_position[id][1])
                     kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
-                    self.kill_zones.append([kill_zone_x, kill_zone_y]) # only for debug
-                    self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
-                    killed_ids.append(id)
-                else:
-                    #print(f"Drone {id} left")
-                    killed_ids.append(id)
+       
+                    is_kill_zone = True
+                    for data in self.semantic_values():
+                        if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+                            drone_x = self.drone_position[0] + data.distance * math.cos(data.angle + self.get_angle())
+                            drone_y = self.drone_position[1] + data.distance * math.sin(data.angle + self.get_angle())
+                            if np.linalg.norm(np.array([drone_x, drone_y]) - np.array([kill_zone_x, kill_zone_y])) < 50:
+                                is_kill_zone = False
+                    if is_kill_zone:
+                        self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
+                killed_ids.append(id)
             
         for id in killed_ids:
             self.last_other_drones_position.pop(id)
