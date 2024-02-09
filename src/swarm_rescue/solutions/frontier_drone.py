@@ -20,7 +20,7 @@ from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from solutions.mapper.mapper import Map
 from solutions.localizer.localizer import Localizer
-from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR
+from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR
 from solutions.types.types import DroneData
 import solutions
 
@@ -93,6 +93,7 @@ class FrontierDrone(DroneAbstract):
         self.kill_zones = []
         self.semantic_drone_pos = []
         self.potential_kill_zones = []
+        self.kill_zone_mode = True
 
         self.iteration = 0
 
@@ -150,6 +151,7 @@ class FrontierDrone(DroneAbstract):
         data.wounded_target = self.wounded_target
         data.map = self.map
         data.semantic_values = self.semantic_values()
+        data.kill_zone_mode = self.kill_zone_mode
         return data
 
     def get_position(self):
@@ -507,69 +509,51 @@ class FrontierDrone(DroneAbstract):
         """
         checks if the other drones are killed
         """
-        # update other drones distance
-        drone_list_alt = []
         for drone in self.drone_list:
-            #if np.linalg.norm(drone.position - self.drone_position) < RANGE_COMMUNICATION:
-            drone_list_alt.append(drone)
-        for drone in drone_list_alt:
             if drone.id == self.identifier: continue
             self.last_other_drones_position[drone.id] = [drone.position, drone.vel_angle]
         
         # check if other drones are killed by checking it's not in drone_list anymore and have last seen distance < MAX_RANGE_LIDAR_SENSOR / 2
         killed_ids = []
         for id in self.last_other_drones_position:
-            if id not in [drone.id for drone in drone_list_alt]:
+            if id not in [drone.id for drone in self.drone_list]:
                 if np.linalg.norm(self.last_other_drones_position[id][0] - self.drone_position) < RANGE_COMMUNICATION * 0.85:
                     #print(f"Drone {id} killed")
                     self.path = []
                     self.nextWaypoint = None
                     kill_zone_x = self.last_other_drones_position[id][0][0] + 50*math.cos(self.last_other_drones_position[id][1])
                     kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
-       
-                    # is_kill_zone = True
-                    # for drone in drone_list_alt:
-                    #     for data in drone.semantic_values:
-                    #         if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
-                    #             drone_x = drone.position[0] + data.distance * math.cos(data.angle + drone.angle)
-                    #             drone_y = drone.position[1] + data.distance * math.sin(data.angle + drone.angle)
-                    #             if np.linalg.norm(np.array([drone_x, drone_y]) - np.array([self.last_other_drones_position[id][0][0],  self.last_other_drones_position[id][0][1]])) < 50:
-                    #                 is_kill_zone = False
-                    #--------------------
-                    # for data in self.semantic_values():
-                    #     if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
-                    #         drone_x = self.drone_position[0] + data.distance * math.cos(data.angle + self.get_angle())
-                    #         drone_y = self.drone_position[1] + data.distance * math.sin(data.angle + self.get_angle())
-                    #         # count the number of positions near the drone in the last 50 frames
-                    #         count = 0
-                    #         for pos in self.semantic_drone_pos:
-                    #             if np.linalg.norm(pos - np.array([self.last_other_drones_position[id][0][0], self.last_other_drones_position[id][0][1]])) < 5:
-                    #                 count += 1
-                    #         if count > 5:
-                    #             self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
-                        #self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
-                    self.potential_kill_zones.append((id, np.array([kill_zone_x, kill_zone_y])))
-                killed_ids.append(id)
+                    self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
+                    killed_ids.append(id)
+                else:
+                    #print(f"Drone {id} left")
+                    killed_ids.append(id)
             
         for id in killed_ids:
             self.last_other_drones_position.pop(id)
+        
+        for id, kill_zone in self.map.kill_zones.items():
+            if id in [drone.id for drone in self.drone_list]:
+                self.kill_zone_mode = False
+                print("Kill zone mode disabled")
 
-        for data in self.semantic_values():
-            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
-                drone_x = self.drone_position[0] + data.distance * math.cos(data.angle + self.get_angle())
-                drone_y = self.drone_position[1] + data.distance * math.sin(data.angle + self.get_angle())
-                self.semantic_drone_pos.append(np.array([drone_x, drone_y]))
-
-        for id, potential_kill_zone in self.potential_kill_zones:
-            count = 0
-            for pos in self.semantic_drone_pos:
-                if np.linalg.norm(pos - potential_kill_zone) < 10:
-                    count += 1
-            if count > 5:
-                self.map.add_kill_zone(id, potential_kill_zone)
-        print(len(self.semantic_drone_pos))
-        if len(self.semantic_drone_pos) > 1000:
-            self.semantic_drone_pos = self.semantic_drone_pos[-1000:]
+        # killed_ids = []
+        # for id, kill_zone in self.map.kill_zones.items():
+        #     # check if the kill zone is near the drone
+        #     if np.linalg.norm(np.array(kill_zone) - self.drone_position) < MAX_RANGE_SEMANTIC_SENSOR:
+        #         real_kill_zone = False
+        #         for data in self.semantic_values():
+        #             if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+        #                 drone_x = self.drone_position[0] + data.distance * math.cos(data.angle + self.get_angle())
+        #                 drone_y = self.drone_position[1] + data.distance * math.sin(data.angle + self.get_angle())
+        #                 if np.linalg.norm(np.array(kill_zone) - np.array([drone_x, drone_y])) < 100:
+        #                     real_kill_zone = True
+        #         if not real_kill_zone:
+        #             killed_ids.append(id)
+        #             print("Not a real kill zone")
+                    
+        # for id in killed_ids:
+        #     self.map.remove_kill_zone(id)
     def control(self):
         if not self.odometer_values() is None:
             self.iteration += 1
@@ -577,14 +561,18 @@ class FrontierDrone(DroneAbstract):
             self.found_center, self.command_semantic = self.process_semantic_sensor()
             self.process_communicator()
             self.check_wounded_available()
-            if not self.communicator_is_disabled():
-                self.check_other_drones_killed()
-            else:
-                self.last_other_drones_position = {}
                 
             if self.rescue_center_position is None:
                 self.compute_rescue_center_position()
             
+            for drone in self.drone_list:
+                if drone.id == self.identifier: continue
+                if not drone.kill_zone_mode:
+                    self.kill_zone_mode = False
+            if not self.communicator_is_disabled() and self.iteration > 2 and self.kill_zone_mode:
+                self.check_other_drones_killed()
+            else:
+                self.last_other_drones_position = {}
 
             if self.roaming:
                 try:
@@ -706,9 +694,8 @@ class FrontierDrone(DroneAbstract):
                 pt2 = np.array(drawn_path[k+1]) + np.array(self.size_area)/2
                 arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
 
-        if self.debug_kill_zones:
-            for killed_drone_pos_grid in self.map.kill_zones.values():
-                killed_drone_pos = self.map.grid_to_world(killed_drone_pos_grid)
+        if self.debug_kill_zones and self.kill_zone_mode:
+            for killed_drone_pos in self.map.kill_zones.values():
                 pos = np.array(killed_drone_pos) + np.array(self.size_area)/2
                 # draw a rectangle
                 arcade.draw_rectangle_filled(pos[0], pos[1], 100, 100, arcade.color.RED)

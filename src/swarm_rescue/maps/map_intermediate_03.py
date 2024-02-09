@@ -26,7 +26,7 @@ class MyMapIntermediate03(MapAbstract):
         self._size_area = (500, 750)
 
         self._rescue_center = RescueCenter(size=(145,77))
-        self._rescue_center_pos =  ((14,200), 0)
+        self._rescue_center_pos =  ((14,400), 0)
 
         self._no_com_zone = NoComZone(size=(300, 100))
         self._no_com_zone_pos = ((-100, -200), 0)

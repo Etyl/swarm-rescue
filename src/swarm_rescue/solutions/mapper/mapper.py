@@ -165,9 +165,15 @@ class Map():
         """
         Add a kill zone to the map
         """
-        kill_zone = self.world_to_grid(kill_zone)
         if id not in self.kill_zones:
             self.kill_zones[id] = kill_zone
+
+    def remove_kill_zone(self, id):
+        """
+        Remove a kill zone from the map
+        """
+        if id in self.kill_zones:
+            self.kill_zones.pop(id)
 
     def display_map(self):
         """
@@ -261,8 +267,10 @@ class Map():
         obstacle_grid = np.where(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.INEXPLORED), 2, 0).astype(np.float64)
         kill_zone_grid = np.zeros((self.width, self.height)).astype(np.float64)
         # put kill zones as obstacles
-        for kill_zone in self.kill_zones.values():
-            kill_zone_grid[kill_zone[0] - KILL_ZONE_SIZE:kill_zone[0] + KILL_ZONE_SIZE, kill_zone[1] - KILL_ZONE_SIZE:kill_zone[1] + KILL_ZONE_SIZE] = 2
+        if self.kill_zones:
+            for kill_zone in self.kill_zones.values():
+                kill_zone = self.world_to_grid(kill_zone)
+                kill_zone_grid[kill_zone[0] - KILL_ZONE_SIZE:kill_zone[0] + KILL_ZONE_SIZE, kill_zone[1] - KILL_ZONE_SIZE:kill_zone[1] + KILL_ZONE_SIZE] = 2
         #cv2.imwrite("./kill_zones.png", kill_zone_grid * 255)
         # gaussian blur tp smooth kill zones
         #kill_zone_grid = cv2.GaussianBlur(kill_zone_grid, (15, 15), 0)
