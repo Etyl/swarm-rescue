@@ -91,6 +91,8 @@ class FrontierDrone(DroneAbstract):
 
         self.last_other_drones_position = {}
         self.kill_zones = []
+        self.semantic_drone_pos = []
+        self.potential_kill_zones = []
 
         self.iteration = 0
 
@@ -508,8 +510,8 @@ class FrontierDrone(DroneAbstract):
         # update other drones distance
         drone_list_alt = []
         for drone in self.drone_list:
-            if np.linalg.norm(drone.position - self.drone_position) < RANGE_COMMUNICATION:
-                drone_list_alt.append(drone)
+            #if np.linalg.norm(drone.position - self.drone_position) < RANGE_COMMUNICATION:
+            drone_list_alt.append(drone)
         for drone in drone_list_alt:
             if drone.id == self.identifier: continue
             self.last_other_drones_position[drone.id] = [drone.position, drone.vel_angle]
@@ -525,21 +527,49 @@ class FrontierDrone(DroneAbstract):
                     kill_zone_x = self.last_other_drones_position[id][0][0] + 50*math.cos(self.last_other_drones_position[id][1])
                     kill_zone_y = self.last_other_drones_position[id][0][1] + 50*math.sin(self.last_other_drones_position[id][1])
        
-                    is_kill_zone = True
-                    for drone in self.drone_list:
-                        for data in drone.semantic_values:
-                            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
-                                drone_x = drone.position[0] + data.distance * math.cos(data.angle + drone.angle)
-                                drone_y = drone.position[1] + data.distance * math.sin(data.angle + drone.angle)
-                                if np.linalg.norm(np.array([drone_x, drone_y]) - np.array([self.last_other_drones_position[id][0][0],  self.last_other_drones_position[id][0][1]])) < 50:
-                                    is_kill_zone = False
-                    if is_kill_zone:
-                        self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
+                    # is_kill_zone = True
+                    # for drone in drone_list_alt:
+                    #     for data in drone.semantic_values:
+                    #         if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+                    #             drone_x = drone.position[0] + data.distance * math.cos(data.angle + drone.angle)
+                    #             drone_y = drone.position[1] + data.distance * math.sin(data.angle + drone.angle)
+                    #             if np.linalg.norm(np.array([drone_x, drone_y]) - np.array([self.last_other_drones_position[id][0][0],  self.last_other_drones_position[id][0][1]])) < 50:
+                    #                 is_kill_zone = False
+                    #--------------------
+                    # for data in self.semantic_values():
+                    #     if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+                    #         drone_x = self.drone_position[0] + data.distance * math.cos(data.angle + self.get_angle())
+                    #         drone_y = self.drone_position[1] + data.distance * math.sin(data.angle + self.get_angle())
+                    #         # count the number of positions near the drone in the last 50 frames
+                    #         count = 0
+                    #         for pos in self.semantic_drone_pos:
+                    #             if np.linalg.norm(pos - np.array([self.last_other_drones_position[id][0][0], self.last_other_drones_position[id][0][1]])) < 5:
+                    #                 count += 1
+                    #         if count > 5:
+                    #             self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
+                        #self.map.add_kill_zone(id, [kill_zone_x, kill_zone_y])
+                    self.potential_kill_zones.append((id, np.array([kill_zone_x, kill_zone_y])))
                 killed_ids.append(id)
             
         for id in killed_ids:
             self.last_other_drones_position.pop(id)
 
+        for data in self.semantic_values():
+            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+                drone_x = self.drone_position[0] + data.distance * math.cos(data.angle + self.get_angle())
+                drone_y = self.drone_position[1] + data.distance * math.sin(data.angle + self.get_angle())
+                self.semantic_drone_pos.append(np.array([drone_x, drone_y]))
+
+        for id, potential_kill_zone in self.potential_kill_zones:
+            count = 0
+            for pos in self.semantic_drone_pos:
+                if np.linalg.norm(pos - potential_kill_zone) < 10:
+                    count += 1
+            if count > 5:
+                self.map.add_kill_zone(id, potential_kill_zone)
+        print(len(self.semantic_drone_pos))
+        if len(self.semantic_drone_pos) > 1000:
+            self.semantic_drone_pos = self.semantic_drone_pos[-1000:]
     def control(self):
         if not self.odometer_values() is None:
             self.iteration += 1
