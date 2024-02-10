@@ -113,6 +113,8 @@ class DroneController(StateMachine):
     def before_approaching_wounded(self):
         self.drone.onRoute = False
         self.drone.roaming = False
+        self.drone.nextWaypoint = None
+        self.drone.path = []
     
     @approaching_wounded.enter
     def on_enter_approaching_wounded(self):
@@ -147,6 +149,9 @@ class DroneController(StateMachine):
 
     def before_approaching_center(self):
         self.drone.onRoute = False
+        self.drone.roaming = False
+        self.drone.nextWaypoint = None
+        self.drone.path = []
     
     @approaching_center.enter
     def enter_approaching_center(self):

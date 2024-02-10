@@ -24,6 +24,7 @@ from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SEN
 from solutions.types.types import DroneData
 import solutions
 
+# TODO fix approach to wounded state change when drone gives wounded position
 
 class FrontierDrone(DroneAbstract):
 
@@ -47,7 +48,8 @@ class FrontierDrone(DroneAbstract):
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.last_angles = deque() # queue of the last angles
-        self.repulsion = np.zeros(2) # The repulsion vector
+        self.repulsion = np.zeros(2) # The repulsion vector from the other drones
+        self.wall_repulsion = np.zeros(2) # The repulsion vector from the walls
 
         self.wounded_found = [] # the list of wounded persons found
         self.wounded_distance = 80 # The distance between wounded person to be considered as the same
@@ -64,8 +66,9 @@ class FrontierDrone(DroneAbstract):
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = True
-        self.debug_kill_zones = True
+        self.debug_repulsion = False
+        self.debug_kill_zones = False
+        self.debug_wall_repulsion = True
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -124,7 +127,7 @@ class FrontierDrone(DroneAbstract):
         """
 
         dist = np.linalg.norm(pos - self.nextWaypoint)
-        if len(self.path) == 0: return dist < 20
+        if len(self.path) == 0: return dist < 15
 
         v1 = self.nextWaypoint - pos
         v2 = np.array(self.path[-1]) - np.array(self.nextWaypoint)
@@ -135,7 +138,7 @@ class FrontierDrone(DroneAbstract):
             turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
         # TODO: tune values
-        return dist < 20 + (1+turning_angle)*20
+        return dist < 15 + (1+turning_angle)*20
         
 
     def define_message_for_all(self):
@@ -453,6 +456,7 @@ class FrontierDrone(DroneAbstract):
                     self.onRoute = False
         return command
     
+
     def compute_rescue_center_position(self):
         """
         computes the position of the rescue center
@@ -464,11 +468,9 @@ class FrontierDrone(DroneAbstract):
             self.rescue_center_position = self.drone_position.copy()
 
 
-    def drone_repulsion(self):
+    def update_drone_repulsion(self):
         """
         repulses the drone from other drones
-        Returns:
-            repulsion float[2]: the repulsion vector
         """
         def compute_angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
@@ -484,10 +486,63 @@ class FrontierDrone(DroneAbstract):
             angle = normalize_angle(global_angle - self.get_angle())
             repulsion -= repulse_func(dist) * np.array([math.cos(angle), math.sin(angle)])
 
-        if not self.roaming:
-            repulsion /= 10
+        if self.roaming:
+            self.repulsion = repulsion
+        else:
+            self.repulsion = 0.1*repulsion
+      
+    # TODO : check if wall is not drone or wounded
+    def update_wall_repulsion(self):
+        """
+        update repulsion vector for the drone from the walls (local drone vector)
+        """
+        def compute_angle(v1, v2):
+            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
 
-        self.repulsion = repulsion
+        lidar_dist = self.lidar().get_sensor_values()
+        lidar_angles = self.lidar().ray_angles
+        detection_semantic = self.semantic_values()
+
+        drone_angles = []
+        for data in detection_semantic:
+            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+                drone_angles.append(round((data.angle+np.pi)*34/(2*np.pi)))
+        
+        repulsion_vectors = [np.zeros(2)]
+
+        if self.controller.current_state == self.controller.going_to_center:
+            for k in range(35):
+                i = round(k*180/34)
+                if (k not in drone_angles and
+                    lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR and 
+                    abs(lidar_angles[i])>np.pi/3):
+                        d = 1 - lidar_dist[i]/(0.3*MAX_RANGE_LIDAR_SENSOR)
+                        repulsion_vectors.append(np.array([d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])]))
+        else:
+            for k in range(35):
+                i = round(k*180/34)
+                if (k not in drone_angles and
+                    lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
+                        d = 1 - lidar_dist[i]/(0.3*MAX_RANGE_LIDAR_SENSOR)
+                        repulsion_vectors.append(np.array([d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])])) 
+
+        repulsion_vector = -sum(repulsion_vectors)
+
+        if np.linalg.norm(repulsion_vector) == 0:
+            self.wall_repulsion = np.zeros(2)
+            return
+
+        # check if the repulsion vector is needed (the repulsion vector repulses from an open space)
+        repulsion_angle = compute_angle(np.array([1,0]), -repulsion_vector)
+        angle = normalize_angle(self.get_angle() + repulsion_angle)
+        kmin = np.argmin(np.abs(lidar_angles-angle))
+        if (lidar_dist[kmin] >= 0.4*MAX_RANGE_LIDAR_SENSOR):
+            print(lidar_dist[kmin], self.controller.current_state.id, angle, repulsion_angle)
+            self.wall_repulsion = np.zeros(2)
+            return
+
+        self.wall_repulsion = (1-min(lidar_dist)/(0.8*MAX_RANGE_LIDAR_SENSOR))*repulsion_vector/np.linalg.norm(repulsion_vector)
+
 
     def compute_vel_angle(self):
         """
@@ -565,9 +620,14 @@ class FrontierDrone(DroneAbstract):
                     self.controller.command["lateral"] /=2
                 self.command = self.controller.command.copy()
 
-            self.drone_repulsion()
+            self.update_drone_repulsion()
+            self.update_wall_repulsion()
             self.command["forward"] += self.repulsion[0]
             self.command["lateral"] += self.repulsion[1]
+            if (self.controller.current_state != self.controller.approaching_wounded 
+                and self.controller.current_state != self.controller.approaching_center) :
+                self.command["forward"] += self.wall_repulsion[0]
+                self.command["lateral"] += self.wall_repulsion[1]
             self.command["forward"] = min(1,max(-1,self.command["forward"]))
             self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
 
@@ -616,7 +676,17 @@ class FrontierDrone(DroneAbstract):
 
         if self.debug_repulsion:
             pos = self.get_position() + np.array(self.size_area)/2
-            arcade.draw_line(pos[0], pos[1], pos[0]+self.repulsion[0]*20, pos[1]+self.repulsion[1]*20, arcade.color.PURPLE)
+            angle = self.get_angle()
+            rot = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
+            repulsion = self.repulsion @ rot
+            arcade.draw_line(pos[0], pos[1], pos[0]+repulsion[0]*20, pos[1]+repulsion[1]*20, arcade.color.PURPLE)
+
+        if self.debug_wall_repulsion:
+            pos = self.get_position() + np.array(self.size_area)/2
+            angle = self.get_angle()
+            rot = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
+            wall_repulsion = self.wall_repulsion @ rot
+            arcade.draw_line(pos[0], pos[1], pos[0]+wall_repulsion[0]*20, pos[1]+wall_repulsion[1]*20, arcade.color.RED)
 
         if self.debug_lidar:
             lidar_dist = self.lidar().get_sensor_values()[::].copy()
