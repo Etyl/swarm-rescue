@@ -140,6 +140,13 @@ class DroneController(StateMachine):
     @going_to_center.enter
     def on_enter_going_to_center(self):
         self.drone.drone_angle_offset = np.pi
+        if len(self.drone.path)==0 and self.drone.nextWaypoint is None:
+            self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
+            if self.drone.path is None: 
+                self.drone.path = []
+                return
+            else:
+                self.drone.nextWaypoint = self.drone.path.pop()
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
 
