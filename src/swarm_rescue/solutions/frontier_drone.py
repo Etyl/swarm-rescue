@@ -257,6 +257,8 @@ class FrontierDrone(DroneAbstract):
             return wounded_pos
 
         wounded_pos = get_wounded_position()
+        if self.wounded_target is not None and np.linalg.norm(wounded_pos - self.wounded_target) < self.wounded_distance:
+            self.wounded_visible = True
     
         for k in range(len(self.wounded_found)):
             wounded = self.wounded_found[k]
@@ -376,7 +378,6 @@ class FrontierDrone(DroneAbstract):
             for data in detection_semantic:
                 # If the wounded person detected is held by nobody
                 if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON and not data.grasped:
-                    self.wounded_visible = True
                     self.add_wounded(data)
 
         found_rescue_center = False
