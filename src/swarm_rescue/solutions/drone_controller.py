@@ -121,7 +121,6 @@ class DroneController(StateMachine):
     
     @approaching_wounded.enter
     def on_enter_approaching_wounded(self):
-        print("Approaching wounded", self.drone.identifier, self.drone.get_position(), self.drone.found_wounded)
         self.command = self.drone.command_semantic
         dist = np.linalg.norm(self.drone.wounded_target - self.drone.get_position())
         if dist < 80:
