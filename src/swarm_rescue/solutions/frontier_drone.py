@@ -540,7 +540,7 @@ class FrontierDrone(DroneAbstract):
         repulsion_angle = compute_angle(np.array([1,0]), -repulsion_vector)
         angle = normalize_angle(self.get_angle() + repulsion_angle)
         kmin = np.argmin(np.abs(lidar_angles-angle))
-        if (lidar_dist[kmin] >= 0.4*MAX_RANGE_LIDAR_SENSOR):
+        if (lidar_dist[kmin] >= 0.25*MAX_RANGE_LIDAR_SENSOR):
             self.wall_repulsion = np.zeros(2)
             return
 
@@ -712,8 +712,8 @@ class FrontierDrone(DroneAbstract):
             pos = self.get_position() + np.array(self.size_area)/2
             angle = self.get_angle()
             rot = np.array([[math.cos(angle), math.sin(angle)],[-math.sin(angle), math.cos(angle)]])
-            wall_repulsion = self.wall_repulsion @ rot
-            arcade.draw_line(pos[0], pos[1], pos[0]+wall_repulsion[0]*20, pos[1]+wall_repulsion[1]*20, arcade.color.RED)
+            wall_repulsion = -self.wall_repulsion @ rot
+            arcade.draw_line(pos[0], pos[1], pos[0]+wall_repulsion[0]*0.25*MAX_RANGE_LIDAR_SENSOR, pos[1]+wall_repulsion[1]*0.25*MAX_RANGE_LIDAR_SENSOR, arcade.color.RED)
 
         if self.debug_lidar:
             lidar_dist = self.lidar().get_sensor_values()[::].copy()
