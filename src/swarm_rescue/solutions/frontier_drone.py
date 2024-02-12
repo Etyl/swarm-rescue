@@ -490,10 +490,11 @@ class FrontierDrone(DroneAbstract):
             angle = normalize_angle(global_angle - self.get_angle())
             repulsion -= repulse_func(dist) * np.array([math.cos(angle), math.sin(angle)])
 
-        if self.roaming:
-            self.repulsion = repulsion
-        else:
+        if (self.controller.current_state == self.controller.going_to_center or
+            self.controller.current_state == self.controller.approaching_wounded):
             self.repulsion = 0.1*repulsion
+        else:
+            self.repulsion = repulsion
       
     # TODO : check if wall is not drone or wounded
     def update_wall_repulsion(self):
