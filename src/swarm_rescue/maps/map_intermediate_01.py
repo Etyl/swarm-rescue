@@ -21,7 +21,7 @@ class MyMapIntermediate01(MapAbstract):
 
     def __init__(self, zones_config: ZonesConfig = ()):
         super().__init__(zones_config)
-        self._time_step_limit = 1000
+        self._time_step_limit = 2000
         self._real_time_limit = 120
 
         # PARAMETERS MAP
@@ -33,7 +33,7 @@ class MyMapIntermediate01(MapAbstract):
         self._no_gps_zone = NoGpsZone(size=(400, 500))
         self._no_gps_zone_pos = ((-190, 0), 0)
 
-        self._wounded_persons_pos = []
+        self._wounded_persons_pos = [(-310, -180)]
         self._number_wounded_persons = len(self._wounded_persons_pos)
         self._wounded_persons: List[WoundedPerson] = []
 

@@ -48,6 +48,7 @@ class FrontierDrone(DroneAbstract):
         self.drone_angle = 0 # The angle of the drone
         self.drone_angle_offset = 0 # The angle offset of the drone that can be changed by the states
         self.found_wounded = False # True if the drone has found a wounded person
+        self.wounded_visible = False # True if the wounded person is visible
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.last_angles = deque() # queue of the last angles
@@ -64,7 +65,7 @@ class FrontierDrone(DroneAbstract):
         ## Debug controls
 
         self.debug_path = True # True if the path must be displayed
-        self.debug_wounded = False
+        self.debug_wounded = True
         self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
@@ -327,9 +328,7 @@ class FrontierDrone(DroneAbstract):
                 self.found_wounded = True
         
         if self.found_wounded:
-            # simple P controller
-            # The robot will turn until best_angle is 0
-
+       
             command = {"forward": 1.0,
                         "lateral": 0.0,
                         "rotation": 0.0,
@@ -372,11 +371,12 @@ class FrontierDrone(DroneAbstract):
         best_angle = 0
 
         self.clear_wounded_found()
-
+        self.wounded_visible = False
         if (detection_semantic):
             for data in detection_semantic:
                 # If the wounded person detected is held by nobody
                 if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON and not data.grasped:
+                    self.wounded_visible = True
                     self.add_wounded(data)
 
         found_rescue_center = False
