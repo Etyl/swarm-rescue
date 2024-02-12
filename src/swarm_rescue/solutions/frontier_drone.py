@@ -520,14 +520,14 @@ class FrontierDrone(DroneAbstract):
                 if (k not in drone_angles and
                     lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR and 
                     abs(lidar_angles[i])>np.pi/3):
-                        d = 1 - lidar_dist[i]/(0.3*MAX_RANGE_LIDAR_SENSOR)
+                        d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
                         repulsion_vectors.append(np.array([d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])]))
         else:
             for k in range(35):
                 i = round(k*180/34)
                 if (k not in drone_angles and
                     lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
-                        d = 1 - lidar_dist[i]/(0.3*MAX_RANGE_LIDAR_SENSOR)
+                        d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
                         repulsion_vectors.append(np.array([d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])])) 
 
         repulsion_vector = -sum(repulsion_vectors)
@@ -537,9 +537,9 @@ class FrontierDrone(DroneAbstract):
             return
 
         # check if the repulsion vector is needed (the repulsion vector repulses from an open space)
-        repulsion_angle = compute_angle(np.array([1,0]), -repulsion_vector)
-        angle = normalize_angle(self.get_angle() + repulsion_angle)
-        kmin = np.argmin(np.abs(lidar_angles-angle))
+        repulsion_angle = compute_angle(np.array([1,0]), -repulsion_vector/np.linalg.norm(repulsion_vector))
+        kmin = np.argmin(np.abs(lidar_angles - repulsion_angle))
+
         if (lidar_dist[kmin] >= 0.25*MAX_RANGE_LIDAR_SENSOR):
             self.wall_repulsion = np.zeros(2)
             return
@@ -629,7 +629,6 @@ class FrontierDrone(DroneAbstract):
             
             self.controller.cycle()
             self.update_mapping()
-            self.keep_distance_from_walls()
                 
             if self.roaming:
                 if self.gps_disabled:
@@ -653,8 +652,8 @@ class FrontierDrone(DroneAbstract):
                 self.command["lateral"] += 0.5*self.wall_repulsion[1]
             elif (self.controller.current_state != self.controller.approaching_wounded 
                 and self.controller.current_state != self.controller.approaching_center) :
-                self.command["forward"] += 1.2*self.wall_repulsion[0]
-                self.command["lateral"] += 1.2*self.wall_repulsion[1]
+                self.command["forward"] += 2*self.wall_repulsion[0]
+                self.command["lateral"] += 2*self.wall_repulsion[1]
             self.command["forward"] = min(1,max(-1,self.command["forward"]))
             self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
 
@@ -662,21 +661,6 @@ class FrontierDrone(DroneAbstract):
             
         return self.command
     
-    def keep_distance_from_walls(self):
-        """
-        keeps the drone at a distance from the walls
-        """
-        
-        lidar_dist = self.lidar().get_sensor_values()
-        lidar_angles = self.lidar().ray_angles
-
-        min_dist_index = np.argmin(lidar_dist)
-        min_dist = lidar_dist[min_dist_index]
-        min_angle = lidar_angles[min_dist_index]
-
-        if min_dist < 30:
-            return min_angle, min_dist
-        return None
     
     # TODO : update confidence map using the velocity
     def update_mapping(self):
