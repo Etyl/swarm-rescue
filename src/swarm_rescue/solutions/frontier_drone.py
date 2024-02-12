@@ -24,8 +24,6 @@ from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SEN
 from solutions.types.types import DroneData
 import solutions
 
-# TODO fix approach to wounded state change when drone gives wounded position
-
 POSITION_QUEUE_SIZE = 40 # number of positions to check if the drone is stuck
 REFRESH_PATH_LIMIT = 40 # frames before refreshing the path
 
@@ -305,7 +303,7 @@ class FrontierDrone(DroneAbstract):
         for (drone_communicator,drone_data) in data_list:
             self.update_drones(drone_data)
 
-
+    # TODO : deal with situation where 2 drones selected wounded
     def check_wounded_available(self):
 
         def angle(v1, v2):
@@ -496,7 +494,7 @@ class FrontierDrone(DroneAbstract):
         else:
             self.repulsion = repulsion
       
-    # TODO : check if wall is not drone or wounded
+
     def update_wall_repulsion(self):
         """
         update repulsion vector for the drone from the walls (local drone vector)
