@@ -26,6 +26,9 @@ import solutions
 
 # TODO fix approach to wounded state change when drone gives wounded position
 
+POSITION_QUEUE_SIZE = 40 # number of positions to check if the drone is stuck
+REFRESH_PATH_LIMIT = 40 # frames before refreshing the path
+
 class FrontierDrone(DroneAbstract):
 
     def __init__(self,
@@ -48,6 +51,7 @@ class FrontierDrone(DroneAbstract):
         self.found_center = False # True if the drone has found the rescue center
         self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.last_angles = deque() # queue of the last angles
+        self.last_positions = deque() # queue of the last positions
         self.repulsion = np.zeros(2) # The repulsion vector from the other drones
         self.wall_repulsion = np.zeros(2) # The repulsion vector from the walls
 
@@ -89,7 +93,6 @@ class FrontierDrone(DroneAbstract):
         self.theorical_velocity = np.zeros(2)
 
         self.controller = solutions.drone_controller.DroneController(self, debug_mode=self.debug_controller)
-        self.controller.force_transition()
         self.gps_disabled = True
 
         self.last_other_drones_position = {}
@@ -537,11 +540,30 @@ class FrontierDrone(DroneAbstract):
         angle = normalize_angle(self.get_angle() + repulsion_angle)
         kmin = np.argmin(np.abs(lidar_angles-angle))
         if (lidar_dist[kmin] >= 0.4*MAX_RANGE_LIDAR_SENSOR):
-            print(lidar_dist[kmin], self.controller.current_state.id, angle, repulsion_angle)
             self.wall_repulsion = np.zeros(2)
             return
 
-        self.wall_repulsion = (1-min(lidar_dist)/(0.8*MAX_RANGE_LIDAR_SENSOR))*repulsion_vector/np.linalg.norm(repulsion_vector)
+        coef = 1 - min(lidar_dist)/(2*MAX_RANGE_LIDAR_SENSOR)
+        repulsion_vector = repulsion_vector/np.linalg.norm(repulsion_vector)
+        self.wall_repulsion = coef * repulsion_vector
+
+
+    def test_stuck(self):
+        self.last_positions.append(self.get_position())
+        if len(self.last_positions) >= POSITION_QUEUE_SIZE:
+            self.last_positions.popleft()
+        else:
+            return
+        for k in range(len(self.last_positions)):
+            if np.linalg.norm(self.last_positions[0] - self.last_positions[k]) > 10:
+                return
+        if self.iteration < REFRESH_PATH_LIMIT:
+            return
+        self.iteration = 0
+        self.path = []
+        self.nextWaypoint = None
+        if self.controller.current_state == self.controller.approaching_wounded:
+            self.controller.force_drone_stuck()
 
 
     def compute_vel_angle(self):
@@ -592,6 +614,7 @@ class FrontierDrone(DroneAbstract):
             self.process_communicator()
             self.check_wounded_available()
             self.check_other_drones_killed()
+            self.test_stuck()
             
             if self.rescue_center_position is None:
                 self.compute_rescue_center_position()
@@ -624,10 +647,13 @@ class FrontierDrone(DroneAbstract):
             self.update_wall_repulsion()
             self.command["forward"] += self.repulsion[0]
             self.command["lateral"] += self.repulsion[1]
-            if (self.controller.current_state != self.controller.approaching_wounded 
+            if (self.controller.current_state == self.controller.going_to_center):
+                self.command["forward"] += 0.5*self.wall_repulsion[0]
+                self.command["lateral"] += 0.5*self.wall_repulsion[1]
+            elif (self.controller.current_state != self.controller.approaching_wounded 
                 and self.controller.current_state != self.controller.approaching_center) :
-                self.command["forward"] += self.wall_repulsion[0]
-                self.command["lateral"] += self.wall_repulsion[1]
+                self.command["forward"] += 1.2*self.wall_repulsion[0]
+                self.command["lateral"] += 1.2*self.wall_repulsion[1]
             self.command["forward"] = min(1,max(-1,self.command["forward"]))
             self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
 

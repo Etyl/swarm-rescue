@@ -12,7 +12,7 @@ class DroneController(StateMachine):
     going_to_center = State('Going to center')
     approaching_center = State('Approaching to center')
 
-    force_transition = roaming.to(going_to_wounded, on='before_going_to_wounded')
+    force_drone_stuck = approaching_wounded.to(roaming)
 
     # transitions
     cycle = (
