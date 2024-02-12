@@ -139,7 +139,6 @@ class FrontierDrone(DroneAbstract):
         else:
             turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
-        # TODO: tune values
         return dist < 15 + (1+turning_angle)*20
         
 

@@ -138,8 +138,6 @@ class DroneController(StateMachine):
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
 
-    # TODO : retry path if drone stuck
-    # TODO : verify if wounded is in front of drone
     @going_to_center.enter
     def on_enter_going_to_center(self):
         self.drone.drone_angle_offset = np.pi
