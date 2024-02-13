@@ -501,6 +501,7 @@ class FrontierDrone(DroneAbstract):
         def compute_angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
+        # TODO use inverse function
         def repulsion_dist(dist):
             return 2 - dist/(1.5*MAX_RANGE_SEMANTIC_SENSOR)
         
@@ -781,7 +782,7 @@ class FrontierDrone(DroneAbstract):
                 pos = np.array(wounded["position"]) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
                 arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
-            if self.wounded_target is not None:
+            if self.wounded_target is not None and (self.controller.current_state == self.controller.going_to_wounded or self.controller.current_state == self.controller.approaching_wounded):
                 pos = np.array(self.wounded_target) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.RED)
                 arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.RED)

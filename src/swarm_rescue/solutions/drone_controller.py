@@ -152,7 +152,6 @@ class DroneController(StateMachine):
                 return
             else:
                 self.drone.nextWaypoint = self.drone.path.pop()
-        print(f"Going to center. Next waypoint: {self.drone.nextWaypoint}")
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
 
