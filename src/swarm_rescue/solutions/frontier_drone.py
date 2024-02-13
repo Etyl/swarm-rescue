@@ -69,9 +69,9 @@ class FrontierDrone(DroneAbstract):
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = False
+        self.debug_repulsion = True
         self.debug_kill_zones = False
-        self.debug_wall_repulsion = True
+        self.debug_wall_repulsion = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -318,45 +318,53 @@ class FrontierDrone(DroneAbstract):
             return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
         self.found_wounded = False
+        min_distance = np.inf
+        best_position = None
         if (len(self.wounded_found_list) > 0 and 
             (self.controller.current_state == self.controller.going_to_wounded 
             or self.controller.current_state == self.controller.approaching_wounded
             or self.controller.current_state == self.controller.roaming)):
         
             # Select the best one among wounded persons detected
-            min_distance = 0
-            best_position = None
-            for wounded in self.wounded_found_list:
+            for i,wounded in enumerate(self.wounded_found_list):
                 distance = np.linalg.norm(self.get_position() - wounded["position"])
-                if "taken" not in wounded and (best_position is None or distance < min_distance):
+                if best_position is None or distance < min_distance:
+                    if "drone_taker" in wounded and wounded["drone_taker"] > self.identifier:
+                        continue
                     min_distance = distance
-                    best_position = wounded["position"]
-            self.wounded_target = best_position
-            if best_position is not None:
-                self.found_wounded = True
+                    best_position = i
+
+        if best_position is None:
+            return
+        
+        if self.controller.current_state == self.controller.approaching_wounded:
+            self.wounded_found_list[i]["drone_taker"] = self.identifier
+        
+        self.found_wounded = True
+        self.wounded_target = self.wounded_found_list[i]["position"]
+
         
         # TODO : refactor
-        if self.controller.current_state == self.controller.approaching_wounded:
-       
-            command = {"forward": 1.0,
-                        "lateral": 0.0,
-                        "rotation": 0.0,
-                        "grasper": 0}
+   
+        command = {"forward": 1.0,
+                    "lateral": 0.0,
+                    "rotation": 0.0,
+                    "grasper": 0}
 
-            best_angle = normalize_angle(angle(np.array([1,0]), best_position - self.drone_position))
-            best_angle = normalize_angle(best_angle - normalize_angle(self.get_angle()))
+        best_angle = normalize_angle(angle(np.array([1,0]), self.wounded_target - self.drone_position))
+        best_angle = normalize_angle(best_angle - normalize_angle(self.get_angle()))
 
-            kp = 2.0
-            a = kp * best_angle
-            a = min(a, 1.0)
-            a = max(a, -1.0)
-            command["rotation"] = a
+        kp = 2.0
+        a = kp * best_angle
+        a = min(a, 1.0)
+        a = max(a, -1.0)
+        command["rotation"] = a
 
-            # reduce speed if we need to turn a lot
-            if abs(a) == 1:
-                command["forward"] = 0.4
-            
-            self.command_semantic = command
+        # reduce speed if we need to turn a lot
+        if abs(a) == 1:
+            command["forward"] = 0.4
+        
+        self.command_semantic = command
 
 
 
@@ -486,29 +494,31 @@ class FrontierDrone(DroneAbstract):
         def compute_angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
-        def repulse_func(dist):
-            return 8/max(1,2*(dist-60))
+        def repulsion_dist(dist):
+            return 2 - dist/(1.5*MAX_RANGE_SEMANTIC_SENSOR)
         
         repulsion = np.zeros(2)
-        drone_pos = self.get_position()
-        for drone in self.drone_list:
-            dist = np.linalg.norm(drone_pos - drone.position)
-            global_angle = normalize_angle(compute_angle(np.array([1,0]), drone.position - drone_pos))
-            angle = normalize_angle(global_angle - self.get_angle())
-            repulsion -= repulse_func(dist) * np.array([math.cos(angle), math.sin(angle)])
+        min_dist = np.inf
+        for data in self.semantic_values():
+            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+                angle = data.angle
+                dist = data.distance
+                min_dist = min(min_dist, dist)
+                repulsion += repulsion_dist(dist) * np.array([math.cos(angle), math.sin(angle)])
         
         if np.linalg.norm(repulsion) == 0:
             self.repulsion = np.zeros(2)
             return
         
-        repulsion = repulsion/np.linalg.norm(repulsion)
+        repulsion = -repulsion/np.linalg.norm(repulsion)
+        repulsion *= repulsion_dist(min_dist)
 
         if (self.controller.current_state == self.controller.going_to_center or
             self.controller.current_state == self.controller.approaching_wounded or
             self.controller.current_state == self.controller.approaching_center):
-            self.repulsion = 0.3*repulsion
+            self.repulsion = 0.2*repulsion
         else:
-            self.repulsion = 2*repulsion
+            self.repulsion = repulsion
       
 
     def update_wall_repulsion(self):
@@ -547,9 +557,7 @@ class FrontierDrone(DroneAbstract):
 
         # check if drone is too close to a wall
         kmin = np.argmax(np.linalg.norm(repulsion_vectors, axis=1))
-        # print(self.iteration, np.linalg.norm(repulsion_vectors[kmin]))
         if np.linalg.norm(repulsion_vectors[kmin]) >= 0.93:
-            print(self.iteration, np.linalg.norm(repulsion_vectors[kmin]))
             self.wall_repulsion = -repulsion_vectors[kmin]/np.linalg.norm(repulsion_vectors[kmin])
             return
 
@@ -764,6 +772,10 @@ class FrontierDrone(DroneAbstract):
                 pos = np.array(wounded["position"]) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
                 arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
+            if self.wounded_target is not None:
+                pos = np.array(self.wounded_target) + np.array(self.size_area)/2
+                arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.RED)
+                arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.RED)
 
         if self.debug_positions:
             pos = np.array(self.drone_position) + np.array(self.size_area)/2
