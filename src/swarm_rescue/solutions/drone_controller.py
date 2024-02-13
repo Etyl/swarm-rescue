@@ -29,6 +29,7 @@ class DroneController(StateMachine):
 
         going_to_center.to(approaching_center, cond="found_center", on='before_approaching_center') |
 
+        approaching_center.to(going_to_center, cond="lost_center") |
         approaching_center.to(roaming, cond="lost_wounded") |
         going_to_center.to(roaming, cond="lost_wounded",) |
 
@@ -72,6 +73,9 @@ class DroneController(StateMachine):
     
     def found_center(self):
         return self.drone.found_center
+    
+    def lost_center(self):
+        return not self.drone.found_center
     
     def lost_wounded(self):
         return not self.drone.base.grasper.grasped_entities

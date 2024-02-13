@@ -286,15 +286,22 @@ class FrontierDrone(DroneAbstract):
         updates the data of the drones
         """
 
+        """
+        # update the visibility of the drones
         for data in self.drone_list:
             data.visible = False
-        drone_data.visible = True
+        #drone_data.visible = True
+        """
 
+        # update the wounded list
         if drone_data.wounded_target is not None:
             for k in range(len(self.wounded_found_list)):
                 if np.linalg.norm(self.wounded_found_list[k]["position"] - drone_data.wounded_target) < self.wounded_distance:
-                    self.wounded_found_list[k]["taken"] = True
+                    #self.wounded_found_list[k]["taken"] = True
+                    self.wounded_found_list[k]["drone_taker"] = drone_data.id
                     break
+        
+        # update the drone information
         for k in range(len(self.drone_list)):
             if self.drone_list[k].id == drone_data.id:
                 self.drone_list[k] = drone_data

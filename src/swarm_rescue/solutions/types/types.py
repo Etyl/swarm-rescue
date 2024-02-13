@@ -7,9 +7,9 @@ class DroneData:
         self.position: np.ndarray = None
         self.angle: float = None
         self.vel_angle: float = None
-        self.wounded_found: list = None
+        self.wounded_found_list: list = None
         self.wounded_target: np.ndarray = None
         self.map: Map = None
         self.semantic_values: np.ndarray = None
         self.kill_zone_mode: bool = None
-        self.visible = True
+        #self.visible = True
