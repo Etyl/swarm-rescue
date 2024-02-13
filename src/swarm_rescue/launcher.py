@@ -12,6 +12,7 @@ from spg_overlay.gui_map.gui_sr import GuiSR
 
 from maps.map_intermediate_01 import MyMapIntermediate01
 from maps.map_intermediate_02 import MyMapIntermediate02
+from maps.map_intermediate_03 import MyMapIntermediate03
 from maps.map_final_2023 import MyMapFinal
 from maps.map_medium_01 import MyMapMedium01
 from maps.map_medium_02 import MyMapMedium02
@@ -56,7 +57,12 @@ class Launcher:
         self.team_info = TeamInfo()
         self.eval_plan = EvalPlan()
 
-        eval_config = EvalConfig(map_type=MyMapFinal, nb_rounds=1)
+        zones_config: ZonesConfig = (ZoneType.KILL_ZONE,)
+        eval_config = EvalConfig(map_type=MyMapIntermediate03, nb_rounds=1, zones_config=zones_config)
+        self.eval_plan.add(eval_config=eval_config)
+
+        zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE,)
+        eval_config = EvalConfig(map_type=MyMapIntermediate03, nb_rounds=1, zones_config=zones_config)
         self.eval_plan.add(eval_config=eval_config)
 
         """

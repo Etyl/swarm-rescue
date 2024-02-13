@@ -35,7 +35,7 @@ class FrontierExplorer():
         # Run the Wavefront Detector algorithm
         wavefront_map = np.copy(temp_map)
         wavefront_value = 1
-        wavefront_map[self.drone_position] = wavefront_value
+        wavefront_map[self.drone_position[0], self.drone_position[1]] = wavefront_value
 
         while wavefront_value <= np.max(wavefront_map):
             indices = np.where(wavefront_map == wavefront_value)
