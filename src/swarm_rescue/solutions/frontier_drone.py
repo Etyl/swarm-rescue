@@ -54,7 +54,7 @@ class FrontierDrone(DroneAbstract):
         self.repulsion = np.zeros(2) # The repulsion vector from the other drones
         self.wall_repulsion = np.zeros(2) # The repulsion vector from the walls
 
-        self.wounded_found = [] # the list of wounded persons found
+        self.wounded_found_list = [] # the list of wounded persons found
         self.wounded_distance = 80 # The distance between wounded person to be considered as the same
         self.wounded_target = None # The wounded position to go to
 
@@ -151,7 +151,7 @@ class FrontierDrone(DroneAbstract):
         data.position = self.get_position()
         data.angle = self.get_angle()
         data.vel_angle = self.compute_vel_angle()
-        data.wounded_found = self.wounded_found
+        data.wounded_found = self.wounded_found_list
         data.wounded_target = self.wounded_target
         data.map = self.map
         data.semantic_values = self.semantic_values()
@@ -262,8 +262,8 @@ class FrontierDrone(DroneAbstract):
         if self.wounded_target is not None and np.linalg.norm(wounded_pos - self.wounded_target) < self.wounded_distance:
             self.wounded_visible = True
     
-        for k in range(len(self.wounded_found)):
-            wounded = self.wounded_found[k]
+        for k in range(len(self.wounded_found_list)):
+            wounded = self.wounded_found_list[k]
             if np.linalg.norm(wounded_pos - wounded["position"]) < self.wounded_distance:
                 wounded["count"] += 1
                 n = wounded["count"]
@@ -271,25 +271,29 @@ class FrontierDrone(DroneAbstract):
                 wounded["last_seen"] = 0
                 return
             
-        self.wounded_found.append({"position": wounded_pos, "count": 1, "last_seen": 0})
+        self.wounded_found_list.append({"position": wounded_pos, "count": 1, "last_seen": 0})
     
     def clear_wounded_found(self):
         frame_limit = 10
 
-        for k in range(len(self.wounded_found)-1,-1,-1):
-            self.wounded_found[k]["last_seen"] += 1
-            if np.linalg.norm(self.drone_position - self.wounded_found[k]["position"])<80 and self.wounded_found[k]["last_seen"] > frame_limit:
-                self.wounded_found.pop(k)
+        for k in range(len(self.wounded_found_list)-1,-1,-1):
+            self.wounded_found_list[k]["last_seen"] += 1
+            if np.linalg.norm(self.drone_position - self.wounded_found_list[k]["position"])<80 and self.wounded_found_list[k]["last_seen"] > frame_limit:
+                self.wounded_found_list.pop(k)
 
     def update_drones(self, drone_data : DroneData):
         """
         updates the data of the drones
         """
 
+        for data in self.drone_list:
+            data.visible = False
+        drone_data.visible = True
+
         if drone_data.wounded_target is not None:
-            for k in range(len(self.wounded_found)):
-                if np.linalg.norm(self.wounded_found[k]["position"] - drone_data.wounded_target) < self.wounded_distance:
-                    self.wounded_found[k]["taken"] = True
+            for k in range(len(self.wounded_found_list)):
+                if np.linalg.norm(self.wounded_found_list[k]["position"] - drone_data.wounded_target) < self.wounded_distance:
+                    self.wounded_found_list[k]["taken"] = True
                     break
         for k in range(len(self.drone_list)):
             if self.drone_list[k].id == drone_data.id:
@@ -314,7 +318,7 @@ class FrontierDrone(DroneAbstract):
             return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
         self.found_wounded = False
-        if (len(self.wounded_found) > 0 and 
+        if (len(self.wounded_found_list) > 0 and 
             (self.controller.current_state == self.controller.going_to_wounded 
             or self.controller.current_state == self.controller.approaching_wounded
             or self.controller.current_state == self.controller.roaming)):
@@ -322,7 +326,7 @@ class FrontierDrone(DroneAbstract):
             # Select the best one among wounded persons detected
             min_distance = 0
             best_position = None
-            for wounded in self.wounded_found:
+            for wounded in self.wounded_found_list:
                 distance = np.linalg.norm(self.get_position() - wounded["position"])
                 if "taken" not in wounded and (best_position is None or distance < min_distance):
                     min_distance = distance
@@ -331,7 +335,8 @@ class FrontierDrone(DroneAbstract):
             if best_position is not None:
                 self.found_wounded = True
         
-        if self.found_wounded:
+        # TODO : refactor
+        if self.controller.current_state == self.controller.approaching_wounded:
        
             command = {"forward": 1.0,
                         "lateral": 0.0,
@@ -482,7 +487,7 @@ class FrontierDrone(DroneAbstract):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
         def repulse_func(dist):
-            return 10/max(1,(dist-60))
+            return 8/max(1,2*(dist-60))
         
         repulsion = np.zeros(2)
         drone_pos = self.get_position()
@@ -491,12 +496,19 @@ class FrontierDrone(DroneAbstract):
             global_angle = normalize_angle(compute_angle(np.array([1,0]), drone.position - drone_pos))
             angle = normalize_angle(global_angle - self.get_angle())
             repulsion -= repulse_func(dist) * np.array([math.cos(angle), math.sin(angle)])
+        
+        if np.linalg.norm(repulsion) == 0:
+            self.repulsion = np.zeros(2)
+            return
+        
+        repulsion = repulsion/np.linalg.norm(repulsion)
 
         if (self.controller.current_state == self.controller.going_to_center or
-            self.controller.current_state == self.controller.approaching_wounded):
-            self.repulsion = 0.1*repulsion
+            self.controller.current_state == self.controller.approaching_wounded or
+            self.controller.current_state == self.controller.approaching_center):
+            self.repulsion = 0.3*repulsion
         else:
-            self.repulsion = repulsion
+            self.repulsion = 2*repulsion
       
 
     def update_wall_repulsion(self):
@@ -532,6 +544,14 @@ class FrontierDrone(DroneAbstract):
                     lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
                         d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
                         repulsion_vectors.append(np.array([d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])])) 
+
+        # check if drone is too close to a wall
+        kmin = np.argmax(np.linalg.norm(repulsion_vectors, axis=1))
+        # print(self.iteration, np.linalg.norm(repulsion_vectors[kmin]))
+        if np.linalg.norm(repulsion_vectors[kmin]) >= 0.93:
+            print(self.iteration, np.linalg.norm(repulsion_vectors[kmin]))
+            self.wall_repulsion = -repulsion_vectors[kmin]/np.linalg.norm(repulsion_vectors[kmin])
+            return
 
         repulsion_vector = -sum(repulsion_vectors)
 
@@ -679,8 +699,8 @@ class FrontierDrone(DroneAbstract):
             self.command["forward"] += self.repulsion[0]
             self.command["lateral"] += self.repulsion[1]
             if (self.controller.current_state == self.controller.going_to_center):
-                self.command["forward"] += 0.5*self.wall_repulsion[0]
-                self.command["lateral"] += 0.5*self.wall_repulsion[1]
+                self.command["forward"] += self.wall_repulsion[0]
+                self.command["lateral"] += self.wall_repulsion[1]
             elif (self.controller.current_state != self.controller.approaching_wounded 
                 and self.controller.current_state != self.controller.approaching_center) :
                 self.command["forward"] += 2*self.wall_repulsion[0]
@@ -740,7 +760,7 @@ class FrontierDrone(DroneAbstract):
                 arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
 
         if self.debug_wounded:
-            for wounded in self.wounded_found:
+            for wounded in self.wounded_found_list:
                 pos = np.array(wounded["position"]) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
                 arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)

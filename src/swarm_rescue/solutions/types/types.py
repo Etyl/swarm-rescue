@@ -12,3 +12,4 @@ class DroneData:
         self.map: Map = None
         self.semantic_values: np.ndarray = None
         self.kill_zone_mode: bool = None
+        self.visible = True

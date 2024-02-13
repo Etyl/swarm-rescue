@@ -56,7 +56,7 @@ class DroneController(StateMachine):
         return self.drone.found_wounded
     
     def found_wounded_in_list(self):
-        return len(self.drone.wounded_found) > 0
+        return len(self.drone.wounded_found_list) > 0
     
     def wounded_visible(self):
         return self.drone.wounded_visible and self.drone.found_wounded
@@ -92,7 +92,7 @@ class DroneController(StateMachine):
     def before_going_to_wounded(self):
         min_dist = np.inf
         target, target_path = None, None
-        for wounded in self.drone.wounded_found:
+        for wounded in self.drone.wounded_found_list:
             path = self.drone.get_path(wounded["position"])
             if path is None: continue
             dist = 0

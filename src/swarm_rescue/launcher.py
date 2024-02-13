@@ -57,13 +57,10 @@ class Launcher:
         self.team_info = TeamInfo()
         self.eval_plan = EvalPlan()
 
-        zones_config: ZonesConfig = (ZoneType.KILL_ZONE,)
-        eval_config = EvalConfig(map_type=MyMapIntermediate03, nb_rounds=1, zones_config=zones_config)
+        eval_config = EvalConfig(map_type=MyMapFinal, nb_rounds=1)
         self.eval_plan.add(eval_config=eval_config)
 
-        zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE,)
-        eval_config = EvalConfig(map_type=MyMapIntermediate03, nb_rounds=1, zones_config=zones_config)
-        self.eval_plan.add(eval_config=eval_config)
+
 
         """
         eval_config = EvalConfig(map_type=MyMapIntermediate02)
