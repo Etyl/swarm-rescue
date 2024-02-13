@@ -666,6 +666,8 @@ class FrontierDrone(DroneAbstract):
         # for id in killed_ids:
         #     self.map.remove_kill_zone(id)
     def control(self):
+
+        # TODO check if works in no gps mode
         if not self.odometer_values() is None:
             self.iteration += 1
             self.get_localization()
