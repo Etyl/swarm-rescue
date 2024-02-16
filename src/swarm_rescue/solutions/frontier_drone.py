@@ -318,7 +318,6 @@ class FrontierDrone(DroneAbstract):
         for (drone_communicator,drone_data) in data_list:
             self.update_drones(drone_data)
 
-    # TODO : deal with situation where 2 drones selected wounded
     def check_wounded_available(self):
 
         def angle(v1, v2):
@@ -501,9 +500,13 @@ class FrontierDrone(DroneAbstract):
         def compute_angle(v1, v2):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
-        # TODO use inverse function
+        # TODO : tweak values
         def repulsion_dist(dist):
-            return 2 - dist/(1.5*MAX_RANGE_SEMANTIC_SENSOR)
+            a = 34
+            b = 1.4
+            c = 0.6
+            if dist <= a: return 2
+            return min(2,(b*MAX_RANGE_SEMANTIC_SENSOR)/(dist-a) - c)
         
         repulsion = np.zeros(2)
         min_dist = np.inf
