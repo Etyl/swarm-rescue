@@ -337,6 +337,8 @@ class FrontierDrone(DroneAbstract):
                         continue
                     min_distance = distance
                     best_position = i
+                    if self.wounded_target is not None and np.linalg.norm(wounded["position"] - self.wounded_target) < self.wounded_distance/2:
+                        continue
 
         if best_position is None:
             return
