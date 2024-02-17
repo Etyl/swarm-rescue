@@ -333,7 +333,7 @@ class FrontierDrone(DroneAbstract):
             for i,wounded in enumerate(self.wounded_found_list):
                 distance = np.linalg.norm(self.get_position() - wounded["position"])
                 if best_position is None or distance < min_distance:
-                    if "drone_taker" in wounded and wounded["drone_taker"] > self.identifier:
+                    if self.wounded_visible and "drone_taker" in wounded and wounded["drone_taker"] > self.identifier:
                         continue
                     min_distance = distance
                     best_position = i
