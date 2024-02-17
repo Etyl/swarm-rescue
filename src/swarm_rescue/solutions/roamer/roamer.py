@@ -94,6 +94,7 @@ class RoamerController(StateMachine):
 
         self.waiting_time = 0
         self.last_time_updates = 1000
+        self.first_time = True
 
         self.frontiers = None
 
@@ -160,7 +161,9 @@ class RoamerController(StateMachine):
 
         if self.last_time_updates > self._COMPUTE_FRONTIER_COOLDOWN:
             self.drone.path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
-            self.last_time_updates = 0
+            if not self.first_time:
+                self.last_time_updates = 0
+            self.first_time = False
         else:
             self.last_time_updates += 1
             return
