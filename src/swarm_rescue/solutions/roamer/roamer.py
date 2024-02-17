@@ -328,7 +328,8 @@ class Roamer:
         frontier_count = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
 
         # score (the higher the better)
-        score = 2*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size + 2*(1-selected_frontiers_repulsion_angle)
+        # TODO : optimize
+        score = 8*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size + 16*(1-selected_frontiers_repulsion_angle)
 
         # select the best frontier
         best_frontier_idx = np.argmax(score)

@@ -500,11 +500,11 @@ class FrontierDrone(DroneAbstract):
         
         # TODO : tweak values
         def repulsion_dist(dist):
-            a = 34
-            b = 1.4
-            c = 0.6
+            a = 27
+            b = 0.8
+            c = 0.007
             if dist <= a: return 2
-            return min(2,(b*MAX_RANGE_SEMANTIC_SENSOR)/(dist-a) - c)
+            return min(2,MAX_RANGE_SEMANTIC_SENSOR*(b/(dist-a) - c))
         
         repulsion = np.zeros(2)
         min_dist = np.inf
