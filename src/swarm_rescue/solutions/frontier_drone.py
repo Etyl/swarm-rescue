@@ -48,11 +48,12 @@ class FrontierDrone(DroneAbstract):
         self.found_wounded = False # True if the drone has found a wounded person
         self.wounded_visible = False # True if the wounded person is visible
         self.found_center = False # True if the drone has found the rescue center
-        self.command_semantic = None # The command to follow the wounded person or the rescue center
         self.last_angles = deque() # queue of the last angles
         self.last_positions = deque() # queue of the last positions
         self.repulsion = np.zeros(2) # The repulsion vector from the other drones
         self.wall_repulsion = np.zeros(2) # The repulsion vector from the walls
+        self.center_angle = None
+        self.is_near_center = False
 
         self.wounded_found_list = [] # the list of wounded persons found
         self.wounded_distance = 80 # The distance between wounded person to be considered as the same
@@ -83,7 +84,7 @@ class FrontierDrone(DroneAbstract):
                         "grasper": 0}
 
         #self.map = Map(area_world=self.size_area, resolution=8, lidar=self.lidar(), debug_mode=self.debug_map)
-        self.map = Map(drone=self, area_world=self.size_area, drone_lidar=self.lidar(), resolution=10, identifier=self.identifier, debug_mode=True)
+        self.map = Map(drone=self, area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, identifier=self.identifier, debug_mode=True)
         self.rescue_center_position = None
         
         self.roamer_controller = solutions.roamer.RoamerController(self, self.map, debug_mode=self.debug_roamer)
@@ -319,9 +320,6 @@ class FrontierDrone(DroneAbstract):
             self.update_drones(drone_data)
 
     def check_wounded_available(self):
-
-        def angle(v1, v2):
-            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
         self.found_wounded = False
         min_distance = np.inf
@@ -349,30 +347,51 @@ class FrontierDrone(DroneAbstract):
         self.found_wounded = True
         self.wounded_target = self.wounded_found_list[i]["position"]
 
-        
-        # TODO : refactor
-   
+
+    def get_control_from_semantic(self):
+
+        def angle(v1, v2):
+            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
+
+        angular_vel_controller_max = 1.0
+
         command = {"forward": 1.0,
                     "lateral": 0.0,
                     "rotation": 0.0,
                     "grasper": 0}
 
-        best_angle = normalize_angle(angle(np.array([1,0]), self.wounded_target - self.drone_position))
-        best_angle = normalize_angle(best_angle - normalize_angle(self.get_angle()))
+        if self.found_wounded:
+            best_angle = normalize_angle(angle(np.array([1,0]), self.wounded_target - self.drone_position))
+            best_angle = normalize_angle(best_angle - normalize_angle(self.get_angle()))
 
-        kp = 2.0
-        a = kp * best_angle
-        a = min(a, 1.0)
-        a = max(a, -1.0)
-        command["rotation"] = a
+            kp = 2.0
+            a = kp * best_angle
+            a = min(a, 1.0)
+            a = max(a, -1.0)
+            command["rotation"] = a
 
-        # reduce speed if we need to turn a lot
-        if abs(a) == 1:
-            command["forward"] = 0.4
-        
-        self.command_semantic = command
+            # reduce speed if we need to turn a lot
+            if abs(a) == 1:
+                command["forward"] = 0.4        
 
+        if self.found_center:
+            # simple P controller
+            # The robot will turn until best_angle is 0
+            kp = 2.0
+            a = kp * self.center_angle
+            a = min(a, 1.0)
+            a = max(a, -1.0)
+            command["rotation"] = a * angular_vel_controller_max
 
+            # reduce speed if we need to turn a lot
+            if abs(a) == 1:
+                command["forward"] = 0.2
+
+        if self.found_center and self.is_near_center:
+            command["forward"] = 0
+            command["rotation"] = random.uniform(0.5, 1)
+
+        return command
 
     def process_semantic_sensor(self):
         """
@@ -381,13 +400,6 @@ class FrontierDrone(DroneAbstract):
 
         def angle(v1, v2):
             return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
-        
-        command = {"forward": 1.0,
-                   "lateral": 0.0,
-                   "rotation": 0.0,
-                   "grasper": 0}
-        
-        angular_vel_controller_max = 1.0
 
         detection_semantic = self.semantic_values()
         
@@ -413,28 +425,14 @@ class FrontierDrone(DroneAbstract):
                     angles_list.append(data.angle)
                     is_near = (data.distance < 50)
 
-            if found_rescue_center:
-                best_angle = circular_mean(np.array(angles_list))
-
-
         if found_rescue_center:
-            # simple P controller
-            # The robot will turn until best_angle is 0
-            kp = 2.0
-            a = kp * best_angle
-            a = min(a, 1.0)
-            a = max(a, -1.0)
-            command["rotation"] = a * angular_vel_controller_max
+            self.center_angle = circular_mean(np.array(angles_list))
+            self.is_near_center = is_near
+        else:
+            self.center_angle = None
+            self.is_near_center = False
 
-            # reduce speed if we need to turn a lot
-            if abs(a) == 1:
-                command["forward"] = 0.2
-
-        if found_rescue_center and is_near:
-            command["forward"] = 0
-            command["rotation"] = random.uniform(0.5, 1)
-
-        return found_rescue_center, command
+        return found_rescue_center
 
 
     def get_path(self, pos):
@@ -675,7 +673,7 @@ class FrontierDrone(DroneAbstract):
         if not self.odometer_values() is None:
             self.iteration += 1
             self.get_localization()
-            self.found_center, self.command_semantic = self.process_semantic_sensor()
+            self.found_center = self.process_semantic_sensor()
             self.process_communicator()
             self.check_wounded_available()
             self.check_other_drones_killed()

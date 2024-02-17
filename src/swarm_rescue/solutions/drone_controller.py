@@ -125,7 +125,7 @@ class DroneController(StateMachine):
     
     @approaching_wounded.enter
     def on_enter_approaching_wounded(self):
-        self.command = self.drone.command_semantic
+        self.command = self.drone.get_control_from_semantic()
         dist = np.linalg.norm(self.drone.wounded_target - self.drone.get_position())
         if dist < 80:
             self.command["grasper"] = 1
@@ -167,7 +167,7 @@ class DroneController(StateMachine):
     
     @approaching_center.enter
     def enter_approaching_center(self):
-        self.command = self.drone.command_semantic
+        self.command = self.drone.get_control_from_semantic()
         self.command["grasper"] = 1
 
 
