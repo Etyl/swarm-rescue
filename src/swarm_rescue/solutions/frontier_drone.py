@@ -672,8 +672,6 @@ class FrontierDrone(DroneAbstract):
 
         # TODO check if works in no gps mode
         if not self.odometer_values() is None:
-            print("========")
-            print(self.get_angle(),self.command["rotation"])
             self.iteration += 1
             self.get_localization()
             self.found_center = self.process_semantic_sensor()
@@ -683,7 +681,6 @@ class FrontierDrone(DroneAbstract):
             self.test_stuck()
 
             # TODO remove
-            print(self.get_angle())
             if type(self.get_angle()) != float:
                 print("error")
             
