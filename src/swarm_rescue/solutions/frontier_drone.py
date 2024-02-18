@@ -14,7 +14,8 @@ import time
 
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
-from spg_overlay.utils.utils import circular_mean, normalize_angle
+from spg_overlay.utils.utils import circular_mean
+from solutions.utils import normalize_angle
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
@@ -43,7 +44,7 @@ class FrontierDrone(DroneAbstract):
         self.lastWaypoint = None # The last waypoint reached
         self.nextWaypoint = np.array([0,0]) # The next waypoint to go to
         self.drone_position = np.array([0,0]) # The position of the drone
-        self.drone_angle = 0 # The angle of the drone
+        self.drone_angle : float = 0 # The angle of the drone
         self.drone_angle_offset = 0 # The angle offset of the drone that can be changed by the states
         self.found_wounded = False # True if the drone has found a wounded person
         self.wounded_visible = False # True if the wounded person is visible
@@ -104,7 +105,7 @@ class FrontierDrone(DroneAbstract):
         self.iteration = 0
 
 
-    def adapt_angle_direction(self, pos: list):
+    def adapt_angle_direction(self, pos: list) -> float:
         """
         gives the angle to turn to in order to go to the next waypoint
         """
@@ -525,7 +526,7 @@ class FrontierDrone(DroneAbstract):
         if (self.controller.current_state == self.controller.going_to_center or
             self.controller.current_state == self.controller.approaching_wounded or
             self.controller.current_state == self.controller.approaching_center):
-            self.repulsion = 0.2*repulsion
+            self.repulsion = 0.05*repulsion
         else:
             self.repulsion = repulsion
       
@@ -671,6 +672,8 @@ class FrontierDrone(DroneAbstract):
 
         # TODO check if works in no gps mode
         if not self.odometer_values() is None:
+            print("========")
+            print(self.get_angle(),self.command["rotation"])
             self.iteration += 1
             self.get_localization()
             self.found_center = self.process_semantic_sensor()
@@ -678,6 +681,11 @@ class FrontierDrone(DroneAbstract):
             self.check_wounded_available()
             self.check_other_drones_killed()
             self.test_stuck()
+
+            # TODO remove
+            print(self.get_angle())
+            if type(self.get_angle()) != float:
+                print("error")
             
             if self.rescue_center_position is None:
                 self.compute_rescue_center_position()

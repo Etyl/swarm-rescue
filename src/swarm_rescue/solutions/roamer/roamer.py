@@ -17,7 +17,7 @@ import numpy as np
 import os
 import cv2
 
-from spg_overlay.utils.utils import normalize_angle
+from solutions.utils import normalize_angle
 
 # OTHER IMPL - ASYNC
 # import asyncio
