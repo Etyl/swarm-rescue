@@ -270,6 +270,10 @@ class Roamer:
         Find the closest unexplored target from the drone's curretn position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
+
+        print(self.drone.identifier, "=====================")
+
+
         map_matrix_copy = self.map.get_map_matrix().copy() # copy map (to not modify the original)
   
         map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int (for the Frontier Explorer algorithms)
@@ -324,6 +328,7 @@ class Roamer:
                 sum(point[0] for point in frontier) / len(frontier),
                 sum(point[1] for point in frontier) / len(frontier)
             )
+            print(frontier_center)
             distance, repulsion_angle = self.get_path_length(frontier_center)
             selected_frontiers_distance[id] = distance
             selected_frontiers_repulsion_angle.append(repulsion_angle)
@@ -348,7 +353,9 @@ class Roamer:
 
         # score (the higher the better)
         # TODO : optimize
-        score = 8*(1-selected_frontiers_distance) + 2*frontier_count + frontiers_size + 16*(1-selected_frontiers_repulsion_angle)
+        score = 2*(1-selected_frontiers_distance) + frontiers_size + frontier_count + 4*(1-selected_frontiers_repulsion_angle)
+        print(selected_frontiers_repulsion_angle)
+        print(score)
 
         # select the best frontier
         best_frontier_idx = np.argmax(score)
@@ -536,11 +543,9 @@ class Roamer:
             - target: the target
         """
         if target is None: return np.inf, 1
-
         path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
 
-        # TODO change implementation
-        if path is None:
+        if path is None or len(path) <= 1:
             return np.inf, 1
         
         path_length = np.sum(np.linalg.norm(np.diff(path, axis=0), axis=1))
@@ -551,7 +556,7 @@ class Roamer:
         repulsion = self.drone.repulsion
         if np.linalg.norm(repulsion)>0 : repulsion /= np.linalg.norm(repulsion)
         
-        nextWaypoint = path[-1]
+        nextWaypoint = path[-2]
         waypointDirection = nextWaypoint - self.drone.get_position()
         waypointDirection /= np.linalg.norm(waypointDirection)
 
