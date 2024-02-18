@@ -17,7 +17,7 @@ import numpy as np
 import os
 import cv2
 
-from spg_overlay.utils.utils import normalize_angle
+from solutions.utils import normalize_angle
 
 # OTHER IMPL - ASYNC
 # import asyncio
@@ -48,6 +48,9 @@ class RoamerController(StateMachine):
     # the number of points required in a frontier
     _FRONTIERS_THRESHOLD = 6
 
+    # the cooldown for computing the frontier
+    _COMPUTE_FRONTIER_COOLDOWN = 50
+
     start_roaming = State('Start Roaming', initial=True)
     searching_for_target = State('Searching for target')
     going_to_target = State('Going to target')
@@ -60,6 +63,7 @@ class RoamerController(StateMachine):
 
         searching_for_target.to(going_to_target) |
 
+        going_to_target.to(searching_for_target, cond="no_path_to_target") |
         going_to_target.to(searching_for_target, cond="check_target_reached") |
         going_to_target.to(going_to_target)
     )
@@ -88,15 +92,16 @@ class RoamerController(StateMachine):
         self.previous_searching_start_point = None
         self.count_close_previous_searching_start_point = 0
 
+        self.waiting_time = 0
+        self.last_time_updates = self._COMPUTE_FRONTIER_COOLDOWN
+        self.first_time = True
+        self.first_time_cooldown = 0
+
         self.frontiers = None
 
         super(RoamerController, self).__init__()
-    
-    def check_target_reached(self):
-        """
-        checks if the drone has reached the waypoint
-        """
 
+    def no_path_to_target(self):
         # TODO change implementation, use velocity (check if stuck)
         # right now, we only increment a counter each time the check is called
         # if the counter reaches a certain threshold, we restart the search
@@ -109,6 +114,11 @@ class RoamerController(StateMachine):
 
         # TODO fix this
         if self.target is None or self.target==0: return True
+    
+    def check_target_reached(self):
+        """
+        checks if the drone has reached the waypoint
+        """
 
         dist = np.linalg.norm(self.drone.get_position() - self.target)
         if len(self.drone.path) == 0: return dist < 20
@@ -150,8 +160,17 @@ class RoamerController(StateMachine):
         # await asyncio.sleep(1)
         # END OTHER IMPL - ASYNC
 
-        self.drone.path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
-
+        if self.last_time_updates >= self._COMPUTE_FRONTIER_COOLDOWN:
+            self.drone.path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
+            if not self.first_time:
+                self.last_time_updates = 0
+            else:
+                self.first_time_cooldown+=1
+                if self.first_time_cooldown >= self._COMPUTE_FRONTIER_COOLDOWN:
+                    self.first_time = False
+        else:
+            self.last_time_updates += 1
+            return
         # if need to wait
         if self.target == -1:
             self.command = {"forward": 0.0,
