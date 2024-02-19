@@ -271,9 +271,6 @@ class Roamer:
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
 
-        print(self.drone.identifier, "=====================")
-
-
         map_matrix_copy = self.map.get_map_matrix().copy() # copy map (to not modify the original)
   
         map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int (for the Frontier Explorer algorithms)
@@ -328,7 +325,6 @@ class Roamer:
                 sum(point[0] for point in frontier) / len(frontier),
                 sum(point[1] for point in frontier) / len(frontier)
             )
-            print(frontier_center)
             distance, repulsion_angle = self.get_path_length(frontier_center)
             selected_frontiers_distance[id] = distance
             selected_frontiers_repulsion_angle.append(repulsion_angle)
@@ -354,11 +350,11 @@ class Roamer:
         # score (the higher the better)
         # TODO : optimize
         score = 2*(1-selected_frontiers_distance) + frontiers_size + frontier_count + 4*(1-selected_frontiers_repulsion_angle)
-        print(selected_frontiers_repulsion_angle)
-        print(score)
 
+        #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)
         # select the best frontier
         best_frontier_idx = np.argmax(score)
+        #best_frontier_idx = np.random.choice(np.arange(len(frontiers)), p=softmax)
 
         # Return the center and the points of the chosen frontier
         chosen_frontier = frontiers[best_frontier_idx]
@@ -366,6 +362,10 @@ class Roamer:
             int(sum(point[0] for point in chosen_frontier) / len(chosen_frontier)),
             int(sum(point[1] for point in chosen_frontier) / len(chosen_frontier))
         )
+
+        if self.drone.debug_frontiers:
+            self.drone.set_selected_frontier_id(best_frontier_idx)
+            self.drone.frontiers = frontiers
 
         # print(f"best_count: {best_count} - best_distance: {best_distance}")
 
