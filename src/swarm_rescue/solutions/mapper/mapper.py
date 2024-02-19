@@ -12,7 +12,7 @@ from solutions.pathfinder.pathfinder import *
 from solutions.mapper.utils import display_grid
 
 EVERY_N = 2
-LIDAR_DIST_CLIP = 40.0
+LIDAR_DIST_CLIP = 10.0
 EMPTY_ZONE_VALUE = -1
 OBSTACLE_ZONE_VALUE = 2
 FREE_ZONE_VALUE = -8
