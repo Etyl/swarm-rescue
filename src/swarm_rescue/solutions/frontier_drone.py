@@ -72,9 +72,9 @@ class FrontierDrone(DroneAbstract):
         self.debug_controller = False 
         self.debug_lidar = False
         self.debug_repulsion = True
-        self.debug_kill_zones = False
+        self.debug_kill_zones = True
         self.debug_wall_repulsion = False
-        self.debug_frontiers = True
+        self.debug_frontiers = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -704,7 +704,8 @@ class FrontierDrone(DroneAbstract):
             self.found_center = self.process_semantic_sensor()
             self.process_communicator()
             self.check_wounded_available()
-            self.check_other_drones_killed()
+            if not self.communicator_is_disabled():
+                self.check_other_drones_killed()
             self.test_stuck()
 
             # TODO remove
