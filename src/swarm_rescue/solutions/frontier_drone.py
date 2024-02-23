@@ -302,10 +302,10 @@ class FrontierDrone(DroneAbstract):
     
     def clear_wounded_found(self):
         frame_limit = 10
-
+        
         for k in range(len(self.wounded_found_list)-1,-1,-1):
             self.wounded_found_list[k]["last_seen"] += 1
-            if np.linalg.norm(self.drone_position - self.wounded_found_list[k]["position"])<80 and self.wounded_found_list[k]["last_seen"] > frame_limit:
+            if np.linalg.norm(self.get_position() - self.wounded_found_list[k]["position"])<self.wounded_distance/2 and self.wounded_found_list[k]["last_seen"] > frame_limit:
                 self.wounded_found_list.pop(k)
 
     def update_drones(self, drone_data : DroneData):
@@ -347,18 +347,16 @@ class FrontierDrone(DroneAbstract):
 
     def check_wounded_available(self):
         
-        # TODO remove
-        print("========================")
-        print(self.wounded_found_list)
-        if self.path is not None and len(self.path)>0: print(self.path[0])
-
         self.found_wounded = False
+
+        if self.wounded_found_list is None or len(self.wounded_found_list) == 0:
+            return
+
         min_distance = np.inf
         best_position = None
-        if (len(self.wounded_found_list) > 0 and 
-            (self.controller.current_state == self.controller.going_to_wounded 
+        if (self.controller.current_state == self.controller.going_to_wounded 
             or self.controller.current_state == self.controller.approaching_wounded
-            or self.controller.current_state == self.controller.roaming)):
+            or self.controller.current_state == self.controller.roaming):
         
             # Select the best one among wounded persons detected
             for i,wounded in enumerate(self.wounded_found_list):
@@ -436,9 +434,8 @@ class FrontierDrone(DroneAbstract):
 
         detection_semantic = self.semantic_values()
         
-        best_angle = 0
-
         self.clear_wounded_found()
+
         self.wounded_visible = False
         if (detection_semantic):
             for data in detection_semantic:
@@ -700,6 +697,8 @@ class FrontierDrone(DroneAbstract):
                     
         # for id in killed_ids:
         #     self.map.remove_kill_zone(id)
+                
+
     def control(self):
 
         # TODO check if works in no gps mode
@@ -740,9 +739,6 @@ class FrontierDrone(DroneAbstract):
             self.roaming = self.controller.current_state == self.controller.roaming
             
             self.update_mapping()
-
-            # TODO remove
-            print(self.roaming)
                 
             if self.roaming:
                 self.command = self.roamer_controller.command.copy()

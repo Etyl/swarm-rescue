@@ -17,10 +17,10 @@ class DroneController(StateMachine):
     # transitions
     cycle = (
         roaming.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
-        roaming.to(going_to_wounded, cond="found_wounded_in_list", on="before_going_to_wounded") |
+        roaming.to(going_to_wounded, cond="found_wounded_in_list") |
         going_to_wounded.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
 
-        going_to_wounded.to(roaming, cond="lost_route") |
+        going_to_wounded.to(roaming, cond="lost_wounded_found") |
 
         # if wounded captured by someone else
         approaching_wounded.to(roaming, cond="no_wounded") |
@@ -62,8 +62,8 @@ class DroneController(StateMachine):
     def wounded_visible(self):
         return self.drone.wounded_visible and self.drone.found_wounded
     
-    def lost_route(self):
-        return self.drone.onRoute and self.drone.nextWaypoint is None
+    def lost_wounded_found(self):
+        return not self.drone.found_wounded
     
     def no_wounded(self):
         return not self.drone.found_wounded and not self.drone.base.grasper.grasped_entities
@@ -93,6 +93,7 @@ class DroneController(StateMachine):
         # self.drone.onRoute = False
         pass
 
+    """
     def before_going_to_wounded(self):
         min_dist = np.inf
         target, target_path = None, None
@@ -107,11 +108,13 @@ class DroneController(StateMachine):
                 target = wounded["position"]
                 target_path = path
         if target is None: return
+        
 
         self.drone.wounded_target = target
         self.drone.path = target_path
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
+        """
 
     @going_to_wounded.enter
     def on_enter_going_to_wounded(self):
