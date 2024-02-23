@@ -1,5 +1,22 @@
 import numpy as np
+import arcade
 
+map_id_to_color = {
+    0: arcade.color.BLACK,
+    1: arcade.color.WHITE,
+    2: arcade.color.GREEN,
+    3: arcade.color.RED,
+    4: arcade.color.BLUE,
+    5: arcade.color.YELLOW,
+    6: arcade.color.PURPLE,
+    7: arcade.color.ORANGE,
+    8: arcade.color.PINK,
+    9: arcade.color.BROWN,
+    10: arcade.color.GRAY,
+    11: arcade.color.LIGHT_GRAY,
+    12: arcade.color.DARK_GREEN,
+    13: arcade.color.DARK_RED,
+}
 
 def normalize_angle(angle, zero_2_2pi=False):
     """

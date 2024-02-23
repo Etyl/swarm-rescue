@@ -15,7 +15,7 @@ import time
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
 from spg_overlay.utils.utils import circular_mean
-from solutions.utils import normalize_angle
+from solutions.utils import normalize_angle, map_id_to_color
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from spg_overlay.utils.pose import Pose
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
@@ -72,8 +72,9 @@ class FrontierDrone(DroneAbstract):
         self.debug_controller = True 
         self.debug_lidar = False
         self.debug_repulsion = True
-        self.debug_kill_zones = False
+        self.debug_kill_zones = True
         self.debug_wall_repulsion = False
+        self.debug_frontiers = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -102,7 +103,31 @@ class FrontierDrone(DroneAbstract):
         self.potential_kill_zones = []
         self.kill_zone_mode = True
 
+        self.point_of_interest = (0,0)
+        self.frontiers = []
+        self.selected_frontier_id = 0
+
         self.iteration = 0
+
+    
+    def compute_point_of_interest(self, number_of_drones: int):
+        """
+        computes the point of interest by repartitioning the drones in the area
+        """
+        size_rows = 450
+        size_cols = 300
+        num_rows = self.size_area[0] // size_rows
+        num_cols = self.size_area[1] // size_cols
+
+
+        num = max(num_rows, num_cols)
+
+        size = max(size_rows, size_cols)
+
+        drone_row = self.identifier % num
+        drone_col = self.identifier // num
+
+        return (drone_row * size + size/2, drone_col * size + size/2)
 
 
     def adapt_angle_direction(self, pos: list) -> float:
@@ -134,7 +159,7 @@ class FrontierDrone(DroneAbstract):
         """
 
         dist = np.linalg.norm(pos - self.nextWaypoint)
-        if len(self.path) == 0: return dist < 35
+        if len(self.path) == 0: return dist < 30
 
         v1 = self.nextWaypoint - pos
         v2 = np.array(self.path[-1]) - np.array(self.nextWaypoint)
@@ -144,7 +169,7 @@ class FrontierDrone(DroneAbstract):
         else:
             turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
-        return dist < 15 + (1+turning_angle)*20
+        return dist < 30 + (1+turning_angle)*20
         
 
     def define_message_for_all(self):
@@ -656,7 +681,7 @@ class FrontierDrone(DroneAbstract):
         for id, kill_zone in self.map.kill_zones.items():
             if id in [drone.id for drone in self.drone_list]:
                 self.kill_zone_mode = False
-                print("Kill zone mode disabled")
+                #print("Kill zone mode disabled")
 
         # killed_ids = []
         # for id, kill_zone in self.map.kill_zones.items():
@@ -684,7 +709,8 @@ class FrontierDrone(DroneAbstract):
             self.found_center = self.process_semantic_sensor()
             self.process_communicator()
             self.check_wounded_available()
-            self.check_other_drones_killed()
+            if not self.communicator_is_disabled():
+                self.check_other_drones_killed()
             self.test_stuck()
 
             # TODO remove
@@ -703,12 +729,13 @@ class FrontierDrone(DroneAbstract):
             else:
                 self.last_other_drones_position = {}
 
-            if self.roaming:
-                try:
-                    self.roamer_controller.cycle()
-                except exceptions.TransitionNotAllowed:
-                    pass
-            
+            if self.iteration > 100:
+                if self.roaming:
+                    try:
+                        self.roamer_controller.cycle()
+                    except exceptions.TransitionNotAllowed:
+                        pass
+                
             self.controller.cycle()
             self.roaming = self.controller.current_state == self.controller.roaming
             
@@ -742,6 +769,8 @@ class FrontierDrone(DroneAbstract):
             self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
 
             self.drone_prev_position = self.drone_position.copy()
+
+            self.point_of_interest = self.compute_point_of_interest(10)
             
         return self.command
     
@@ -764,6 +793,12 @@ class FrontierDrone(DroneAbstract):
             if other_drone.id == self.identifier: continue
             self.map.merge(other_drone.map)
 
+
+    def set_selected_frontier_id(self, id):
+        """
+        sets the selected frontier id
+        """
+        self.selected_frontier_id = id
 
     def draw_top_layer(self):
         # check if drone is dead
@@ -817,6 +852,18 @@ class FrontierDrone(DroneAbstract):
             direction = self.theorical_velocity
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*20, pos[1]+direction[1]*20, arcade.color.GREEN)
 
+        # draw frontiers
+        if self.debug_frontiers:
+            pos = np.array(self.get_position()) + np.array(self.size_area)/2
+            arcade.draw_text(str(self.identifier), pos[0], pos[1], map_id_to_color[self.identifier], 20)
+            for id, frontier in enumerate(self.frontiers):
+                for point in frontier:
+                    if id == self.selected_frontier_id:
+                        pos = np.array(self.map.grid_to_world(point)) + np.array(self.size_area)/2
+                        arcade.draw_rectangle_filled(pos[0], pos[1], 8, 8, map_id_to_color[self.identifier])
+                    else:
+                        pos = np.array(self.map.grid_to_world(point)) + np.array(self.size_area)/2
+                        arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
 
     def draw_bottom_layer(self):
         # check if drone is dead

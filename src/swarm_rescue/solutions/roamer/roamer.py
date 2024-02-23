@@ -351,8 +351,10 @@ class Roamer:
         # TODO : optimize
         score = 2*(1-selected_frontiers_distance) + frontiers_size + frontier_count + 4*(1-selected_frontiers_repulsion_angle)
 
+        #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)
         # select the best frontier
         best_frontier_idx = np.argmax(score)
+        #best_frontier_idx = np.random.choice(np.arange(len(frontiers)), p=softmax)
 
         # Return the center and the points of the chosen frontier
         chosen_frontier = frontiers[best_frontier_idx]
@@ -360,6 +362,10 @@ class Roamer:
             int(sum(point[0] for point in chosen_frontier) / len(chosen_frontier)),
             int(sum(point[1] for point in chosen_frontier) / len(chosen_frontier))
         )
+
+        if self.drone.debug_frontiers:
+            self.drone.set_selected_frontier_id(best_frontier_idx)
+            self.drone.frontiers = frontiers
 
         # print(f"best_count: {best_count} - best_distance: {best_distance}")
 
