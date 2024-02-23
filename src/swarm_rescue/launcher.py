@@ -58,10 +58,8 @@ class Launcher:
         self.eval_plan = EvalPlan()
 
         #zones_config: ZonesConfig = (ZoneType.NO_GPS_ZONE,)
-        eval_config = EvalConfig(map_type=GeneratedMap, nb_rounds=1) #, zones_config=zones_config)
+        eval_config = EvalConfig(map_type=MyMapFinal, nb_rounds=1) #, zones_config=zones_config)
         self.eval_plan.add(eval_config=eval_config)
-
-
 
         """
         eval_config = EvalConfig(map_type=MyMapIntermediate02)
