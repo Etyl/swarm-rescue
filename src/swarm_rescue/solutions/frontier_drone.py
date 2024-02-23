@@ -134,7 +134,7 @@ class FrontierDrone(DroneAbstract):
         """
 
         dist = np.linalg.norm(pos - self.nextWaypoint)
-        if len(self.path) == 0: return dist < 15
+        if len(self.path) == 0: return dist < 35
 
         v1 = self.nextWaypoint - pos
         v2 = np.array(self.path[-1]) - np.array(self.nextWaypoint)
