@@ -91,7 +91,7 @@ class DroneController(StateMachine):
     @roaming.enter
     def on_enter_roaming(self):
         # self.drone.onRoute = False
-        self.drone.roaming = True
+        pass
 
     def before_going_to_wounded(self):
         min_dist = np.inf
@@ -119,7 +119,6 @@ class DroneController(StateMachine):
 
     def before_approaching_wounded(self):
         self.drone.onRoute = False
-        self.drone.roaming = False
         self.drone.nextWaypoint = None
         self.drone.path = []
     
@@ -161,7 +160,6 @@ class DroneController(StateMachine):
 
     def before_approaching_center(self):
         self.drone.onRoute = False
-        self.drone.roaming = False
         self.drone.nextWaypoint = None
         self.drone.path = []
     

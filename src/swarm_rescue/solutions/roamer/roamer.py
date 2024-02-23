@@ -271,9 +271,6 @@ class Roamer:
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
 
-        print(self.drone.identifier, "=====================")
-
-
         map_matrix_copy = self.map.get_map_matrix().copy() # copy map (to not modify the original)
   
         map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int (for the Frontier Explorer algorithms)
@@ -328,7 +325,6 @@ class Roamer:
                 sum(point[0] for point in frontier) / len(frontier),
                 sum(point[1] for point in frontier) / len(frontier)
             )
-            print(frontier_center)
             distance, repulsion_angle = self.get_path_length(frontier_center)
             selected_frontiers_distance[id] = distance
             selected_frontiers_repulsion_angle.append(repulsion_angle)
@@ -354,8 +350,6 @@ class Roamer:
         # score (the higher the better)
         # TODO : optimize
         score = 2*(1-selected_frontiers_distance) + frontiers_size + frontier_count + 4*(1-selected_frontiers_repulsion_angle)
-        print(selected_frontiers_repulsion_angle)
-        print(score)
 
         # select the best frontier
         best_frontier_idx = np.argmax(score)

@@ -69,7 +69,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
-        self.debug_controller = False 
+        self.debug_controller = True 
         self.debug_lidar = False
         self.debug_repulsion = True
         self.debug_kill_zones = False
@@ -322,6 +322,11 @@ class FrontierDrone(DroneAbstract):
 
     def check_wounded_available(self):
         
+        # TODO remove
+        print("========================")
+        print(self.wounded_found_list)
+        if self.path is not None and len(self.path)>0: print(self.path[0])
+
         self.found_wounded = False
         min_distance = np.inf
         best_position = None
@@ -705,20 +710,22 @@ class FrontierDrone(DroneAbstract):
                     pass
             
             self.controller.cycle()
+            self.roaming = self.controller.current_state == self.controller.roaming
+            
             self.update_mapping()
+
+            # TODO remove
+            print(self.roaming)
                 
             if self.roaming:
-                if self.gps_disabled:
-                    self.roamer_controller.command["rotation"] /=2
-                    self.roamer_controller.command["forward"] /=2
-                    self.roamer_controller.command["lateral"] /=2
                 self.command = self.roamer_controller.command.copy()
             else:
-                if self.gps_disabled:
-                    self.controller.command["rotation"] /=2
-                    self.controller.command["forward"] /=2
-                    self.controller.command["lateral"] /=2
                 self.command = self.controller.command.copy()
+
+            if self.gps_disabled:
+                self.command["rotation"] /=2
+                self.command["forward"] /=2
+                self.command["lateral"] /=2
 
             self.update_drone_repulsion()
             self.update_wall_repulsion()
