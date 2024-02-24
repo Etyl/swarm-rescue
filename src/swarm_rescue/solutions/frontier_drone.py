@@ -68,7 +68,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_wounded = True
         self.debug_positions = False
         self.debug_map = False
-        self.debug_roamer = False
+        self.debug_roamer = True
         self.debug_controller = True 
         self.debug_lidar = False
         self.debug_repulsion = True
@@ -285,6 +285,7 @@ class FrontierDrone(DroneAbstract):
             wounded_pos[1] += data_wounded.distance * math.sin(angle)
             return wounded_pos
 
+        # check if wounded target is visible
         wounded_pos = get_wounded_position()
         if self.wounded_target is not None and np.linalg.norm(wounded_pos - self.wounded_target) < self.wounded_distance:
             self.wounded_visible = True
@@ -362,12 +363,26 @@ class FrontierDrone(DroneAbstract):
             for i,wounded in enumerate(self.wounded_found_list):
                 distance = np.linalg.norm(self.get_position() - wounded["position"])
                 if best_position is None or distance < min_distance:
+
+                    # check if the wounded is taken by another drone
                     if self.wounded_visible and "drone_taker" in wounded and wounded["drone_taker"] > self.identifier:
                         continue
+
+                    # check if the wounded is the target
+                    if "drone_taker" in wounded and wounded["drone_taker"] == self.identifier:
+                        if self.controller.current_state != self.controller.roaming:
+                            self.found_wounded = True
+                            self.wounded_target = wounded["position"]
+                            return
+                        else:
+                            wounded.pop("drone_taker")
+
                     min_distance = distance
                     best_position = i
-                    if self.wounded_target is not None and np.linalg.norm(wounded["position"] - self.wounded_target) < self.wounded_distance/2:
-                        continue
+                    
+                    # TODO remove ?
+                    if self.wounded_target is not None and np.linalg.norm(wounded["position"] - self.wounded_target) < self.wounded_distance:
+                        break
 
         if best_position is None:
             return
@@ -711,10 +726,6 @@ class FrontierDrone(DroneAbstract):
             if not self.communicator_is_disabled():
                 self.check_other_drones_killed()
             self.test_stuck()
-
-            # TODO remove
-            if type(self.get_angle()) != float:
-                print("error")
             
             if self.rescue_center_position is None:
                 self.compute_rescue_center_position()
