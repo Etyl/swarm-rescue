@@ -71,9 +71,9 @@ class FrontierDrone(DroneAbstract):
         self.debug_roamer = True
         self.debug_controller = True 
         self.debug_lidar = False
-        self.debug_repulsion = True
+        self.debug_repulsion = False
         self.debug_kill_zones = True
-        self.debug_wall_repulsion = False
+        self.debug_wall_repulsion = True
         self.debug_frontiers = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
@@ -107,7 +107,8 @@ class FrontierDrone(DroneAbstract):
         self.frontiers = []
         self.selected_frontier_id = 0
 
-        self.iteration = 0
+        self.stuck_iteration = 0
+        self.time = 0
 
     
     def compute_point_of_interest(self, number_of_drones: int):
@@ -643,9 +644,9 @@ class FrontierDrone(DroneAbstract):
         for k in range(len(self.last_positions)):
             if np.linalg.norm(self.last_positions[0] - self.last_positions[k]) > 10:
                 return
-        if self.iteration < REFRESH_PATH_LIMIT:
+        if self.stuck_iteration < REFRESH_PATH_LIMIT:
             return
-        self.iteration = 0
+        self.stuck_iteration = 0
         self.path = []
         self.nextWaypoint = None
         if self.controller.current_state == self.controller.approaching_wounded:
@@ -717,68 +718,72 @@ class FrontierDrone(DroneAbstract):
     def control(self):
 
         # TODO check if works in no gps mode
-        if not self.odometer_values() is None:
-            self.iteration += 1
-            self.get_localization()
-            self.found_center = self.process_semantic_sensor()
-            self.process_communicator()
-            self.check_wounded_available()
-            if not self.communicator_is_disabled():
-                self.check_other_drones_killed()
-            self.test_stuck()
-            
-            if self.rescue_center_position is None:
-                self.compute_rescue_center_position()
-            
-            for drone in self.drone_list:
-                if drone.id == self.identifier: continue
-                if not drone.kill_zone_mode:
-                    self.kill_zone_mode = False
-            if not self.communicator_is_disabled() and self.iteration > 2 and self.kill_zone_mode:
-                self.check_other_drones_killed()
-            else:
-                self.last_other_drones_position = {}
+        if self.odometer_values() is None:
+            return
+        
+        self.stuck_iteration += 1
+        self.time += 1
 
-            if self.iteration > 100:
-                if self.roaming:
-                    try:
-                        self.roamer_controller.cycle()
-                    except exceptions.TransitionNotAllowed:
-                        pass
-                
-            self.controller.cycle()
-            self.roaming = self.controller.current_state == self.controller.roaming
-            
-            self.update_mapping()
-                
+        self.get_localization()
+        self.found_center = self.process_semantic_sensor()
+        self.process_communicator()
+        self.check_wounded_available()
+        if not self.communicator_is_disabled():
+            self.check_other_drones_killed()
+        self.test_stuck()
+        
+        if self.rescue_center_position is None:
+            self.compute_rescue_center_position()
+        
+        for drone in self.drone_list:
+            if drone.id == self.identifier: continue
+            if not drone.kill_zone_mode:
+                self.kill_zone_mode = False
+        if not self.communicator_is_disabled() and self.stuck_iteration > 2 and self.kill_zone_mode:
+            self.check_other_drones_killed()
+        else:
+            self.last_other_drones_position = {}
+
+        if self.time > 100:
             if self.roaming:
-                self.command = self.roamer_controller.command.copy()
-            else:
-                self.command = self.controller.command.copy()
-
-            if self.gps_disabled:
-                self.command["rotation"] /=2
-                self.command["forward"] /=2
-                self.command["lateral"] /=2
-
-            self.update_drone_repulsion()
-            self.update_wall_repulsion()
-            self.command["forward"] += self.repulsion[0]
-            self.command["lateral"] += self.repulsion[1]
-            if (self.controller.current_state == self.controller.going_to_center):
-                self.command["forward"] += 0.9*self.wall_repulsion[0]
-                self.command["lateral"] += 0.9*self.wall_repulsion[1]
-            elif (self.controller.current_state != self.controller.approaching_wounded 
-                and self.controller.current_state != self.controller.approaching_center) :
-                self.command["forward"] += self.wall_repulsion[0]
-                self.command["lateral"] += self.wall_repulsion[1]
+                try:
+                    self.roamer_controller.cycle()
+                except exceptions.TransitionNotAllowed:
+                    pass
             
-            self.command["forward"] = min(1,max(-1,self.command["forward"]))
-            self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
+        self.controller.cycle()
+        self.roaming = self.controller.current_state == self.controller.roaming
+        
+        self.update_mapping()
+            
+        if self.roaming:
+            self.command = self.roamer_controller.command.copy()
+        else:
+            self.command = self.controller.command.copy()
 
-            self.drone_prev_position = self.drone_position.copy()
+        if self.gps_disabled:
+            self.command["rotation"] /=2
+            self.command["forward"] /=2
+            self.command["lateral"] /=2
 
-            self.point_of_interest = self.compute_point_of_interest(10)
+        self.update_drone_repulsion()
+        self.update_wall_repulsion()
+        self.command["forward"] += self.repulsion[0]
+        self.command["lateral"] += self.repulsion[1]
+        if (self.controller.current_state == self.controller.going_to_center):
+            self.command["forward"] += 0.9*self.wall_repulsion[0]
+            self.command["lateral"] += 0.9*self.wall_repulsion[1]
+        elif (self.controller.current_state != self.controller.approaching_wounded 
+            and self.controller.current_state != self.controller.approaching_center) :
+            self.command["forward"] += self.wall_repulsion[0]
+            self.command["lateral"] += self.wall_repulsion[1]
+        
+        self.command["forward"] = min(1,max(-1,self.command["forward"]))
+        self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
+
+        self.drone_prev_position = self.drone_position.copy()
+
+        self.point_of_interest = self.compute_point_of_interest(10)
             
         return self.command
     

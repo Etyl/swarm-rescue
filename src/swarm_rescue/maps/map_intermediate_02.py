@@ -41,8 +41,9 @@ class MyMapIntermediate02(MapAbstract):
                                      (-15, -187)]
         self._number_wounded_persons = len(self._wounded_persons_pos)
         self._wounded_persons: List[WoundedPerson] = []
-
-        self._number_drones = 10
+        
+        # TODO remove and change to 10
+        self._number_drones = 8
         # They are positioned in a square whose side size depends on the total number of drones.
         start_area_drones = (496, 100)
         nb_per_side = math.ceil(math.sqrt(float(self._number_drones)))
