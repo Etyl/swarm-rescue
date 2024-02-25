@@ -68,7 +68,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_wounded = True
         self.debug_positions = False
         self.debug_map = False
-        self.debug_roamer = True
+        self.debug_roamer = False
         self.debug_controller = True 
         self.debug_lidar = False
         self.debug_repulsion = False
@@ -363,27 +363,27 @@ class FrontierDrone(DroneAbstract):
             # Select the best one among wounded persons detected
             for i,wounded in enumerate(self.wounded_found_list):
                 distance = np.linalg.norm(self.get_position() - wounded["position"])
-                if best_position is None or distance < min_distance:
 
-                    # check if the wounded is taken by another drone
-                    if self.wounded_visible and "drone_taker" in wounded and wounded["drone_taker"] > self.identifier:
-                        continue
+                # check if the wounded is taken by another drone
+                if self.wounded_visible and "drone_taker" in wounded and wounded["drone_taker"] > self.identifier:
+                    continue
 
-                    # check if the wounded is the target
-                    if "drone_taker" in wounded and wounded["drone_taker"] == self.identifier:
-                        if self.controller.current_state != self.controller.roaming:
-                            self.found_wounded = True
-                            self.wounded_target = wounded["position"]
-                            return
-                        else:
-                            wounded.pop("drone_taker")
-
+                # check if the wounded is the target
+                if "drone_taker" in wounded and wounded["drone_taker"] == self.identifier:
+                    if self.controller.current_state != self.controller.roaming:
+                        self.found_wounded = True
+                        self.wounded_target = wounded["position"]
+                        return
+                    else:
+                        wounded.pop("drone_taker")
+                elif self.wounded_target is not None and np.linalg.norm(self.wounded_target - wounded["position"]) < 0.8*self.wounded_distance:
+                    self.found_wounded = True
+                    self.wounded_target = wounded["position"]
+                    return
+                
+                if distance < min_distance:
                     min_distance = distance
                     best_position = i
-                    
-                    # TODO remove ?
-                    if self.wounded_target is not None and np.linalg.norm(wounded["position"] - self.wounded_target) < self.wounded_distance:
-                        break
 
         if best_position is None:
             return

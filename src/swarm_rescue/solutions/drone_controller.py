@@ -17,7 +17,7 @@ class DroneController(StateMachine):
     # transitions
     cycle = (
         roaming.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
-        roaming.to(going_to_wounded, cond="found_wounded_in_list") |
+        roaming.to(going_to_wounded, cond="found_wounded_in_list", on="before_going_to_wounded") |
         going_to_wounded.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
 
         going_to_wounded.to(roaming, cond="lost_wounded_found") |
@@ -115,6 +115,11 @@ class DroneController(StateMachine):
         self.drone.nextWaypoint = self.drone.path.pop()
         self.drone.onRoute = True
         """
+
+    def before_going_to_wounded(self):
+        self.drone.onRoute = False
+        self.drone.nextWaypoint = None
+        self.drone.path = []
 
     @going_to_wounded.enter
     def on_enter_going_to_wounded(self):
