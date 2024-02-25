@@ -84,7 +84,7 @@ class MyMapIntermediate02(MapAbstract):
 
         if ZoneType.KILL_ZONE in self._zones_config:
             playground.add(self._kill_zone, self._kill_zone_pos)
-        playground.add(self._kill_zone, self._kill_zone_pos)
+        #playground.add(self._kill_zone, self._kill_zone_pos)
 
         # POSITIONS OF THE WOUNDED PERSONS
         for i in range(self._number_wounded_persons):

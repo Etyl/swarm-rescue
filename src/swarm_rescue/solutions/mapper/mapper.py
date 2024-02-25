@@ -109,7 +109,7 @@ class Map():
         downsampled_lidar_dist = lidar_dist[mask]
         downsampled_lidar_angles = lidar_angles[mask]
 
-        max_range = 0.9 * MAX_RANGE_LIDAR_SENSOR
+        max_range = 0.6 * MAX_RANGE_LIDAR_SENSOR
         
         lidar_dist_clip = np.minimum(np.maximum(downsampled_lidar_dist - LIDAR_DIST_CLIP, 0.0), max_range)
 

@@ -629,7 +629,7 @@ class FrontierDrone(DroneAbstract):
             self.wall_repulsion = np.zeros(2)
             return
 
-        coef = 1 - min(lidar_dist)/(2*MAX_RANGE_LIDAR_SENSOR)
+        coef = 1.7 * (1 - (min(lidar_dist)-11)/(2*MAX_RANGE_LIDAR_SENSOR))
         repulsion_vector = repulsion_vector/np.linalg.norm(repulsion_vector)
         self.wall_repulsion = coef * repulsion_vector
 
@@ -766,12 +766,13 @@ class FrontierDrone(DroneAbstract):
             self.command["forward"] += self.repulsion[0]
             self.command["lateral"] += self.repulsion[1]
             if (self.controller.current_state == self.controller.going_to_center):
-                self.command["forward"] += self.wall_repulsion[0]
-                self.command["lateral"] += self.wall_repulsion[1]
+                self.command["forward"] += 0.9*self.wall_repulsion[0]
+                self.command["lateral"] += 0.9*self.wall_repulsion[1]
             elif (self.controller.current_state != self.controller.approaching_wounded 
                 and self.controller.current_state != self.controller.approaching_center) :
-                self.command["forward"] += 2*self.wall_repulsion[0]
-                self.command["lateral"] += 2*self.wall_repulsion[1]
+                self.command["forward"] += self.wall_repulsion[0]
+                self.command["lateral"] += self.wall_repulsion[1]
+            
             self.command["forward"] = min(1,max(-1,self.command["forward"]))
             self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
 
