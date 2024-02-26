@@ -630,10 +630,11 @@ class FrontierDrone(DroneAbstract):
             self.wall_repulsion = np.zeros(2)
             return
 
-        coef = 1.7 * (1 - (min(lidar_dist)-11)/(2*MAX_RANGE_LIDAR_SENSOR))
+        coef = max(0,2 * (1 - 2*(min(lidar_dist)-11)/(MAX_RANGE_LIDAR_SENSOR)))
         repulsion_vector = repulsion_vector/np.linalg.norm(repulsion_vector)
         self.wall_repulsion = coef * repulsion_vector
 
+        # TODO : change repulsion according to drone direction (change forward and sideways command)
 
     def test_stuck(self):
         self.last_positions.append(self.get_position())
