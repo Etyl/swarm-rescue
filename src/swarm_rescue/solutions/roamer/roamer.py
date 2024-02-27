@@ -577,7 +577,6 @@ class Roamer:
         """
         target = self.find_next_unexplored_target(frontiers_threshold)
 
-        # TODO change implementation
         if target is None:
             return [], None
         
@@ -593,7 +592,6 @@ class Roamer:
             print("[Roamer] Path found : ", path)
             self.display_map_with_path(self.map.get_map_matrix(), path, target, 5)
 
-        # TODO change implementation
         if path is None:
             return [], None
 

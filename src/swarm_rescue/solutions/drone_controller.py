@@ -147,7 +147,6 @@ class DroneController(StateMachine):
             self.command["grasper"] = 0
 
     def before_going_to_center(self):
-        # TODO : fix if path is None
         self.drone.drone_angle_offset = np.pi
         self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
         if self.drone.path is None: 
