@@ -545,7 +545,7 @@ class FrontierDrone(DroneAbstract):
                 return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
         
         def repulsion_dist(dist):
-            a = 27
+            a = 7
             b = 0.8
             c = 0.007
             if dist <= a: return 2
@@ -629,7 +629,11 @@ class FrontierDrone(DroneAbstract):
             self.wall_repulsion = np.zeros(2)
             return
 
-        coef = max(0,2 * (1 - 2*(min(lidar_dist)-11)/(MAX_RANGE_LIDAR_SENSOR)))
+        coef = 0
+        if lidar_dist < 50:
+            coef = max(0,2 * (1 - 2*(min(lidar_dist)-11)/(MAX_RANGE_LIDAR_SENSOR)))
+        
+        
         repulsion_vector = repulsion_vector/np.linalg.norm(repulsion_vector)
         self.wall_repulsion = coef * repulsion_vector
 
