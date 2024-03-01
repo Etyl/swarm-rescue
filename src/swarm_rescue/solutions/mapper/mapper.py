@@ -242,7 +242,8 @@ class Map():
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
-        self.occupancy_grid.set_grid(np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(), self.occupancy_grid.get_grid(), other_map.occupancy_grid.get_grid()))
+        self.occupancy_grid.set_grid(np.where(other_map.confidence_grid.get_grid() > self.confidence_grid.get_grid(), other_map.occupancy_grid.get_grid(), self.occupancy_grid.get_grid()))
+
         reset = False
         for other_id in other_map.kill_zones:
             if other_id not in self.kill_zones:
