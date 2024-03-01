@@ -68,10 +68,10 @@ class FrontierDrone(DroneAbstract):
         self.debug_wounded = True
         self.debug_positions = False
         self.debug_map = False
-        self.debug_roamer = False
-        self.debug_controller = True 
+        self.debug_roamer = True
+        self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = False
+        self.debug_repulsion = True
         self.debug_kill_zones = True
         self.debug_wall_repulsion = True
         self.debug_frontiers = False
@@ -630,7 +630,7 @@ class FrontierDrone(DroneAbstract):
             return
 
         coef = 0
-        if lidar_dist < 50:
+        if lidar_dist[kmin] < 50:
             coef = max(0,2 * (1 - 2*(min(lidar_dist)-11)/(MAX_RANGE_LIDAR_SENSOR)))
         
         
@@ -748,7 +748,7 @@ class FrontierDrone(DroneAbstract):
         else:
             self.last_other_drones_position = {}
 
-        if self.time > 100:
+        if self.time > 20:
             if self.roaming:
                 try:
                     self.roamer_controller.cycle()
