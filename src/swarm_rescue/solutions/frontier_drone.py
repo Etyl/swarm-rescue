@@ -170,7 +170,7 @@ class FrontierDrone(DroneAbstract):
         else:
             turning_angle = np.dot(v1,v2)/(np.linalg.norm(v1)*np.linalg.norm(v2))
 
-        return dist < 30 + (1+turning_angle)*20
+        return dist < 15 + (1+turning_angle)*20
         
 
     def define_message_for_all(self):
