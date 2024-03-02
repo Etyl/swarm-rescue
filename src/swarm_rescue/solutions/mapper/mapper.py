@@ -151,8 +151,8 @@ class Map():
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        if self.drone_id==0:
-            self.display_map()
+        #if self.drone_id==0:
+        #    self.display_map()
 
     def __setitem__(self, pos, zone):
         x,y = pos

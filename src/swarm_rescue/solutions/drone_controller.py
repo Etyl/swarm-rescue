@@ -17,7 +17,7 @@ class DroneController(StateMachine):
     # transitions
     cycle = (
         roaming.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
-        roaming.to(going_to_wounded, cond="found_wounded_in_list", on="before_going_to_wounded") |
+        roaming.to(going_to_wounded, cond="found_wounded", on="before_going_to_wounded") |
         going_to_wounded.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
 
         going_to_wounded.to(roaming, cond="lost_wounded_found") |
@@ -55,9 +55,6 @@ class DroneController(StateMachine):
 
     def found_wounded(self):
         return self.drone.found_wounded
-    
-    def found_wounded_in_list(self):
-        return len(self.drone.wounded_found_list) > 0
     
     def wounded_visible(self):
         return self.drone.wounded_visible and self.drone.found_wounded
