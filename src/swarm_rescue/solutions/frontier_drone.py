@@ -347,6 +347,7 @@ class FrontierDrone(DroneAbstract):
         for (drone_communicator,drone_data) in data_list:
             self.update_drones(drone_data)
 
+    # TODO fix
     def check_wounded_available(self):
         
         self.found_wounded = False
@@ -639,6 +640,7 @@ class FrontierDrone(DroneAbstract):
 
         # TODO : change repulsion according to drone direction (change forward and sideways command)
 
+    # TODO: priority for drones
     def test_stuck(self):
         self.last_positions.append(self.get_position())
         if len(self.last_positions) >= POSITION_QUEUE_SIZE:
