@@ -630,8 +630,8 @@ class FrontierDrone(DroneAbstract):
             return
 
         coef = 0
-        if lidar_dist[kmin] < 50:
-            coef = max(0,2 * (1 - 2*(min(lidar_dist)-11)/(MAX_RANGE_LIDAR_SENSOR)))
+        if lidar_dist[kmin] < 40:
+            coef = min(2,max(0,2 * (1 - 3*(min(lidar_dist)-13)/(MAX_RANGE_LIDAR_SENSOR))))
         
         
         repulsion_vector = repulsion_vector/np.linalg.norm(repulsion_vector)
@@ -748,7 +748,7 @@ class FrontierDrone(DroneAbstract):
         else:
             self.last_other_drones_position = {}
 
-        if self.time > 20:
+        if self.time > 30:
             if self.roaming:
                 try:
                     self.roamer_controller.cycle()
