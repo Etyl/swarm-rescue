@@ -721,7 +721,7 @@ class FrontierDrone(DroneAbstract):
 
     def control(self):
 
-        # TODO check if works in no gps mode
+        # check if drone is dead
         if self.odometer_values() is None:
             return
         

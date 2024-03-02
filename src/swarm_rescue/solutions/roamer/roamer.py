@@ -102,7 +102,7 @@ class RoamerController(StateMachine):
         super(RoamerController, self).__init__()
 
     def no_path_to_target(self):
-        # TODO change implementation, use velocity (check if stuck)
+        # TODO change implementation
         # right now, we only increment a counter each time the check is called
         # if the counter reaches a certain threshold, we restart the search
         if self.loop_count_going_to_target >= self._LOOP_COUNT_GOING_TO_TARGET_THRESHOLD: return True
@@ -112,8 +112,10 @@ class RoamerController(StateMachine):
         # in case the drone has ended its path
         if self.drone.nextWaypoint is None: return True
 
-        # TODO fix this
+        # if there is no target
         if self.target is None or self.target==0: return True
+
+        return False
     
     def check_target_reached(self):
         """
