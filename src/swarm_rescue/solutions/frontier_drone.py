@@ -630,7 +630,7 @@ class FrontierDrone(DroneAbstract):
             return
 
         coef = 0
-        if lidar_dist < 50:
+        if min(lidar_dist) < 50:
             coef = max(0,2 * (1 - 2*(min(lidar_dist)-11)/(MAX_RANGE_LIDAR_SENSOR)))
         
         
