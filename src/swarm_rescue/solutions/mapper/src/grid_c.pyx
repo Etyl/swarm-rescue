@@ -199,7 +199,7 @@ cdef class Grid:
             dist_from_start = int(abs(x - x_0) + abs(y - y_0))
             
             # Inline max function and calculate inverse to avoid division
-            inverse_dist = 1.0 / float(max(1, dist_from_start))
+            inverse_dist = 1.0 / float(max(1, dist_from_start/10))
             added_value = val * inverse_dist
             
             # Check boundaries and add value

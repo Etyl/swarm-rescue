@@ -46,7 +46,7 @@ class Map():
         self.occupancy_grid = Grid(area_world, resolution)
         self.binary_occupancy_grid = np.zeros((self.width, self.height)).astype(np.uint8)
         self.confidence_grid = Grid(area_world, resolution)
-        self.confidence_grid_downsampled = Grid(area_world, resolution * 1)
+        self.confidence_grid_downsampled = Grid(area_world, resolution * 2)
         
         self.map = np.full((self.width, self.height), Zone.INEXPLORED)
 
@@ -62,15 +62,15 @@ class Map():
         lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
 
-        downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
-        downsample_indices = downsample_indices[downsample_indices % 2 == 0]
+        # downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
+        # downsample_indices = downsample_indices[downsample_indices % 2 == 0]
 
-        mask = np.zeros(lidar_dist.shape, dtype=bool)
-        mask[downsample_indices] = True
-        mask[lidar_dist > MAX_RANGE_LIDAR_SENSOR/2] = True
+        # mask = np.zeros(lidar_dist.shape, dtype=bool)
+        # mask[downsample_indices] = True
+        # mask[lidar_dist > MAX_RANGE_LIDAR_SENSOR/2] = True
 
-        downsampled_lidar_dist = lidar_dist[mask]
-        downsampled_lidar_angles = lidar_angles[mask]
+        downsampled_lidar_dist = lidar_dist
+        downsampled_lidar_angles = lidar_angles
 
         world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
@@ -198,7 +198,7 @@ class Map():
         # Assign colors to each point based on the color map
         for x in range(self.width):
             for y in range(self.height):
-                img[x][y] = np.array(color_map[self[x, y]]) #* self.confidence_grid.get_grid()[x][y] / CONFIDENCE_THRESHOLD
+                img[x][y] = np.array(color_map[self[x, y]]) * self.confidence_grid.get_grid()[x][y] / CONFIDENCE_THRESHOLD
 
         # draw kill zones as rectangles
         for kill_zone in self.kill_zones:
@@ -247,6 +247,8 @@ class Map():
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
         self.occupancy_grid.set_grid(np.where(other_map.confidence_grid.get_grid() > self.confidence_grid.get_grid(), other_map.occupancy_grid.get_grid(), self.occupancy_grid.get_grid()))
+
+        self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
 
         reset = False
         for other_id in other_map.kill_zones:
