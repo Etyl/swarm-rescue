@@ -379,7 +379,8 @@ class FrontierDrone(DroneAbstract):
 
                 # check if the wounded is the target
                 if "drone_taker" in wounded and wounded["drone_taker"] == self.identifier:
-                    if self.controller.current_state != self.controller.roaming:
+                    if (self.controller.current_state == self.controller.approaching_wounded or 
+                        self.controller.current_state == self.controller.going_to_wounded):
                         self.found_wounded = True
                         self.wounded_target = wounded["position"]
                         return
@@ -398,10 +399,10 @@ class FrontierDrone(DroneAbstract):
             return
         
         if self.controller.current_state == self.controller.approaching_wounded:
-            self.wounded_found_list[i]["drone_taker"] = self.identifier
+            self.wounded_found_list[best_position]["drone_taker"] = self.identifier
         
         self.found_wounded = True
-        self.wounded_target = self.wounded_found_list[i]["position"]
+        self.wounded_target = self.wounded_found_list[best_position]["position"]
 
 
     def get_control_from_semantic(self):
