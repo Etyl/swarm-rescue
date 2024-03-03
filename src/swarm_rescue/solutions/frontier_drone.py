@@ -55,7 +55,8 @@ class FrontierDrone(DroneAbstract):
         self.repulsion = np.zeros(2) # The repulsion vector from the other drones
         self.wall_repulsion = np.zeros(2) # The repulsion vector from the walls
         self.center_angle = None
-        self.is_near_center = False
+        self.is_near_center = False # True if the drone is near the center and switchs state
+        self.on_center = False # True if the drone is on the center and needs to stop to deliver wounded
         self.ignore_repulsion = 0 # timer to ignore the repulsion vector (>0 => ignore)
 
         self.wounded_found_list = [] # the list of wounded persons found
@@ -434,9 +435,9 @@ class FrontierDrone(DroneAbstract):
             if abs(a) == 1:
                 command["forward"] = 0.2
 
-        if self.found_center and self.is_near_center:
+        if self.found_center and self.on_center:
             command["forward"] = 0
-            command["rotation"] = random.uniform(0.5, 1)
+            command["rotation"] = 0.5
 
         return command
 
@@ -460,7 +461,7 @@ class FrontierDrone(DroneAbstract):
                     self.add_wounded(data)
 
         found_rescue_center = False
-        is_near = False
+        is_near,on_center = False,False
         angles_list = []
         if (detection_semantic and 
             (self.controller.current_state == self.controller.going_to_center 
@@ -469,16 +470,19 @@ class FrontierDrone(DroneAbstract):
                 if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER:
                     found_rescue_center = True
                     angles_list.append(data.angle)
-                    is_near = (data.distance < 50)
+                    is_near = (data.distance <= MAX_RANGE_SEMANTIC_SENSOR*(3/4))
+                    on_center = (data.distance <= 50)
 
         if found_rescue_center:
             self.center_angle = circular_mean(np.array(angles_list))
             self.is_near_center = is_near
+            self.on_center = on_center
         else:
             self.center_angle = None
             self.is_near_center = False
+            self.on_center = False
 
-        return found_rescue_center
+        self.found_center = found_rescue_center
 
 
     def get_path(self, pos):
@@ -611,7 +615,7 @@ class FrontierDrone(DroneAbstract):
 
         # check if drone is too close to a wall
         kmin = np.argmax(np.linalg.norm(repulsion_vectors, axis=1))
-        if np.linalg.norm(repulsion_vectors[kmin]) >= 0.93:
+        if np.linalg.norm(repulsion_vectors[kmin]) >= 0.94:
             self.wall_repulsion = -1.5*repulsion_vectors[kmin]/np.linalg.norm(repulsion_vectors[kmin])
             return
 
@@ -632,14 +636,12 @@ class FrontierDrone(DroneAbstract):
         coef = 0
         if lidar_dist[kmin] < 40:
             coef = min(2,max(0,2 * (1 - 3*(min(lidar_dist)-13)/(MAX_RANGE_LIDAR_SENSOR))))
-        print(self.identifier, coef, lidar_dist[kmin], min(lidar_dist))
         
         repulsion_vector = repulsion_vector/np.linalg.norm(repulsion_vector)
         self.wall_repulsion = coef * repulsion_vector
 
         # TODO : change repulsion according to drone direction (change forward and sideways command)
 
-    # TODO: priority for drones
     def test_stuck(self):
         self.last_positions.append(self.get_position())
         if len(self.last_positions) >= self.POSITION_QUEUE_SIZE:
@@ -748,7 +750,7 @@ class FrontierDrone(DroneAbstract):
         self.time += 1
 
         self.get_localization()
-        self.found_center = self.process_semantic_sensor()
+        self.process_semantic_sensor()
         self.process_communicator()
         self.check_wounded_available()
         if not self.communicator_is_disabled():
@@ -813,10 +815,7 @@ class FrontierDrone(DroneAbstract):
         self.drone_prev_position = self.drone_position.copy()
 
         self.point_of_interest = self.compute_point_of_interest(10)
-
-        # TODO remove
-        print(self.identifier, np.linalg.norm(self.wall_repulsion), self.controller.current_state_value, self.roamer_controller.command, self.command)
-            
+        
         return self.command
     
     

@@ -69,7 +69,7 @@ class DroneController(StateMachine):
         return len(self.drone.base.grasper.grasped_entities) > 0
     
     def found_center(self):
-        return self.drone.found_center
+        return self.drone.found_center and self.drone.is_near_center
     
     def lost_center(self):
         return not self.drone.found_center
