@@ -74,7 +74,10 @@ class Map():
 
         world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
-        self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE)
+        if not self.drone.gps_disabled:
+            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE)
+        else:
+            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE/20)
         # for x, y in world_points:
         #     self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 
@@ -151,8 +154,8 @@ class Map():
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        #if self.drone_id==0:
-        #    self.display_map()
+        if self.drone.debug_map and self.drone_id==0:
+           self.display_map()
 
     def __setitem__(self, pos, zone):
         x,y = pos
@@ -308,3 +311,18 @@ class Map():
 
         path.reverse()
         return path
+
+    def get_confidence_wall_map(self, x: int, y: int):
+        """
+        returns the confidence wall map
+        """
+        confidence_wall_map = np.where(self.occupancy_grid.get_grid() > 0, 1, 0)
+        confidence_wall_map = confidence_wall_map.astype(np.uint8)
+
+        # Apply a gaussian blur to smooth the map
+        confidence_wall_map = cv2.GaussianBlur(confidence_wall_map, (3, 3), 0)
+        confidence_wall_map = confidence_wall_map.astype(np.float64)
+        confidence_wall_map = confidence_wall_map * self.confidence_grid.get_grid() / CONFIDENCE_THRESHOLD
+        #confidence_wall_map = confidence_wall_map * self.confidence_grid.get_grid() / CONFIDENCE_THRESHOLD
+
+        return confidence_wall_map[x, y]
