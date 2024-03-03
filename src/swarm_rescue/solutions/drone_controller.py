@@ -66,7 +66,7 @@ class DroneController(StateMachine):
         return not self.drone.found_wounded
     
     def no_wounded(self):
-        return not self.drone.found_wounded and not self.drone.base.grasper.grasped_entities
+        return not self.drone.wounded_visible and not self.drone.base.grasper.grasped_entities
     
     def grasped_wounded(self):
         return len(self.drone.base.grasper.grasped_entities) > 0
