@@ -163,6 +163,7 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
     start = np.array(start)
     end = np.array(end)
     explored = np.zeros(map_border.shape).astype(bool)
+    
     queue = [start]
     while len(queue)>0:
         current = queue.pop(0)
@@ -176,21 +177,30 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
             if not explored[neighbor[0]][neighbor[1]]:
                 queue.append(neighbor)
     explored = np.zeros(map_border.shape).astype(bool)
+
+    def is_min_local(point):
+        for neighbor in neighbors(map_border, point):
+            if map_border[neighbor[0]][neighbor[1]] < map_border[point[0]][point[1]]:
+                return False
+        return True
+    
     queue = [end]
     while len(queue)>0:
         current = queue.pop(0)
         if explored[current[0]][current[1]]:
             continue
-        if map_border[current[0]][current[1]] < 2*len(map_border)*len(map_border[0]):
+        if map_border[current[0]][current[1]] < 2*len(map_border)*len(map_border[0]) and is_min_local(current):
             end = current
             break
         explored[current[0]][current[1]] = True
         for neighbor in neighbors(map_border, current):
             if not explored[neighbor[0]][neighbor[1]]:
                 queue.append(neighbor)
+    
     if debug_mode:
         print(f"Start : {start}, End : {end}")
         print(f"Start cost : {map_border[start[0]][start[1]]}, End cost : {map_border[end[0]][end[1]]}")
+    
     return start, end
 
 

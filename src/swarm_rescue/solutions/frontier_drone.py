@@ -25,10 +25,11 @@ from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SEN
 from solutions.types.types import DroneData
 import solutions
 
-POSITION_QUEUE_SIZE = 40 # number of positions to check if the drone is stuck
-REFRESH_PATH_LIMIT = 40 # frames before refreshing the path
-
 class FrontierDrone(DroneAbstract):
+
+    POSITION_QUEUE_SIZE = 30 # number of positions to check if the drone is stuck
+    REFRESH_PATH_LIMIT = 40 # frames before refreshing the path
+    WOUNDED_DISTANCE = 50 # The distance between wounded person to be considered as the same
 
     def __init__(self,
                  identifier: Optional[int] = None,
@@ -55,9 +56,9 @@ class FrontierDrone(DroneAbstract):
         self.wall_repulsion = np.zeros(2) # The repulsion vector from the walls
         self.center_angle = None
         self.is_near_center = False
+        self.ignore_repulsion = 0 # timer to ignore the repulsion vector (>0 => ignore)
 
         self.wounded_found_list = [] # the list of wounded persons found
-        self.wounded_distance = 80 # The distance between wounded person to be considered as the same
         self.wounded_target = None # The wounded position to go to
 
         self.drone_list = [] # The list of drones
@@ -72,7 +73,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_controller = False 
         self.debug_lidar = False
         self.debug_repulsion = True
-        self.debug_kill_zones = True
+        self.debug_kill_zones = False
         self.debug_wall_repulsion = True
         self.debug_frontiers = False
         
@@ -179,11 +180,11 @@ class FrontierDrone(DroneAbstract):
         data.position = self.get_position()
         data.angle = self.get_angle()
         data.vel_angle = self.compute_vel_angle()
-        data.wounded_found = self.wounded_found_list
         data.wounded_target = self.wounded_target
         data.map = self.map
         data.semantic_values = self.semantic_values()
         data.kill_zone_mode = self.kill_zone_mode
+        data.nextWaypoint = self.nextWaypoint
         return data
 
     def get_position(self):
@@ -288,12 +289,12 @@ class FrontierDrone(DroneAbstract):
 
         # check if wounded target is visible
         wounded_pos = get_wounded_position()
-        if self.wounded_target is not None and np.linalg.norm(wounded_pos - self.wounded_target) < self.wounded_distance:
+        if self.wounded_target is not None and np.linalg.norm(wounded_pos - self.wounded_target) < self.WOUNDED_DISTANCE:
             self.wounded_visible = True
     
         for k in range(len(self.wounded_found_list)):
             wounded = self.wounded_found_list[k]
-            if np.linalg.norm(wounded_pos - wounded["position"]) < self.wounded_distance:
+            if np.linalg.norm(wounded_pos - wounded["position"]) < self.WOUNDED_DISTANCE:
                 wounded["count"] += 1
                 n = wounded["count"]
                 wounded["position"] = wounded["position"]*((n-1)/n) + wounded_pos/n
@@ -303,11 +304,10 @@ class FrontierDrone(DroneAbstract):
         self.wounded_found_list.append({"position": wounded_pos, "count": 1, "last_seen": 0})
     
     def clear_wounded_found(self):
-        frame_limit = 10
-        
+       
         for k in range(len(self.wounded_found_list)-1,-1,-1):
             self.wounded_found_list[k]["last_seen"] += 1
-            if np.linalg.norm(self.get_position() - self.wounded_found_list[k]["position"])<self.wounded_distance/2 and self.wounded_found_list[k]["last_seen"] > frame_limit:
+            if np.linalg.norm(self.get_position() - self.wounded_found_list[k]["position"])<self.WOUNDED_DISTANCE and self.wounded_found_list[k]["last_seen"] > 5:
                 self.wounded_found_list.pop(k)
 
     def update_drones(self, drone_data : DroneData):
@@ -325,7 +325,7 @@ class FrontierDrone(DroneAbstract):
         # update the wounded list
         if drone_data.wounded_target is not None:
             for k in range(len(self.wounded_found_list)):
-                if np.linalg.norm(self.wounded_found_list[k]["position"] - drone_data.wounded_target) < self.wounded_distance:
+                if np.linalg.norm(self.wounded_found_list[k]["position"] - drone_data.wounded_target) < self.WOUNDED_DISTANCE:
                     #self.wounded_found_list[k]["taken"] = True
                     self.wounded_found_list[k]["drone_taker"] = drone_data.id
                     break
@@ -376,7 +376,7 @@ class FrontierDrone(DroneAbstract):
                         return
                     else:
                         wounded.pop("drone_taker")
-                elif self.wounded_target is not None and np.linalg.norm(self.wounded_target - wounded["position"]) < 0.8*self.wounded_distance:
+                elif self.wounded_target is not None and np.linalg.norm(self.wounded_target - wounded["position"]) < 0.8*self.WOUNDED_DISTANCE:
                     self.found_wounded = True
                     self.wounded_target = wounded["position"]
                     return
@@ -630,8 +630,8 @@ class FrontierDrone(DroneAbstract):
             return
 
         coef = 0
-        if lidar_dist[kmin] < 50:
-            coef = max(0,2 * (1 - 2*(min(lidar_dist)-11)/(MAX_RANGE_LIDAR_SENSOR)))
+        if lidar_dist[kmin] < 40:
+            coef = min(2,max(0,2 * (1 - 3*(min(lidar_dist)-13)/(MAX_RANGE_LIDAR_SENSOR))))
         
         
         repulsion_vector = repulsion_vector/np.linalg.norm(repulsion_vector)
@@ -639,18 +639,37 @@ class FrontierDrone(DroneAbstract):
 
         # TODO : change repulsion according to drone direction (change forward and sideways command)
 
+    # TODO: priority for drones
     def test_stuck(self):
         self.last_positions.append(self.get_position())
-        if len(self.last_positions) >= POSITION_QUEUE_SIZE:
+        if len(self.last_positions) >= self.POSITION_QUEUE_SIZE:
             self.last_positions.popleft()
         else:
             return
         for k in range(len(self.last_positions)):
             if np.linalg.norm(self.last_positions[0] - self.last_positions[k]) > 10:
                 return
-        if self.stuck_iteration < REFRESH_PATH_LIMIT:
+        if self.stuck_iteration < self.REFRESH_PATH_LIMIT:
             return
         self.stuck_iteration = 0
+
+        closest_drone = None
+        dist = np.inf
+        for drone in self.drone_list:
+            if closest_drone is None or np.linalg.norm(drone.position - self.get_position()) < dist:
+                dist = np.linalg.norm(drone.position - self.get_position())
+                closest_drone = drone
+
+        def norm2(l):
+            return math.sqrt(l[0]**2 + l[1]**2)
+
+        if (closest_drone is not None and
+            self.nextWaypoint is not None and
+            closest_drone.nextWaypoint is not None and 
+            norm2([self.nextWaypoint[0]-closest_drone.nextWaypoint[0],self.nextWaypoint[1]-closest_drone.nextWaypoint[1]]) < 30 and 
+            self.identifier < closest_drone.id):
+            self.ignore_repulsion = 30
+        
         self.path = []
         self.nextWaypoint = None
         if self.controller.current_state == self.controller.approaching_wounded:
@@ -748,7 +767,7 @@ class FrontierDrone(DroneAbstract):
         else:
             self.last_other_drones_position = {}
 
-        if self.time > 20:
+        if self.time > 30:
             if self.roaming:
                 try:
                     self.roamer_controller.cycle()
@@ -772,8 +791,13 @@ class FrontierDrone(DroneAbstract):
 
         self.update_drone_repulsion()
         self.update_wall_repulsion()
-        self.command["forward"] += self.repulsion[0]
-        self.command["lateral"] += self.repulsion[1]
+
+        if self.ignore_repulsion <= 0:
+            self.command["forward"] += self.repulsion[0]
+            self.command["lateral"] += self.repulsion[1]
+        else:
+            self.ignore_repulsion -= 1
+
         if (self.controller.current_state == self.controller.going_to_center):
             self.command["forward"] += 0.9*self.wall_repulsion[0]
             self.command["lateral"] += 0.9*self.wall_repulsion[1]
@@ -848,11 +872,11 @@ class FrontierDrone(DroneAbstract):
             for wounded in self.wounded_found_list:
                 pos = np.array(wounded["position"]) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
-                arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.GREEN_YELLOW)
+                arcade.draw_circle_outline(pos[0], pos[1],self.WOUNDED_DISTANCE, arcade.color.GREEN_YELLOW)
             if self.wounded_target is not None and (self.controller.current_state == self.controller.going_to_wounded or self.controller.current_state == self.controller.approaching_wounded):
                 pos = np.array(self.wounded_target) + np.array(self.size_area)/2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.RED)
-                arcade.draw_circle_outline(pos[0], pos[1],self.wounded_distance, arcade.color.RED)
+                arcade.draw_circle_outline(pos[0], pos[1],self.WOUNDED_DISTANCE, arcade.color.RED)
 
         if self.debug_positions:
             pos = np.array(self.drone_position) + np.array(self.size_area)/2
