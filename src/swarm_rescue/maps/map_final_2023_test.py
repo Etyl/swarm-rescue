@@ -15,7 +15,7 @@ from spg_overlay.gui_map.map_abstract import MapAbstract
 from spg_overlay.reporting.evaluation import ZonesConfig
 from spg_overlay.utils.misc_data import MiscData
 
-from .walls_final_map import add_walls, add_boxes
+from .walls_final_map_test import add_walls, add_boxes
 
 
 class MyMapFinal(MapAbstract):
@@ -29,7 +29,7 @@ class MyMapFinal(MapAbstract):
         self._size_area = (1819, 1350)
 
         self._rescue_center = RescueCenter(size=(293, 140))
-        self._rescue_center_pos = ((-6, 63), 0)
+        self._rescue_center_pos = ((-6, 200), 0)
 
         self._no_com_zone = NoComZone(size=(377, 486))
         self._no_com_zone_pos = ((-697, 54), 0)
@@ -49,9 +49,9 @@ class MyMapFinal(MapAbstract):
         self._wounded_persons: List[WoundedPerson] = []
 
         # POSITIONS OF THE DRONES
-        self._number_drones = 10
+        self._number_drones = 1
         # They are positioned in a square whose side size depends on the total number of drones.
-        start_area_drones = (0, 217)
+        start_area_drones = (0, 0)
         nb_per_side = math.ceil(math.sqrt(float(self._number_drones)))
         dist_inter_drone = 30.0
         # print("nb_per_side", nb_per_side)

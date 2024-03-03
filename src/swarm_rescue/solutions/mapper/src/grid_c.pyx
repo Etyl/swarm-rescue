@@ -5,8 +5,8 @@ from libc.stdlib cimport malloc, free
 
 cnp.import_array()  # Necessary to call when using NumPy with Cython
 
-DTYPE = np.double
-ctypedef cnp.double_t DTYPE_t
+DTYPE = np.float64
+ctypedef cnp.float64_t DTYPE_t
 cimport cython
 
 cdef class Grid:
@@ -37,7 +37,7 @@ cdef class Grid:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef add_value_along_line(self, float x_0, float y_0, float x_1, float y_1, int val):
+    cdef add_value_along_line(self, float x_0, float y_0, float x_1, float y_1, DTYPE_t val):
         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
         cdef float error
         cdef DTYPE_t[:, :] grid_view  # Declare memoryview for direct array access
@@ -93,7 +93,7 @@ cdef class Grid:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def add_points(self, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, int val):
+    def add_points(self, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, DTYPE_t val):
         """
         Add a value to an array of points, input coordinates in meters
         points_x, points_y: arrays of x and y coordinates in m
@@ -120,7 +120,7 @@ cdef class Grid:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def add_point(self, float x, float y, int val):
+    def add_point(self, float x, float y, DTYPE_t val):
         """
         Add a value to a point, input coordinates in meters
         x, y :  x and y coordinates in m
@@ -151,7 +151,7 @@ cdef class Grid:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    cdef add_value_along_line_confidence(self, float x_0, float y_0, float x_1, float y_1, int val):
+    cdef add_value_along_line_confidence(self, float x_0, float y_0, float x_1, float y_1, DTYPE_t val):
         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
         cdef float error, added_value, inverse_dist
         cdef int dist_from_start
@@ -217,7 +217,7 @@ cdef class Grid:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def add_value_along_lines_confidence(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, int val):
+    def add_value_along_lines_confidence(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, DTYPE_t val):
         cdef int num_points = points_x.shape[0]
         cdef int i
 
@@ -227,7 +227,7 @@ cdef class Grid:
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
-    def add_value_along_lines(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, int val):
+    def add_value_along_lines(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, DTYPE_t val):
         cdef int num_points = points_x.shape[0]
         cdef int i
 
