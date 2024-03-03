@@ -13,3 +13,4 @@ class DroneData:
         self.semantic_values: np.ndarray = None
         self.kill_zone_mode: bool = None
         #self.visible = True
+        self.nextWaypoint = None
