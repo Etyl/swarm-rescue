@@ -612,7 +612,7 @@ class FrontierDrone(DroneAbstract):
         # check if drone is too close to a wall
         kmin = np.argmax(np.linalg.norm(repulsion_vectors, axis=1))
         if np.linalg.norm(repulsion_vectors[kmin]) >= 0.93:
-            self.wall_repulsion = -repulsion_vectors[kmin]/np.linalg.norm(repulsion_vectors[kmin])
+            self.wall_repulsion = -1.5*repulsion_vectors[kmin]/np.linalg.norm(repulsion_vectors[kmin])
             return
 
         repulsion_vector = -sum(repulsion_vectors)
@@ -632,7 +632,7 @@ class FrontierDrone(DroneAbstract):
         coef = 0
         if lidar_dist[kmin] < 40:
             coef = min(2,max(0,2 * (1 - 3*(min(lidar_dist)-13)/(MAX_RANGE_LIDAR_SENSOR))))
-        
+        print(self.identifier, coef, lidar_dist[kmin], min(lidar_dist))
         
         repulsion_vector = repulsion_vector/np.linalg.norm(repulsion_vector)
         self.wall_repulsion = coef * repulsion_vector
@@ -813,6 +813,9 @@ class FrontierDrone(DroneAbstract):
         self.drone_prev_position = self.drone_position.copy()
 
         self.point_of_interest = self.compute_point_of_interest(10)
+
+        # TODO remove
+        print(self.identifier, np.linalg.norm(self.wall_repulsion), self.controller.current_state_value, self.roamer_controller.command, self.command)
             
         return self.command
     
