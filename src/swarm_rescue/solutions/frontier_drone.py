@@ -43,7 +43,7 @@ class FrontierDrone(DroneAbstract):
         self.onRoute = False # True if the drone is on the route to the waypoint
         self.path = []
         self.lastWaypoint = None # The last waypoint reached
-        self.nextWaypoint = np.array([0,0]) # The next waypoint to go to
+        self.nextWaypoint = None # The next waypoint to go to
         self.drone_position = np.array([0,0]) # The position of the drone
         self.drone_angle : float = 0 # The angle of the drone
         self.drone_angle_offset = 0 # The angle offset of the drone that can be changed by the states
@@ -767,7 +767,7 @@ class FrontierDrone(DroneAbstract):
         else:
             self.last_other_drones_position = {}
 
-        if self.time > 30:
+        if self.time > 50:
             if self.roaming:
                 try:
                     self.roamer_controller.cycle()
@@ -775,15 +775,16 @@ class FrontierDrone(DroneAbstract):
                     pass
             
         self.controller.cycle()
+        
         self.roaming = self.controller.current_state == self.controller.roaming
         
         self.update_mapping()
             
-        if self.roaming:
+        if self.roaming and self.time > 50:
             self.command = self.roamer_controller.command.copy()
         else:
             self.command = self.controller.command.copy()
-
+        
         if self.gps_disabled:
             self.command["rotation"] /=2
             self.command["forward"] /=2
