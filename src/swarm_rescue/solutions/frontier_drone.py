@@ -759,7 +759,7 @@ class FrontierDrone(DroneAbstract):
         self.get_localization()
         if self.gps_disabled:
             self.time_in_no_gps += 1
-        self.found_center = self.process_semantic_sensor()
+        self.process_semantic_sensor()
         self.process_communicator()
         self.check_wounded_available()
         if not self.communicator_is_disabled():
