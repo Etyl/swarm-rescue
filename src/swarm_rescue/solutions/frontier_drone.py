@@ -180,7 +180,6 @@ class FrontierDrone(DroneAbstract):
         data.position = self.get_position()
         data.angle = self.get_angle()
         data.vel_angle = self.compute_vel_angle()
-        data.wounded_found = self.wounded_found_list
         data.wounded_target = self.wounded_target
         data.map = self.map
         data.semantic_values = self.semantic_values()
@@ -305,11 +304,10 @@ class FrontierDrone(DroneAbstract):
         self.wounded_found_list.append({"position": wounded_pos, "count": 1, "last_seen": 0})
     
     def clear_wounded_found(self):
-        frame_limit = 10
-        
+       
         for k in range(len(self.wounded_found_list)-1,-1,-1):
             self.wounded_found_list[k]["last_seen"] += 1
-            if np.linalg.norm(self.get_position() - self.wounded_found_list[k]["position"])<self.WOUNDED_DISTANCE/2 and self.wounded_found_list[k]["last_seen"] > frame_limit:
+            if np.linalg.norm(self.get_position() - self.wounded_found_list[k]["position"])<self.WOUNDED_DISTANCE and self.wounded_found_list[k]["last_seen"] > 5:
                 self.wounded_found_list.pop(k)
 
     def update_drones(self, drone_data : DroneData):
@@ -670,7 +668,6 @@ class FrontierDrone(DroneAbstract):
             closest_drone.nextWaypoint is not None and 
             norm2([self.nextWaypoint[0]-closest_drone.nextWaypoint[0],self.nextWaypoint[1]-closest_drone.nextWaypoint[1]]) < 30 and 
             self.identifier < closest_drone.id):
-            print("IGNORING REPULSION")
             self.ignore_repulsion = 30
         
         self.path = []
