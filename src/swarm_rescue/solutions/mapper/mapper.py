@@ -12,9 +12,9 @@ from solutions.pathfinder.pathfinder import *
 from solutions.mapper.utils import display_grid
 
 EVERY_N = 2
-LIDAR_DIST_CLIP = 30.0
-EMPTY_ZONE_VALUE = -1
-OBSTACLE_ZONE_VALUE = 2
+LIDAR_DIST_CLIP = 40.0
+EMPTY_ZONE_VALUE = -0.602
+OBSTACLE_ZONE_VALUE = 2.0
 FREE_ZONE_VALUE = -8
 THRESHOLD_MIN = -40
 THRESHOLD_MAX = 40
@@ -46,7 +46,8 @@ class Map():
         self.occupancy_grid = Grid(area_world, resolution)
         self.binary_occupancy_grid = np.zeros((self.width, self.height)).astype(np.uint8)
         self.confidence_grid = Grid(area_world, resolution)
-        self.confidence_grid_downsampled = Grid(area_world, resolution * 1)
+        self.confidence_grid_downsampled = Grid(area_world, resolution * 2)
+        self.confidence_wall_map = np.zeros((self.width, self.height)).astype(np.float64)
         
         self.map = np.full((self.width, self.height), Zone.INEXPLORED)
 
@@ -62,19 +63,22 @@ class Map():
         lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
 
-        downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
-        downsample_indices = downsample_indices[downsample_indices % 2 == 0]
+        # downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
+        # downsample_indices = downsample_indices[downsample_indices % 2 == 0]
 
-        mask = np.zeros(lidar_dist.shape, dtype=bool)
-        mask[downsample_indices] = True
-        mask[lidar_dist > MAX_RANGE_LIDAR_SENSOR/2] = True
+        # mask = np.zeros(lidar_dist.shape, dtype=bool)
+        # mask[downsample_indices] = True
+        # mask[lidar_dist > MAX_RANGE_LIDAR_SENSOR/2] = True
 
-        downsampled_lidar_dist = lidar_dist[mask]
-        downsampled_lidar_angles = lidar_angles[mask]
+        downsampled_lidar_dist = lidar_dist
+        downsampled_lidar_angles = lidar_angles
 
         world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
-        self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE)
+        if not self.drone.gps_disabled:
+            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE)
+        else:
+            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE/2)
         # for x, y in world_points:
         #     self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 
@@ -112,7 +116,10 @@ class Map():
         downsampled_lidar_dist = lidar_dist
         downsampled_lidar_angles = lidar_angles
 
-        max_range = 0.65 * MAX_RANGE_LIDAR_SENSOR
+        if self.drone.gps_disabled:
+            max_range = 0.9 * MAX_RANGE_LIDAR_SENSOR
+        else:
+            max_range = 0.65 * MAX_RANGE_LIDAR_SENSOR
         
         lidar_dist_clip = np.minimum(np.maximum(downsampled_lidar_dist - LIDAR_DIST_CLIP, 0.0), max_range)
 
@@ -151,8 +158,8 @@ class Map():
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        #if self.drone_id==0:
-        #    self.display_map()
+        if self.drone.debug_map and self.drone_id==0:
+           self.display_map()
 
     def __setitem__(self, pos, zone):
         x,y = pos
@@ -248,6 +255,8 @@ class Map():
         """
         self.occupancy_grid.set_grid(np.where(other_map.confidence_grid.get_grid() > self.confidence_grid.get_grid(), other_map.occupancy_grid.get_grid(), self.occupancy_grid.get_grid()))
 
+        self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
+
         reset = False
         for other_id in other_map.kill_zones:
             if other_id not in self.kill_zones:
@@ -306,3 +315,31 @@ class Map():
 
         path.reverse()
         return path
+
+    def update_confidence_wall_map(self):
+        """
+        returns the confidence wall map
+        """
+        self.confidence_wall_map = np.where(self.occupancy_grid.get_grid() > 0, 1, 0).astype(np.float64)
+        #confidence_wall_map = confidence_wall_map.astype(np.uint8)
+
+        # Apply a gaussian blur to smooth the map
+        #confidence_wall_map = cv2.GaussianBlur(confidence_wall_map, (3, 3), 0)
+        # confidence_wall_map = confidence_wall_map.astype(np.float64)
+        # confidence_wall_map = confidence_wall_map * self.confidence_grid.get_grid() / CONFIDENCE_THRESHOLD
+        #confidence_wall_map = confidence_wall_map * self.confidence_grid.get_grid() / CONFIDENCE_THRESHOLD
+        self.confidence_wall_map[0:2,] = 1
+        self.confidence_wall_map[-3:-1,:] = 1
+        self.confidence_wall_map[:,0:2] = 1
+        self.confidence_wall_map[:,-3:-1] = 1
+        #erosion
+        kernel = np.ones((2,2),np.uint8)
+        self.confidence_wall_map = cv2.erode(self.confidence_wall_map, kernel, iterations=1)
+        # get the botder of the binary grid with Cannys algorithm
+        #self.confidence_map = cv2.Canny(self.confidence_map, 0, 1)
+        # apply a gaussian blur to the confidence map
+        self.confidence_wall_map = cv2.GaussianBlur(self.confidence_wall_map, (7,7), 0)
+
+
+    def get_confidence_wall_map(self, x: int, y: int):
+        return self.confidence_wall_map[x, y]

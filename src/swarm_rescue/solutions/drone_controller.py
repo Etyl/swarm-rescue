@@ -18,6 +18,7 @@ class DroneController(StateMachine):
     cycle = (
         roaming.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
         roaming.to(going_to_wounded, cond="found_wounded", on="before_going_to_wounded") |
+        roaming.to(going_to_center, cond="no_gps_time_limit") |
         going_to_wounded.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
 
         going_to_wounded.to(roaming, cond="lost_wounded_found") |
@@ -52,6 +53,8 @@ class DroneController(StateMachine):
 
 
     ## transitions conditions
+    def no_gps_time_limit(self):
+        return self.drone.time_in_no_gps > 1000
 
     def found_wounded(self):
         return self.drone.found_wounded

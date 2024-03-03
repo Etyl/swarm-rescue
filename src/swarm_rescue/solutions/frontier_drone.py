@@ -68,14 +68,14 @@ class FrontierDrone(DroneAbstract):
 
         self.debug_path = True # True if the path must be displayed
         self.debug_wounded = True
-        self.debug_positions = False
+        self.debug_positions = True
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False 
         self.debug_lidar = False
-        self.debug_repulsion = True
+        self.debug_repulsion = False
         self.debug_kill_zones = False
-        self.debug_wall_repulsion = True
+        self.debug_wall_repulsion = False
         self.debug_frontiers = False
         
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
@@ -111,6 +111,7 @@ class FrontierDrone(DroneAbstract):
 
         self.stuck_iteration = 0
         self.time = 0
+        self.time_in_no_gps = 0
 
     
     def compute_point_of_interest(self, number_of_drones: int):
@@ -205,6 +206,8 @@ class FrontierDrone(DroneAbstract):
         """
         optimises the localization of the drone using SLAM
         """
+        # starting_pos = self.drone_position
+        # starting_angle = self.drone_angle
         starting_pos = self.get_position()
         starting_angle = self.get_angle()
 
@@ -224,7 +227,8 @@ class FrontierDrone(DroneAbstract):
                 point = self.map.world_to_grid(point)
                 if point[0] < 0 or point[0] >= self.map.width or point[1] < 0 or point[1] >= self.map.height:
                     continue
-                value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
+                #value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
+                value -= self.map.get_confidence_wall_map(int(point[0]),int(point[1]))
             return value
         
         mindx, mindy, mindangle = 0,0,0
@@ -249,8 +253,10 @@ class FrontierDrone(DroneAbstract):
         if measured_angle is not None:
             self.drone_angle = measured_angle
             self.gps_disabled = False
+            self.time_in_no_gps = 0
         else:
             self.drone_angle = self.drone_angle + 0.2*rot
+            #self.drone_angle += self.odometer_values()[2]
             self.gps_disabled = True
 
         measured_position = self.measured_gps_position()
@@ -271,8 +277,10 @@ class FrontierDrone(DroneAbstract):
             self.theorical_velocity = np.array([v*math.cos(angle), v*math.sin(angle)]) / 2
             self.drone_position = self.measured_gps_position()
         else:
-            self.theorical_velocity = theorical_velocity
-            self.drone_position = self.drone_position + self.theorical_velocity
+            self.drone_position[0] = self.drone_position[0] + self.odometer_values()[0] * np.cos(self.drone_angle + self.odometer_values()[1])
+            self.drone_position[1] = self.drone_position[1] + self.odometer_values()[0] * np.sin(self.drone_angle + self.odometer_values()[1])
+            # self.theorical_velocity = theorical_velocity
+            # self.drone_position = self.drone_position + self.theorical_velocity
             self.optimise_localization()
 
 
@@ -748,9 +756,10 @@ class FrontierDrone(DroneAbstract):
         
         self.stuck_iteration += 1
         self.time += 1
-
         self.get_localization()
-        self.process_semantic_sensor()
+        if self.gps_disabled:
+            self.time_in_no_gps += 1
+        self.found_center = self.process_semantic_sensor()
         self.process_communicator()
         self.check_wounded_available()
         if not self.communicator_is_disabled():
@@ -827,8 +836,13 @@ class FrontierDrone(DroneAbstract):
         self.estimated_pose = Pose(self.get_position(), self.get_angle())
         # max_vel_angle = 0.08
         # if abs(self.measured_angular_velocity()) < max_vel_angle:
-        self.map.update(self.estimated_pose)
-
+        if not self.gps_disabled:
+            self.map.update(self.estimated_pose)
+        else:
+            max_vel_angle = 0.08
+            if abs(self.measured_angular_velocity()) < max_vel_angle:
+                self.map.update_confidence_wall_map()
+                self.map.update(self.estimated_pose)
         # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_map()
@@ -889,7 +903,7 @@ class FrontierDrone(DroneAbstract):
                 arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
 
             direction = np.array([1,0])
-            rot = np.array([[math.cos(self.get_anlge()), math.sin(self.get_anlge())],[-math.sin(self.get_anlge()), math.cos(self.get_anlge())]])
+            rot = np.array([[math.cos(self.get_angle()), math.sin(self.get_angle())],[-math.sin(self.get_angle()), math.cos(self.get_angle())]])
             direction = direction@rot
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
 
