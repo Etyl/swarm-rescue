@@ -14,7 +14,7 @@ Execute the builder.py file.
 
 ```bash
 python builder.py
-```	
+```
 
 ## Frontier Drone
 

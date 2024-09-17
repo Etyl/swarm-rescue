@@ -24,5 +24,5 @@ coverage
 gprof2dot
 
 # pathfinding
-pyastar2d
 Cython
+pyastar2d
