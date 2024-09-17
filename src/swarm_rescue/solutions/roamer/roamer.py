@@ -9,11 +9,10 @@ from statemachine import StateMachine, State
 from solutions.mapper.mapper import Map  # type: ignore
 from solutions.mapper.mapper import Zone  # type: ignore
 from solutions.roamer.frontier_explorer import FrontierExplorer  # type: ignore
-from solutions.types.types import Vector2D # type: ignore
-from solutions.utils import normalize_angle # type: ignore
+from solutions.utils.types import Vector2D # type: ignore
+from solutions.utils.utils import normalize_angle # type: ignore
 
 from typing import TYPE_CHECKING, Optional, Tuple, List
-import math
 import numpy as np
 import os
 import cv2

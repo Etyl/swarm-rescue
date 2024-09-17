@@ -10,7 +10,7 @@ from spg_overlay.reporting.explored_map import ExploredMap
 
 class MapAbstract(ABC):
     """
-    The MapAbstract class is an abstract class that serves as a blueprint for constructing different types of maps
+    The MapAbstract class is an abstract class that serves as a blueprint for constructing different utils of maps
     used in the directory "maps".
     """
 

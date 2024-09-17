@@ -2,13 +2,11 @@ import math
 import typing
 from typing import Optional, List, Union
 import numpy as np
-
-import solutions
 from dataclasses import dataclass
 
 
 class Vector2D:
-    def __init__(self, x : float = 0, y: float = 0, pointList : Optional[Union[List,np.ndarray]] = None):
+    def __init__(self, x : float = 0, y: float = 0, pointList : Union[List,np.ndarray,None] = None):
         self.array: np.ndarray[float]
         if pointList is not None:
             self.array = np.array([pointList[0], pointList[1]])
@@ -59,7 +57,7 @@ class Vector2D:
             return 0
         v1 = self.normalize()
         v2 = other.normalize()
-        return math.atan2(v2.y,v2.x) - math.atan2(v1.y,v1.x)
+        return (math.atan2(v2.y,v2.x) - math.atan2(v1.y,v1.x)) % (2 * np.pi)
 
     @property
     def x(self):
@@ -82,6 +80,7 @@ class WoundedData:
     count : int
     last_seen : int
     drone_taker: Optional[int]
+
 
 @dataclass
 class DroneData:

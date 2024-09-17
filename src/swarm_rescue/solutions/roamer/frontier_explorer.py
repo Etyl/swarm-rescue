@@ -3,7 +3,7 @@ import numpy as np
 from scipy.ndimage import label # type: ignore
 from enum import Enum
 
-from solutions.types.types import Vector2D # type: ignore
+from solutions.utils.types import Vector2D # type: ignore
 
 
 class Zone(Enum):

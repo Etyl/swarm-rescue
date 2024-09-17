@@ -36,7 +36,7 @@ def srdisabler_disables_device(arbiter, _, data):
 class SRDisabler(ZoneElement):
     """
     The SRDisabler class is a subclass of ZoneElement and represents a zone in a playground that disables certain
-    devices when they collide with it. It is used to create different types of disabling zones, such as zones that
+    devices when they collide with it. It is used to create different utils of disabling zones, such as zones that
     disable GPS, communication, or all devices.
     """
     def __init__(self,

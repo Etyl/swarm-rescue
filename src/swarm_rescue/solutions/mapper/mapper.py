@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 from typing import List, TYPE_CHECKING, Optional, Dict
 
-from solutions.types.types import Vector2D  # type: ignore
+from solutions.utils.types import Vector2D  # type: ignore
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
 from solutions.mapper.grid import Grid # type: ignore
 from solutions.pathfinder.pathfinder import pathfinder # type: ignore

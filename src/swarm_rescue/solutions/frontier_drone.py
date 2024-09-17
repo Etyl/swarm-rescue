@@ -1,25 +1,22 @@
 from __future__ import annotations
 
 import math
-import typing
-
 import numpy as np
-from typing import Optional, List, Tuple, Deque
+from typing import Optional, List, Tuple, Deque, Dict
 import arcade
 from collections import deque
-
 from statemachine import exceptions
 
 from spg_overlay.entities.drone_abstract import DroneAbstract  # type: ignore
 from spg_overlay.utils.misc_data import MiscData  # type: ignore
 from spg_overlay.utils.utils import circular_mean # type: ignore
-from solutions.utils import normalize_angle, map_id_to_color  # type: ignore
+from solutions.utils.utils import normalize_angle, map_id_to_color  # type: ignore
 from spg_overlay.utils.pose import Pose # type: ignore
 from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor # type: ignore
-from solutions.localizer.localizer import Localizer # type: ignore
 from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR # type: ignore
-from solutions.types.types import DroneData, WoundedData, Vector2D # type: ignore
 
+from solutions.utils.types import DroneData, WoundedData, Vector2D # type: ignore
+from solutions.localizer.localizer import Localizer # type: ignore
 from solutions.mapper.mapper import Map # type: ignore
 from solutions.drone_controller import DroneController # type: ignore
 from solutions.roamer.roamer import RoamerController # type: ignore
@@ -52,7 +49,6 @@ class FrontierDrone(DroneAbstract):
         self.drone_angle_offset : float = 0 # The angle offset of the drone that can be changed by the states
         self.found_wounded : bool = False # True if the drone has found a wounded person
         self.wounded_visible : bool = False # True if the wounded person is visible
-        self.found_center : bool = False # True if the drone has found the rescue center
         self.last_angles : Deque[float] = deque() # queue of the last angles
         self.last_positions : Deque[Vector2D] = deque() # queue of the last positions
         self.repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the other drones
@@ -99,9 +95,8 @@ class FrontierDrone(DroneAbstract):
         self.theoretical_velocity : Vector2D = Vector2D(0, 0)
 
         self.controller : DroneController = DroneController(self, debug_mode=self.debug_controller)
-        self.gps_disabled = True
 
-        self.last_other_drones_position : typing.Dict[int, Tuple[Vector2D, float]] = {}
+        self.last_other_drones_position : Dict[int, Tuple[Vector2D, float]] = {}
         self.kill_zones : List[Vector2D] = []
         self.semantic_drone_pos : List[Vector2D] = []
         self.potential_kill_zones : List[Vector2D] = []
@@ -114,6 +109,14 @@ class FrontierDrone(DroneAbstract):
         self.stuck_iteration : int = 0
         self.time : int = 0
         self.time_in_no_gps : int = 0
+
+    @property
+    def gps_disabled(self) -> bool:
+        return self.measured_compass_angle() is None
+
+    @property
+    def found_center(self) -> bool:
+        return self.rescue_center_position is not None
 
 
     def compute_point_of_interest(self):
@@ -243,7 +246,7 @@ class FrontierDrone(DroneAbstract):
 
 
     # TODO: improve angle estimation
-    def get_localization(self):
+    def update_localization(self) -> None:
         """
         returns the position of the drone
         """
@@ -252,12 +255,10 @@ class FrontierDrone(DroneAbstract):
         measured_angle = self.measured_compass_angle()
         if measured_angle is not None:
             self.drone_angle = measured_angle
-            self.gps_disabled = False
             self.time_in_no_gps = 0
         else:
             self.drone_angle = self.drone_angle + 0.2*rot
             #self.drone_angle += self.odometer_values()[2]
-            self.gps_disabled = True
 
         measured_position = self.measured_gps_position()
 
@@ -436,7 +437,7 @@ class FrontierDrone(DroneAbstract):
             if abs(a) == 1:
                 command["forward"] = 0.4
 
-        if self.found_center:
+        if self.found_center and self.center_angle is not None:
             # simple P controller
             # The robot will turn until best_angle is 0
             kp = 2.0
@@ -492,8 +493,6 @@ class FrontierDrone(DroneAbstract):
             self.center_angle = None
             self.is_near_center = False
             self.on_center = False
-
-        self.found_center = found_rescue_center
 
 
     def get_path(self, pos:Vector2D):
@@ -735,7 +734,7 @@ class FrontierDrone(DroneAbstract):
 
         self.stuck_iteration += 1
         self.time += 1
-        self.get_localization()
+        self.update_localization()
         if self.gps_disabled:
             self.time_in_no_gps += 1
         self.process_semantic_sensor()

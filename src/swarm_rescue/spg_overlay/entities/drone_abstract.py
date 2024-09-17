@@ -94,7 +94,7 @@ class DroneAbstract(Agent):
     Fields
         RANGE_COMMUNICATION: The radius, in pixels, of the area around the drone in which it can communicate with
         other drones.
-        SensorType: An enumeration of different sensor types.
+        SensorType: An enumeration of different sensor utils.
         identifier: The identifier of the drone.
         _display_lidar_graph: A flag indicating whether the lidar sensor data should be displayed on matplotlib graph.
          It is slow.
