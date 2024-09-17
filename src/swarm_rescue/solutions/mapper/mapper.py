@@ -1,15 +1,21 @@
+from __future__ import annotations
+
 from enum import Enum
 import numpy as np
 import cv2
-import time
 
-from spg_overlay.utils.pose import Pose
+from solutions.types.types import Vector2D
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
-#from solutions.mapper.grid_old import Grid
 from solutions.mapper.grid import Grid
+from solutions.pathfinder.pathfinder import pathfinder
 
 from solutions.pathfinder.pathfinder import *
 from solutions.mapper.utils import display_grid
+
+from typing import List, TYPE_CHECKING, Optional
+
+if TYPE_CHECKING:
+    from solutions.frontier_drone import FrontierDrone
 
 EVERY_N = 2
 LIDAR_DIST_CLIP = 40.0
@@ -30,20 +36,20 @@ class Zone(Enum):
     RESCUE_CENTER = 3
     INEXPLORED = -1
 
-class Map():
-    def __init__(self, drone, area_world, drone_lidar, resolution, identifier, debug_mode=False):
+class Map:
+    def __init__(self, drone : FrontierDrone, area_world, drone_lidar, resolution, identifier, debug_mode=False):
         self.resolution = resolution
         self.debug_mode = debug_mode
         self.drone_lidar = drone_lidar
-        self.drone_id = identifier
-        self.drone = drone
+        self.drone_id : int = identifier
+        self.drone : FrontierDrone = drone
 
         self.area_world = area_world
 
-        self.width = int(area_world[0] / self.resolution + 0.5)
-        self.height = int(area_world[1] / self.resolution + 0.5)
+        self.width : int = int(area_world[0] / self.resolution + 0.5)
+        self.height : int = int(area_world[1] / self.resolution + 0.5)
 
-        self.occupancy_grid = Grid(area_world, resolution)
+        self.occupancy_grid : Grid = Grid(area_world, resolution)
         self.binary_occupancy_grid = np.zeros((self.width, self.height)).astype(np.uint8)
         self.confidence_grid = Grid(area_world, resolution)
         self.confidence_grid_downsampled = Grid(area_world, resolution * 2)
@@ -216,7 +222,7 @@ class Map():
         cv2.imshow("Map", np.transpose(img, (1, 0, 2)))
         cv2.waitKey(1)
 
-    def world_to_grid(self, pos: Pose):
+    def world_to_grid(self, pos: List):
         """
         converts world coordinates to grid coordinates
         """
@@ -227,13 +233,13 @@ class Map():
         y = max(0, min(y, self.height - 1))
         return np.array([x, y])
 
-    def grid_to_world(self, pos):
+    def grid_to_world(self, pos: Vector2D) -> Vector2D:
         """
         converts grid coordinates to world coordinates
         """
-        y = (self.height - pos[1]) * self.resolution - self.height * self.resolution / 2
-        x = (pos[0] - self.width / 2) * self.resolution
-        return [x, y]
+        y = (self.height - pos.y) * self.resolution - self.height * self.resolution / 2
+        x = (pos.x - self.width / 2) * self.resolution
+        return Vector2D(x, y)
     
     def get_width(self):
         return self.width
@@ -268,7 +274,7 @@ class Map():
         #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         #self.update_map()
     
-    def shortest_path(self, start: Pose, end: Pose):
+    def shortest_path(self, start: Vector2D, end: Vector2D) -> Optional[List[Vector2D]]:
         """
         returns the shortest path between start and end
         Params:
@@ -303,15 +309,14 @@ class Map():
             # obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
         # save obstacle grid as image
         #cv2.imwrite("./map.png", obstacle_grid.T * 255/2)
-        adjusted_start = [start[0], start[1]]
-        grid_start = [coord * zoom_factor for coord in self.world_to_grid(adjusted_start)]
-        grid_end = [coord * zoom_factor for coord in self.world_to_grid(end)]
+        grid_start = [coord * zoom_factor for coord in self.world_to_grid(start.array)]
+        grid_end = [coord * zoom_factor for coord in self.world_to_grid(end.array)]
 
-        grid_path = pathfinder(obstacle_grid, grid_start, grid_end, robot_radius=40//zoom_factor)
+        grid_path : List[List[int]] = pathfinder(obstacle_grid, grid_start, grid_end, robot_radius=40//zoom_factor)
 
         if grid_path is None:
             return None
-        path = [self.grid_to_world([pos[0] / zoom_factor, pos[1] / zoom_factor]) for pos in grid_path]
+        path = [self.grid_to_world(Vector2D(pos[0] / zoom_factor, pos[1] / zoom_factor)) for pos in grid_path]
 
         path.reverse()
         return path

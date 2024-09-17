@@ -1,4 +1,5 @@
-import solutions
+from solutions.frontier_drone import FrontierDrone  # type: ignore
 
-class MyDroneEval(solutions.frontier_drone.FrontierDrone):
+
+class MyDroneEval(FrontierDrone):
     pass

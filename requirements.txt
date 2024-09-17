@@ -1,19 +1,19 @@
-PyYAML
+PyYAML~=6.0.2
 pymunk>=6.4.0
-numpy
+numpy~=1.24.4
 scikit-image
-Pillow
-pytest
+Pillow~=9.3.0
+pytest~=8.3.3
 opencv-contrib-python==4.8.0.74
-matplotlib
-setuptools
+matplotlib~=3.7.5
+setuptools~=68.2.0
 -e git+https://github.com/emmanuel-battesti/simple-playgrounds.git@swarm-rescue-v2#egg=spg
 #-e /home/battesti/projetCompetDronesDGA/simple-playgrounds
 #simple-playgrounds
 #spg
-fpdf
+fpdf~=1.7.2
 pandas==2.0.3
-pathlib2
+pathlib2~=2.3.7.post1
 gym
 arcade==2.6.17
 tripy
@@ -24,5 +24,6 @@ coverage
 gprof2dot
 
 # pathfinding
-Cython
-pyastar2d
+Cython~=3.0.11
+pyastar2d~=1.0.6
+scipy~=1.10.1

@@ -1,6 +1,11 @@
+from __future__ import annotations
+
 from statemachine import StateMachine, State
-import solutions
 import numpy as np
+import typing
+
+if typing.TYPE_CHECKING:
+    from solutions.frontier_drone import FrontierDrone
 
 
 class DroneController(StateMachine):
@@ -41,13 +46,13 @@ class DroneController(StateMachine):
         approaching_center.to(approaching_center)
     )
  
-    def __init__(self, drone : solutions.frontier_drone.FrontierDrone, debug_mode: bool = False):
-        self.drone = drone
+    def __init__(self, drone : FrontierDrone, debug_mode: bool = False):
+        self.drone : FrontierDrone = drone
         self.command = {"forward": 0.0,
                         "lateral": 0.0,
                         "rotation": 0.0,
                         "grasper": 0}
-        self.debug_mode = debug_mode
+        self.debug_mode : bool = debug_mode
 
         super(DroneController, self).__init__()
 
@@ -140,7 +145,10 @@ class DroneController(StateMachine):
     @approaching_wounded.enter
     def on_enter_approaching_wounded(self):
         self.command = self.drone.get_control_from_semantic()
-        dist = np.linalg.norm(self.drone.wounded_target - self.drone.get_position())
+        if self.drone.wounded_target is None:
+            self.command["grasper"] = 0
+            return
+        dist = self.drone.wounded_target.distance(self.drone.get_position())
         if dist < 80:
             self.command["grasper"] = 1
         else:
