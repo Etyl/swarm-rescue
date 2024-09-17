@@ -4,7 +4,7 @@ import math
 import typing
 
 import numpy as np
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Deque
 import arcade
 from collections import deque
 
@@ -12,17 +12,17 @@ from statemachine import exceptions
 
 from spg_overlay.entities.drone_abstract import DroneAbstract  # type: ignore
 from spg_overlay.utils.misc_data import MiscData  # type: ignore
-from spg_overlay.utils.utils import circular_mean
+from spg_overlay.utils.utils import circular_mean # type: ignore
 from solutions.utils import normalize_angle, map_id_to_color  # type: ignore
-from spg_overlay.utils.pose import Pose
-from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
-from solutions.localizer.localizer import Localizer
-from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR
-from solutions.types.types import DroneData, WoundedData, Vector2D
+from spg_overlay.utils.pose import Pose # type: ignore
+from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor # type: ignore
+from solutions.localizer.localizer import Localizer # type: ignore
+from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR # type: ignore
+from solutions.types.types import DroneData, WoundedData, Vector2D # type: ignore
 
-from solutions.mapper.mapper import Map
-from solutions.drone_controller import DroneController
-from solutions.roamer.roamer import RoamerController
+from solutions.mapper.mapper import Map # type: ignore
+from solutions.drone_controller import DroneController # type: ignore
+from solutions.roamer.roamer import RoamerController # type: ignore
 
 class FrontierDrone(DroneAbstract):
 
@@ -53,8 +53,8 @@ class FrontierDrone(DroneAbstract):
         self.found_wounded : bool = False # True if the drone has found a wounded person
         self.wounded_visible : bool = False # True if the wounded person is visible
         self.found_center : bool = False # True if the drone has found the rescue center
-        self.last_angles : typing.Deque[float] = deque() # queue of the last angles
-        self.last_positions : typing.Deque[Vector2D] = deque() # queue of the last positions
+        self.last_angles : Deque[float] = deque() # queue of the last angles
+        self.last_positions : Deque[Vector2D] = deque() # queue of the last positions
         self.repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the other drones
         self.wall_repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the walls
         self.center_angle : Optional[float] = None
@@ -65,7 +65,7 @@ class FrontierDrone(DroneAbstract):
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
         self.wounded_target : Optional[Vector2D] = None # The wounded position to go to
 
-        self.drone_list : List = [] # The list of drones
+        self.drone_list : List[DroneData] = [] # The list of drones
 
         ## Debug controls
 
@@ -102,13 +102,13 @@ class FrontierDrone(DroneAbstract):
         self.gps_disabled = True
 
         self.last_other_drones_position : typing.Dict[int, Tuple[Vector2D, float]] = {}
-        self.kill_zones : List = []
-        self.semantic_drone_pos : List = []
-        self.potential_kill_zones : List = []
+        self.kill_zones : List[Vector2D] = []
+        self.semantic_drone_pos : List[Vector2D] = []
+        self.potential_kill_zones : List[Vector2D] = []
         self.kill_zone_mode = True
 
         self.point_of_interest = (0,0)
-        self.frontiers : List = []
+        self.frontiers : List[List[Vector2D]] = []
         self.selected_frontier_id : int = 0
 
         self.stuck_iteration : int = 0
@@ -116,7 +116,7 @@ class FrontierDrone(DroneAbstract):
         self.time_in_no_gps : int = 0
 
 
-    def compute_point_of_interest(self, number_of_drones: int):
+    def compute_point_of_interest(self):
         """
         computes the point of interest by repartitioning the drones in the area
         """
@@ -221,14 +221,14 @@ class FrontierDrone(DroneAbstract):
             [posX, posY, angle] = x
             value = 0
             for [lidar_dist,lidar_angle] in measures:
-                point = np.zeros(2)
-                point[0] = starting_pos.x + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle)
-                point[1] = starting_pos.y + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle)
+                point = Vector2D(0,0)
+                point.setX(starting_pos.x + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle))
+                point.setY(starting_pos.y + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle))
                 point = self.map.world_to_grid(point)
-                if point[0] < 0 or point[0] >= self.map.width or point[1] < 0 or point[1] >= self.map.height:
+                if point.x < 0 or point.x >= self.map.width or point.y < 0 or point.y >= self.map.height:
                     continue
                 #value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
-                value -= self.map.get_confidence_wall_map(int(point[0]),int(point[1]))
+                value -= self.map.get_confidence_wall_map(int(point.x),int(point.y))
             return value
 
         mindx, mindy, mindangle = 0,0,0
@@ -459,10 +459,6 @@ class FrontierDrone(DroneAbstract):
         """
         According to his state in the state machine, the Drone will move towards a wound person or the rescue center
         """
-
-        def angle(v1, v2):
-            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
-
         detection_semantic = self.semantic_values()
 
         self.clear_wounded_found()
@@ -560,9 +556,6 @@ class FrontierDrone(DroneAbstract):
         """
         repulses the drone from other drones
         """
-        def compute_angle(v1, v2):
-                return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
-
         def repulsion_dist(distance):
             a = 7
             b = 0.8
@@ -594,7 +587,7 @@ class FrontierDrone(DroneAbstract):
             self.repulsion = repulsion
 
 
-    def update_wall_repulsion(self):
+    def update_wall_repulsion(self) -> None:
         """
         update repulsion vector for the drone from the walls (local drone vector)
         """
@@ -677,14 +670,12 @@ class FrontierDrone(DroneAbstract):
                 dist = drone.position.distance(self.get_position())
                 closest_drone = drone
 
-        def norm2(l):
-            return math.sqrt(l[0]**2 + l[1]**2)
-
         if (closest_drone is not None and
             self.nextWaypoint is not None and
             closest_drone.nextWaypoint is not None and
-            norm2([self.nextWaypoint.x-closest_drone.nextWaypoint[0],self.nextWaypoint.y-closest_drone.nextWaypoint[1]]) < 30 and
+            self.nextWaypoint.distance(closest_drone.nextWaypoint) < 30 and
             self.identifier < closest_drone.id):
+
             self.ignore_repulsion = 30
 
         self.path = []
@@ -811,7 +802,7 @@ class FrontierDrone(DroneAbstract):
 
         self.drone_prev_position = self.drone_position.copy()
 
-        self.point_of_interest = self.compute_point_of_interest(10)
+        self.point_of_interest = self.compute_point_of_interest()
 
         return self.command
 

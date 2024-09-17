@@ -7,52 +7,51 @@ from __future__ import annotations
 from statemachine import StateMachine, State
 
 from solutions.mapper.mapper import Map  # type: ignore
-from solutions.mapper.mapper import Zone
-from solutions.roamer.frontier_explorer import FrontierExplorer
+from solutions.mapper.mapper import Zone  # type: ignore
+from solutions.roamer.frontier_explorer import FrontierExplorer  # type: ignore
+from solutions.types.types import Vector2D # type: ignore
+from solutions.utils import normalize_angle # type: ignore
 
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple, List
 import math
 import numpy as np
 import os
 import cv2
 
-from solutions.types.types import Vector2D
-from solutions.utils import normalize_angle
-
-if TYPE_CHECKING:
-    from solutions.frontier_drone import FrontierDrone
+if TYPE_CHECKING: # type: ignore
+    from solutions.frontier_drone import FrontierDrone # type: ignore
 
 # OTHER IMPL - ASYNC
 # import asyncio
 # import threading
 
-FRONTIER_SELECTION_SIZE = 10
+FRONTIER_SELECTION_SIZE : int = 10
 
 class RoamerController(StateMachine):
 
     # maximum number of times the drone can be in the same position
     # i.e. the maximum number of times the check_target_reached function can return False
-    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD = 100
+    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD : int = 100
 
     # maximum number of times the drone can be close to the previous searching start point
     # i.e. the maximum number of times the test_position_close_start_point function can return True
-    _COUNT_CLOSE_PREVIOUS_SEARCHING_START_POINT_THRESHOLD = 50
+    _COUNT_CLOSE_PREVIOUS_SEARCHING_START_POINT_THRESHOLD : int= 50
 
     # maximum number of times the drone can't find a target
     # i.e. the maximum number of times the search_for_target function can return None
-    _NONE_TARGET_FOUND_THRESHOLD = 10
+    _NONE_TARGET_FOUND_THRESHOLD : int = 10
 
     # the thickness of the walls in the map when the path is computed (in order to allow a smoother path)
-    _WALL_THICKENING = 3
+    _WALL_THICKENING : int = 3
 
     # the sampling rate of the path (in order to reduce the number of points)
-    _PATH_SAMPLING_RATE = 1
+    _PATH_SAMPLING_RATE : int = 1
 
     # the number of points required in a frontier
-    _FRONTIERS_THRESHOLD = 6
+    _FRONTIERS_THRESHOLD : int = 6
 
     # the cooldown for computing the frontier
-    _COMPUTE_FRONTIER_COOLDOWN = 50
+    _COMPUTE_FRONTIER_COOLDOWN : int = 50
 
     start_roaming = State('Start Roaming', initial=True)
     searching_for_target = State('Searching for target')
@@ -90,17 +89,15 @@ class RoamerController(StateMachine):
         # the idea is to decrease this number if the drone is stuck at some point
         # because it would mean that the drone has already explored a lot of the map
         # and that the remaining unexplored areas are small
-        self.frontiers_threshold = self._FRONTIERS_THRESHOLD
+        self.frontiers_threshold : int = self._FRONTIERS_THRESHOLD
 
         self.previous_searching_start_point : Optional[Vector2D] = None
-        self.count_close_previous_searching_start_point = 0
+        self.count_close_previous_searching_start_point : int= 0
 
-        self.waiting_time = 0
-        self.last_time_updates = self._COMPUTE_FRONTIER_COOLDOWN
-        self.first_time = True
+        self.waiting_time : int = 0
+        self.last_time_updates : int = self._COMPUTE_FRONTIER_COOLDOWN
+        self.first_time : bool = True
         self.first_time_cooldown = 0
-
-        self.frontiers = None
 
         super(RoamerController, self).__init__()
 
@@ -253,11 +250,12 @@ class Roamer:
     defines the roaming behavior of the drone
     """
     def __init__(self, drone: FrontierDrone, map: Map, debug_mode: bool = False):
+        self.frontiers : List[List[Vector2D]] = []
         self.drone : FrontierDrone = drone
         self.map : Map = map
         self.debug_mode : bool = debug_mode
     
-    def print_num_map(self, map, output_file='output.txt'):
+    def print_num_map(self, map : Map, output_file='output.txt'):
         """
         Print the map to a file
         Debugging purposes
@@ -270,7 +268,7 @@ class Roamer:
             np.savetxt(file, numeric_map, fmt='%3d', delimiter=', ')
             file.write('\n') 
     
-    def find_next_unexplored_target(self, frontiers_threshold) -> Optional[Vector2D]:
+    def find_next_unexplored_target(self, frontiers_threshold: int) -> Optional[Vector2D]:
         """
         Find the closest unexplored target from the drone's curretn position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
@@ -283,7 +281,7 @@ class Roamer:
 
         if self.debug_mode: print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position.array))
         
-        drone_position_grid = self.map.world_to_grid(drone_position.array)
+        drone_position_grid = self.map.world_to_grid(drone_position)
         fd = FrontierExplorer(map_matrix_copy, drone_position_grid, frontiers_threshold)
         frontiers = fd.getFrontiers()
         self.frontiers = frontiers
@@ -299,19 +297,19 @@ class Roamer:
         best_count = 0
 
         max_distance = np.inf
-        selected_frontiers_id = []
-        selected_frontiers_distance = []
-        selected_frontiers_repulsion_angle = []
+        selected_frontiers_id : List[int] = []
+        selected_frontiers_distance : List[float] = []
+        selected_frontiers_repulsion_angle : List[float] = []
         
         # select the closest frontiers
         for idx, frontier in enumerate(frontiers):
             
-            frontier_center = (
-                sum(point[0] for point in frontier) / len(frontier),
-                sum(point[1] for point in frontier) / len(frontier)
+            frontier_center = Vector2D(
+                sum(point.x for point in frontier) / len(frontier),
+                sum(point.y for point in frontier) / len(frontier)
             )
             
-            distance = np.linalg.norm(np.array(frontier_center) - np.array(drone_position_grid))
+            distance = frontier_center.distance(drone_position_grid)
             
             if len(selected_frontiers_id) < FRONTIER_SELECTION_SIZE :
                 selected_frontiers_id.append(idx)
@@ -324,27 +322,27 @@ class Roamer:
                 continue
         
         # calculate the path length for each selected frontier
-        for frontier_id,idx in enumerate(selected_frontiers_id):
-            frontier = frontiers[idx]
+        for idx,frontier_id in enumerate(selected_frontiers_id):
+            frontier = frontiers[frontier_id]
             frontier_center = Vector2D(
-                sum(point[0] for point in frontier) / len(frontier),
-                sum(point[1] for point in frontier) / len(frontier)
+                sum(point.x for point in frontier) / len(frontier),
+                sum(point.y for point in frontier) / len(frontier)
             )
             distance, repulsion_angle = self.get_path_length(frontier_center)
-            selected_frontiers_distance[frontier_id] = distance
+            selected_frontiers_distance[idx] = distance
             selected_frontiers_repulsion_angle.append(repulsion_angle)
 
         # parameters
         frontiers = [frontiers[idx] for idx in selected_frontiers_id]
         frontier_count = np.array([frontier_count[idx] for idx in selected_frontiers_id])
-        selected_frontiers_distance = np.array(selected_frontiers_distance)
-        selected_frontiers_repulsion_angle = np.array(selected_frontiers_repulsion_angle)
+        selected_frontiers_distance_array = np.array(selected_frontiers_distance)
+        selected_frontiers_repulsion_angle_array = np.array(selected_frontiers_repulsion_angle)
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
         
         # normalize
-        frontier_distance_noInf = [x for x in selected_frontiers_distance if x != np.inf]
+        frontier_distance_noInf = [x for x in selected_frontiers_distance_array if x != np.inf]
         if len(frontier_distance_noInf) == 0: return None
-        selected_frontiers_distance = selected_frontiers_distance / max(frontier_distance_noInf)
+        selected_frontiers_distance_array = selected_frontiers_distance_array / max(frontier_distance_noInf)
 
         frontier_size_max = np.max(frontiers_size)
         frontiers_size = 0 if frontier_size_max == 0 else frontiers_size / frontier_size_max
@@ -354,7 +352,7 @@ class Roamer:
 
         # score (the higher the better)
         # TODO : optimize
-        score = 2*(1-selected_frontiers_distance) + frontiers_size + frontier_count + 4*(1-selected_frontiers_repulsion_angle)
+        score = 2*(1-selected_frontiers_distance_array) + frontiers_size + frontier_count + 4*(1-selected_frontiers_repulsion_angle_array)
 
         #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)
         # select the best frontier
@@ -364,8 +362,8 @@ class Roamer:
         # Return the center and the points of the chosen frontier
         chosen_frontier = frontiers[best_frontier_idx]
         chosen_frontier_center = Vector2D(
-            int(sum(point[0] for point in chosen_frontier) / len(chosen_frontier)),
-            int(sum(point[1] for point in chosen_frontier) / len(chosen_frontier))
+            int(sum(point.x for point in chosen_frontier) / len(chosen_frontier)),
+            int(sum(point.y for point in chosen_frontier) / len(chosen_frontier))
         )
 
         if self.drone.debug_frontiers:
@@ -521,10 +519,6 @@ class Roamer:
             return [(x + i, y + j) for i in [-1, 0, 1] for j in [-1, 0, 1]
                     if 0 <= x + i < x_max and 0 <= y + j < y_max and (i != 0 or j != 0)]
 
-        # Calculer la distance entre deux points
-        def distance(point1, point2):
-            return np.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
-
         # Parcourir les points dans l'ordre croissant de distance depuis le drone
         for d in range(1, max(x_max, y_max)):
             for i in range(-d, d + 1):
@@ -541,7 +535,7 @@ class Roamer:
         # Si aucun point n'est trouvé, retourner None
         return None
 
-    def get_path_length(self, target : Optional[Vector2D]) -> Tuple[float,int]:
+    def get_path_length(self, target : Optional[Vector2D]) -> Tuple[float,float]:
         """
         Get the length of the path to the target
         params:
@@ -591,7 +585,7 @@ class Roamer:
         
         if self.debug_mode: 
             print("[Roamer] Path found : ", path)
-            self.display_map_with_path(self.map.get_map_matrix(), path, target, 5)
+            self.display_map_with_path(self.map.get_map_matrix(), path, target.array, 5)
 
         if path is None:
             return [], None

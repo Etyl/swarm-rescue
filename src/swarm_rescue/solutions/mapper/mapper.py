@@ -3,19 +3,18 @@ from __future__ import annotations
 from enum import Enum
 import numpy as np
 import cv2
+from typing import List, TYPE_CHECKING, Optional, Dict
 
-from solutions.types.types import Vector2D
-from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR
-from solutions.mapper.grid import Grid
-from solutions.pathfinder.pathfinder import pathfinder
+from solutions.types.types import Vector2D  # type: ignore
+from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
+from solutions.mapper.grid import Grid # type: ignore
+from solutions.pathfinder.pathfinder import pathfinder # type: ignore
 
-from solutions.pathfinder.pathfinder import *
-from solutions.mapper.utils import display_grid
+from solutions.pathfinder.pathfinder import * # type: ignore
+from solutions.mapper.utils import display_grid # type: ignore
 
-from typing import List, TYPE_CHECKING, Optional
-
-if TYPE_CHECKING:
-    from solutions.frontier_drone import FrontierDrone
+if TYPE_CHECKING: # type: ignore
+    from solutions.frontier_drone import FrontierDrone # type: ignore
 
 EVERY_N = 2
 LIDAR_DIST_CLIP = 40.0
@@ -58,9 +57,9 @@ class Map:
         self.map = np.full((self.width, self.height), Zone.INEXPLORED)
 
         self.rescue_center = None
-        self.kill_zones = {}
-        self.no_gps_zones = []
-        self.wounded_persons = []
+        self.kill_zones : Dict[int, Vector2D] = {}
+        self.no_gps_zones : List[Vector2D] = []
+
     
     def update_confidence_grid(self, pose):
         """
@@ -214,24 +213,24 @@ class Map:
                 img[x][y] = np.array(color_map[self[x, y]]) #* self.confidence_grid.get_grid()[x][y] / CONFIDENCE_THRESHOLD
 
         # draw kill zones as rectangles
-        for kill_zone in self.kill_zones:
-            img = cv2.rectangle(img, (kill_zone[1] - KILL_ZONE_SIZE, kill_zone[0] - KILL_ZONE_SIZE), (kill_zone[1] + KILL_ZONE_SIZE, kill_zone[0] + KILL_ZONE_SIZE), (255, 0, 0), 1)
+        for kill_zone in self.kill_zones.values():
+            img = cv2.rectangle(img, (kill_zone.y - KILL_ZONE_SIZE, kill_zone.x - KILL_ZONE_SIZE), (kill_zone.y + KILL_ZONE_SIZE, kill_zone.x + KILL_ZONE_SIZE), (255, 0, 0), 1)
 
         # # Display the image
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
         cv2.imshow("Map", np.transpose(img, (1, 0, 2)))
         cv2.waitKey(1)
 
-    def world_to_grid(self, pos: List):
+    def world_to_grid(self, pos: Vector2D) -> Vector2D:
         """
         converts world coordinates to grid coordinates
         """
-        y =  self.height - int(pos[1] / self.resolution + self.height / 2)
-        x = int(pos[0] / self.resolution + self.width / 2)
+        y =  self.height - int(pos.y / self.resolution + self.height / 2)
+        x = int(pos.x / self.resolution + self.width / 2)
         # crop the values to the map size
         x = max(0, min(x, self.width - 1))
         y = max(0, min(y, self.height - 1))
-        return np.array([x, y])
+        return Vector2D(x, y)
 
     def grid_to_world(self, pos: Vector2D) -> Vector2D:
         """
@@ -290,7 +289,7 @@ class Map:
         if self.kill_zones:
             for kill_zone in self.kill_zones.values():
                 kill_zone = self.world_to_grid(kill_zone)
-                kill_zone_grid[kill_zone[0] - KILL_ZONE_SIZE:kill_zone[0] + KILL_ZONE_SIZE, kill_zone[1] - KILL_ZONE_SIZE:kill_zone[1] + KILL_ZONE_SIZE] = 2
+                kill_zone_grid[kill_zone.x - KILL_ZONE_SIZE:kill_zone.x + KILL_ZONE_SIZE, kill_zone.y - KILL_ZONE_SIZE:kill_zone.y + KILL_ZONE_SIZE] = 2
         #cv2.imwrite("./kill_zones.png", kill_zone_grid * 255)
         # gaussian blur tp smooth kill zones
         #kill_zone_grid = cv2.GaussianBlur(kill_zone_grid, (15, 15), 0)
@@ -309,10 +308,10 @@ class Map:
             # obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
         # save obstacle grid as image
         #cv2.imwrite("./map.png", obstacle_grid.T * 255/2)
-        grid_start = [coord * zoom_factor for coord in self.world_to_grid(start.array)]
-        grid_end = [coord * zoom_factor for coord in self.world_to_grid(end.array)]
+        grid_start = zoom_factor * self.world_to_grid(start)
+        grid_end = zoom_factor * self.world_to_grid(end)
 
-        grid_path : List[List[int]] = pathfinder(obstacle_grid, grid_start, grid_end, robot_radius=40//zoom_factor)
+        grid_path : Optional[List[List[int]]] = pathfinder(obstacle_grid, grid_start.array, grid_end.array, robot_radius=40//zoom_factor)
 
         if grid_path is None:
             return None

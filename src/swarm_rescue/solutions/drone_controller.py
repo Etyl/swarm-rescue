@@ -4,8 +4,8 @@ from statemachine import StateMachine, State
 import numpy as np
 import typing
 
-if typing.TYPE_CHECKING:
-    from solutions.frontier_drone import FrontierDrone
+if typing.TYPE_CHECKING: # type: ignore
+    from solutions.frontier_drone import FrontierDrone # type: ignore
 
 
 class DroneController(StateMachine):
@@ -58,43 +58,43 @@ class DroneController(StateMachine):
 
 
     ## transitions conditions
-    def no_gps_time_limit(self):
+    def no_gps_time_limit(self) -> bool:
         return self.drone.time_in_no_gps > 1000
 
-    def found_wounded(self):
+    def found_wounded(self) -> bool:
         return self.drone.found_wounded
     
-    def wounded_visible(self):
+    def wounded_visible(self) -> bool:
         return self.drone.wounded_visible and self.drone.found_wounded
     
-    def lost_wounded_found(self):
+    def lost_wounded_found(self) -> bool:
         return not self.drone.found_wounded
     
-    def no_wounded(self):
+    def no_wounded(self) -> bool:
         return not self.drone.wounded_visible and not self.drone.base.grasper.grasped_entities
     
-    def grasped_wounded(self):
+    def grasped_wounded(self) -> bool:
         return len(self.drone.base.grasper.grasped_entities) > 0
     
-    def found_center(self):
+    def found_center(self) -> bool:
         return self.drone.found_center and self.drone.is_near_center
     
-    def lost_center(self):
+    def lost_center(self) -> bool:
         return not self.drone.found_center
     
-    def lost_wounded(self):
+    def lost_wounded(self) -> bool:
         return not self.drone.base.grasper.grasped_entities
     
     
     ## actions
 
-    def before_cycle(self, event: str, source: State, target: State, message: str = ""):
+    def before_cycle(self, event: str, source: State, target: State, message: str = "") -> None:
         if not self.debug_mode: return
         message = ". " + message if message else ""
         print(f"Running {event} from {source.id} to {target.id}{message}")
 
     @roaming.enter
-    def on_enter_roaming(self):
+    def on_enter_roaming(self) -> None:
         # self.drone.onRoute = False
         pass
 
@@ -121,13 +121,13 @@ class DroneController(StateMachine):
         self.drone.onRoute = True
         """
 
-    def before_going_to_wounded(self):
+    def before_going_to_wounded(self) -> None:
         self.drone.onRoute = False
         self.drone.nextWaypoint = None
         self.drone.path = []
 
     @going_to_wounded.enter
-    def on_enter_going_to_wounded(self):
+    def on_enter_going_to_wounded(self) -> None:
         if len(self.drone.path)==0 and self.drone.nextWaypoint is None:
             self.drone.path = self.drone.get_path(self.drone.wounded_target)
             if self.drone.path is None: 
@@ -137,13 +137,13 @@ class DroneController(StateMachine):
                 self.drone.nextWaypoint = self.drone.path.pop()
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
 
-    def before_approaching_wounded(self):
+    def before_approaching_wounded(self) -> None:
         self.drone.onRoute = False
         self.drone.nextWaypoint = None
         self.drone.path = []
     
     @approaching_wounded.enter
-    def on_enter_approaching_wounded(self):
+    def on_enter_approaching_wounded(self) -> None:
         self.command = self.drone.get_control_from_semantic()
         if self.drone.wounded_target is None:
             self.command["grasper"] = 0
@@ -154,7 +154,7 @@ class DroneController(StateMachine):
         else:
             self.command["grasper"] = 0
 
-    def before_going_to_center(self):
+    def before_going_to_center(self) -> None:
         self.drone.drone_angle_offset = np.pi
         self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
         if self.drone.path is None: 
@@ -164,7 +164,7 @@ class DroneController(StateMachine):
         self.drone.onRoute = True
 
     @going_to_center.enter
-    def on_enter_going_to_center(self):
+    def on_enter_going_to_center(self) -> None:
         self.drone.drone_angle_offset = np.pi
         if len(self.drone.path)==0 and self.drone.nextWaypoint is None:
             self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
@@ -177,16 +177,16 @@ class DroneController(StateMachine):
         self.command["grasper"] = 1
 
     @going_to_center.exit
-    def on_exit_going_to_center(self):
+    def on_exit_going_to_center(self) -> None:
         self.drone.drone_angle_offset = 0
 
-    def before_approaching_center(self):
+    def before_approaching_center(self) -> None:
         self.drone.onRoute = False
         self.drone.nextWaypoint = None
         self.drone.path = []
     
     @approaching_center.enter
-    def enter_approaching_center(self):
+    def enter_approaching_center(self) -> None:
         self.command = self.drone.get_control_from_semantic()
         self.command["grasper"] = 1
 

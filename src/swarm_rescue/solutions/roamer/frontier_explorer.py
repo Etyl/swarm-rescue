@@ -1,7 +1,10 @@
+from typing import List, Set, Optional
 import numpy as np
-from scipy.ndimage import label
+from scipy.ndimage import label # type: ignore
 from enum import Enum
-import cv2
+
+from solutions.types.types import Vector2D # type: ignore
+
 
 class Zone(Enum):
     EMPTY = 0
@@ -10,20 +13,20 @@ class Zone(Enum):
     RESCUE_CENTER = 3
     INEXPLORED = -1
 
-class FrontierExplorer():
+class FrontierExplorer:
     """
     Class that implements the Wavefront Detector algorithm
     """
-    def __init__(self, map, drone_position, frontiers_threshold):
+    def __init__(self, map, drone_position: Vector2D, frontiers_threshold: int):
         self.map = map
-        self.drone_position = drone_position
-        self.frontiers_threshold = frontiers_threshold
-        self.frontiers = self.computeWFD()
-        self.connectedMap = None
-        self.connectedCount = None
+        self.drone_position : Vector2D = drone_position
+        self.frontiers_threshold : int = frontiers_threshold
+        self.frontiers : List[List[Vector2D]] = self.computeWFD()
+        self.connectedMap : Optional[np.ndarray[int, np.shape(2)]] = None
+        self.connectedCount : Optional[List[int]] = None
         self.buildConnectedComponents()
 
-    def computeWFD(self):
+    def computeWFD(self) -> List[List[Vector2D]]:
         """
         Compute the Wavefront Detector algorithm on the current map
         """
@@ -35,7 +38,7 @@ class FrontierExplorer():
         # Run the Wavefront Detector algorithm
         wavefront_map = np.copy(temp_map)
         wavefront_value = 1
-        wavefront_map[self.drone_position[0], self.drone_position[1]] = wavefront_value
+        wavefront_map[self.drone_position.x, self.drone_position.y] = wavefront_value
 
         while wavefront_value <= np.max(wavefront_map):
             indices = np.where(wavefront_map == wavefront_value)
@@ -54,7 +57,7 @@ class FrontierExplorer():
         
         return frontiers
 
-    def extract_frontiers(self, wavefront_map, min_points=5):
+    def extract_frontiers(self, wavefront_map, min_points=5) -> List[List[Vector2D]]:
         """
         Extract frontiers from the wavefront map
         params:
@@ -63,7 +66,7 @@ class FrontierExplorer():
         """
         # Extract frontiers from the wavefront map
         frontiers = []
-        visited = set()
+        visited : Set = set()
         
         for i in range(wavefront_map.shape[0]):
             for j in range(wavefront_map.shape[1]):
@@ -74,7 +77,7 @@ class FrontierExplorer():
 
         return frontiers
 
-    def find_frontier(self, wavefront_map, start_row, start_col, visited):
+    def find_frontier(self, wavefront_map, start_row, start_col, visited) -> List[Vector2D]:
         """
         Find a frontier starting from the given point
         Doing a DFS to find a frontier starting from the given point
@@ -82,7 +85,7 @@ class FrontierExplorer():
         """
 
         # DFS to find a frontier starting from the given point
-        frontier = []
+        frontier : List[Vector2D] = []
         stack = [(start_row, start_col)]
 
         while stack:
@@ -108,7 +111,7 @@ class FrontierExplorer():
                 # print("Point ", current_row, current_col, " has empty neighbor : ", has_empty_neighbor)
                 # END DEBUG
 
-                frontier.append((current_row, current_col))
+                frontier.append(Vector2D(current_row, current_col))
                 visited.add((current_row, current_col))
 
                 neighbors = [(current_row + x, current_col + y) for x in [-1, 0, 1] for y in [-1, 0, 1] if (x != 0 or y != 0)]
@@ -155,13 +158,13 @@ class FrontierExplorer():
 
         for idx, frontier in enumerate(frontiers):
             # Calculate the center of the frontier
-            frontier_center = (
-                sum(point[0] for point in frontier) / len(frontier),
-                sum(point[1] for point in frontier) / len(frontier)
+            frontier_center = Vector2D(
+                sum(point.x for point in frontier) / len(frontier),
+                sum(point.y for point in frontier) / len(frontier)
             )
 
             # Calculate the distance from the robot to the center of the frontier
-            distance = np.sqrt((frontier_center[0] - curr_row)**2 + (frontier_center[1] - curr_col)**2)
+            distance = np.sqrt((frontier_center.x - curr_row)**2 + (frontier_center.y - curr_col)**2)
 
             # Update the best frontier if the current one is closer
             if distance < best_distance:
@@ -171,30 +174,33 @@ class FrontierExplorer():
         # Return the center and the points of the chosen frontier
         chosen_frontier = frontiers[best_frontier_idx]
         chosen_frontier_center = (
-            int(sum(point[0] for point in chosen_frontier) / len(chosen_frontier)),
-            int(sum(point[1] for point in chosen_frontier) / len(chosen_frontier))
+            int(sum(point.x for point in chosen_frontier) / len(chosen_frontier)),
+            int(sum(point.y for point in chosen_frontier) / len(chosen_frontier))
         )
 
         return chosen_frontier_center
 
-    def getFrontiers(self):
+    def getFrontiers(self) -> List[List[Vector2D]]:
         """
         Return the frontiers
         """
         return self.frontiers
     
-    def getFrontiersCount(self):
+    def getFrontiersCount(self) -> Optional[List[int]]:
         """
         Return the frontiers count
         """
-        frontierCount = []
+        if self.connectedMap is None or self.connectedCount is None:
+            return None
+
+        frontier_count : List[int] = []
         for frontier in self.frontiers:
 
-            [x,y] = frontier[len(frontier)//2]
-            connectedZoneID = self.connectedMap[x,y]
-            frontierCount.append(self.connectedCount[connectedZoneID])
+            center = frontier[len(frontier)//2]
+            connected_zone_id = self.connectedMap[center.x,center.y]
+            frontier_count.append(self.connectedCount[connected_zone_id])
         
-        return frontierCount
+        return frontier_count
 
 
     def extractGrid(self, msg):

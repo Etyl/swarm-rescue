@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import time
 import pyastar2d
 import cython
+from typing import List, Optional
 
 cimport numpy as cnp
 from libc.math cimport sqrt
@@ -204,7 +205,7 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
     return start, end
 
 
-def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30):
+def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30) -> Optional[List[List[int]]]:
     """
     Args:
         map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
