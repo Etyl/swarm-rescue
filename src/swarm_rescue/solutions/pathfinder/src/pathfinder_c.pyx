@@ -20,7 +20,7 @@ debug_mode = False
 output = "./solve"
 
 
-cdef border_from_map_np(map : np.ndarray, robot_radius : int):
+def border_from_map_np(map : np.ndarray, robot_radius : int):
     """
     Args:
         map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
@@ -31,6 +31,7 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
     
     new_map = np.zeros(map.shape).astype(np.float32)
     new_map[map > 1.5] = 1
+
     for _ in range(robot_radius):
         roll_map = (np.roll(new_map,(1, 0), axis=(1, 0))+
                     np.roll(new_map,(0, 1), axis=(1, 0))+
@@ -42,8 +43,8 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
                     np.roll(new_map,(-1, 1), axis=(1, 0)))
         roll_map[roll_map>0.5] = 1
         new_map += roll_map
-
     new_map[map > 1.5] = np.inf
+
     new_map = new_map*robot_radius
     
     bump_map = (len(map)+len(map[0]))*np.ones(map.shape).astype(np.float32)
@@ -205,7 +206,7 @@ def findPointsAvailable(map_border : np.ndarray, start, end):
     return start, end
 
 
-def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30) -> Optional[List[List[int]]]:
+def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30) -> Optional[np.ndarray]:
     """
     Args:
         map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied

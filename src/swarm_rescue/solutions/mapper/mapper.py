@@ -311,7 +311,7 @@ class Map:
         grid_start = zoom_factor * self.world_to_grid(start)
         grid_end = zoom_factor * self.world_to_grid(end)
 
-        grid_path : Optional[List[List[int]]] = pathfinder(obstacle_grid, grid_start.array, grid_end.array, robot_radius=40//zoom_factor)
+        grid_path : Optional[np.ndarray] = pathfinder(obstacle_grid, grid_start.array, grid_end.array, robot_radius=40//zoom_factor)
 
         if grid_path is None:
             return None
