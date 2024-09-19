@@ -20,7 +20,7 @@ debug_mode = False
 output = "./solve"
 
 
-def border_from_map_np(map : np.ndarray, robot_radius : int):
+cdef border_from_map_np(map : np.ndarray, robot_radius : int):
     """
     Args:
         map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
@@ -148,7 +148,7 @@ cdef segmentize_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int
 
     return new_path
 
-def neighbors(map,point):
+cdef neighbors(map,point):
     neighbors = []
     if point[0]>0:
         neighbors.append((point[0]-1,point[1]))
@@ -160,7 +160,7 @@ def neighbors(map,point):
         neighbors.append((point[0],point[1]+1))
     return neighbors
 
-def findPointsAvailable(map_border : np.ndarray, start, end):
+cdef findPointsAvailable(map_border : np.ndarray, start, end):
     # find closest available point to start and end using BFS
     start = np.array(start)
     end = np.array(end)
@@ -213,85 +213,22 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30
         start: tuple of start coordinates
         end: tuple of end coordinates
     """
-    if debug_mode:
+    map_border = border_from_map_np(map, robot_radius)
 
-        t0 = time.perf_counter()
-        map_border = border_from_map_np(map, robot_radius)
-        
-        start,end = findPointsAvailable(map_border, start, end)
+    start,end = findPointsAvailable(map_border, start, end)
 
-        # assert map_border.min() > 0.5, "cost of moving must be at least 1"
+    path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
+    if path is None:
+        return None
 
-        tp0 = time.perf_counter()
-        path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
-        tp = time.perf_counter() - tp0
-        if path is None:
-            print("No path found")
-            return None
+    path_smooth = smooth_path(map_border, path.astype(DTYPE))
 
-        ts0 = time.perf_counter()
-        path_smooth = smooth_path(map_border, path.astype(DTYPE))
-        
-        path_refined = segmentize_path(map_border, np.array(path_smooth).astype(DTYPE))
+    path_refined = segmentize_path(map_border, np.array(path_smooth).astype(DTYPE))
+    path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
+
+    for _ in range(PATH_REFINEMENTS-1):
+        path_refined = segmentize_path(map_border, np.array(path_refined).astype(DTYPE))
         path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
-        
-        for _ in range(PATH_REFINEMENTS-1):
-            path_refined = segmentize_path(map_border, np.array(path_refined).astype(DTYPE))
-            path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
-        
-        ts = time.perf_counter() - ts0
-        
-        total_time = time.perf_counter() - t0
-        print(f"=========PATHFINDING===========")
-        print(f"Time : {total_time:.6f}")
-        print(f"A* : {tp/total_time*100:.1f}% | Refinement : {ts/total_time*100:.1f}%")   
-    else:    
-        map_border = border_from_map_np(map, robot_radius)
-        
-        start,end = findPointsAvailable(map_border, start, end)
 
-        path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
-        if path is None:
-            return None
-
-        path_smooth = smooth_path(map_border, path.astype(DTYPE))
-        
-        path_refined = segmentize_path(map_border, np.array(path_smooth).astype(DTYPE))
-        path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
-        
-        for _ in range(PATH_REFINEMENTS-1):
-            path_refined = segmentize_path(map_border, np.array(path_refined).astype(DTYPE))
-            path_refined = smooth_path(map_border, np.array(path_refined).astype(DTYPE))
-       
-    if save_images:
-        img_border = map_border.astype(np.float32).copy()
-        plt.imshow(img_border)
-        plt.savefig("./border.png")
-
-        current_output = output+"-raw.png"
-        plt.figure()
-        path_plot = np.array(path)
-        plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-        plt.imshow(img_border)
-        print(f"Plotting path to {current_output}, {len(path)} points)")
-        plt.savefig(current_output)
-
-        current_output = output+"-smooth.png"
-        plt.figure()
-        path_plot = np.array(path_smooth)
-        plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-        plt.imshow(img_border)
-        print(f"Plotting path to {current_output}, {len(path_smooth)} points)")
-        plt.savefig(current_output)
-
-        current_output = output+"-refined.png"
-        plt.figure()
-        path_plot = np.array(path_refined)
-        plt.plot(path_plot[:,1],path_plot[:,0],color="red")
-        plt.imshow(img_border)
-        print(f"Plotting path to {current_output}, {len(path_refined)} points)")
-        plt.savefig(current_output)
-
-    
     return path_refined
 
