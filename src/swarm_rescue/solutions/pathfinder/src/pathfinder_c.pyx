@@ -2,7 +2,6 @@ import numpy as np
 import pyastar2d
 import cython
 from typing import Optional
-
 cimport numpy as cnp
 from libc.math cimport sqrt
 
@@ -12,9 +11,6 @@ ctypedef cnp.int64_t DTYPE_t
 
 SUB_SEGMENT_SIZE = 10 # the number of segment to divide each path segment into
 PATH_REFINEMENTS = 3 # number of times to refine the path
-save_images = False
-debug_mode = False
-output = "./solve"
 
 
 cdef border_from_map_np(map : np.ndarray, robot_radius : int):
@@ -251,10 +247,6 @@ cdef findPointsAvailable(map_border : np.ndarray, start, end):
         for neighbor in neighbors(map_border, current):
             if not explored[neighbor[0]][neighbor[1]]:
                 queue.append(neighbor)
-    
-    if debug_mode:
-        print(f"Start : {start}, End : {end}")
-        print(f"Start cost : {map_border[start[0]][start[1]]}, End cost : {map_border[end[0]][end[1]]}")
     
     return start, end
 

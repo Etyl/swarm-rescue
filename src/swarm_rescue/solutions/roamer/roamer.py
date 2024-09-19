@@ -8,7 +8,7 @@ from statemachine import StateMachine, State
 
 from solutions.mapper.mapper import Map  # type: ignore
 from solutions.mapper.mapper import Zone  # type: ignore
-from solutions.roamer.frontier_explorer import FrontierExplorer  # type: ignore
+from solutions.roamer.frontier_explorer import get_frontiers  # type: ignore
 from solutions.utils.types import Vector2D # type: ignore
 from solutions.utils.utils import normalize_angle # type: ignore
 
@@ -281,11 +281,8 @@ class Roamer:
         if self.debug_mode: print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position.array))
         
         drone_position_grid = self.map.world_to_grid(drone_position)
-        fd = FrontierExplorer(map_matrix_copy, drone_position_grid, frontiers_threshold)
-        frontiers = fd.getFrontiers()
+        frontiers, frontier_count = get_frontiers(map_matrix_copy, drone_position_grid, frontiers_threshold)
         self.frontiers = frontiers
-        
-        frontier_count = fd.getFrontiersCount()
 
         if not frontiers:
             return None  # No frontiers found
