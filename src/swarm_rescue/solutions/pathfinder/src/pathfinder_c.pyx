@@ -120,11 +120,21 @@ cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_
             return is_path_free_high(map, x0, y0, x1, y1)
 
 
+cdef get_max_segment_index(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path, int i):
+    cdef int jmin=i+1, jmax=len(path)-1
+    cdef int j = (jmin+jmax)>>1
+    while jmax-jmin>1:
+        if is_path_free(map, path[i], path[j]):
+            jmin = j
+        else:
+            jmax = j
+        j = (jmin + jmax) >> 1
+    return j
+
 
 @cython.boundscheck(False) # type: ignore
 @cython.wraparound(False) # type: ignore
 cdef smooth_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
-
     if len(path)<2:
         return path
     cdef int i_ref = 0
@@ -134,17 +144,16 @@ cdef smooth_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t
     cdef int path_index = 1
     cdef int maxpath_index = len(path)
     while i_ref<maxpath_index:
-        if j_ref<maxpath_index and is_path_free(map, path[i_ref], path[j_ref]):
-            j_ref += 1
-        elif j_ref>=maxpath_index:
+        j_ref = get_max_segment_index(map, path, i_ref)
+        if j_ref>=maxpath_index-1:
             new_path[path_index] = path[maxpath_index-1]
             path_index += 1
             break
         else:
-            new_path[path_index] = path[j_ref-1]
+            new_path[path_index] = path[j_ref]
             path_index += 1
-            i_ref = j_ref-1
-            j_ref = i_ref+2
+            i_ref = j_ref
+
     if path_index >= maxpath_index:
         return new_path
     if new_path[max(path_index,maxpath_index-1)][0]!=path[maxpath_index-1][0] or new_path[max(path_index,maxpath_index-1)][1]!=path[maxpath_index-1][1]:

@@ -20,7 +20,7 @@ def test_small_border_map(benchmark: Any) -> None:
     benchmark(lambda: pathfinder(maze, [17,27], [45, 176], 5))
 
 
-@pytest.mark.skip(reason="Too slow for now")
+#@pytest.mark.skip(reason="Too slow for now")
 def test_medium_border_map(benchmark: Any) -> None:
     path: str = os.path.dirname(os.path.abspath(__file__))
     maze = get_maze(path + "/data/medium_maze.pkl")
