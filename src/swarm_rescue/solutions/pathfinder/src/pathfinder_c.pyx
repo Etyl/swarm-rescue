@@ -1,10 +1,7 @@
 import numpy as np
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
-import time
 import pyastar2d
 import cython
-from typing import List, Optional
+from typing import Optional
 
 cimport numpy as cnp
 from libc.math cimport sqrt
@@ -58,27 +55,74 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
 cdef interpolate_path(cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.int64_t, ndim=1] point2, float t):
     return point1 + (point2-point1)*t
 
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False) # turn off negative indexing for entire function
-@cython.cdivision(True)
-cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point1, cnp.ndarray[cnp.int64_t, ndim=1] point2):
-    cdef int n = int(np.sum(np.abs(point2-point1)))
-    cdef int[2] b = point1
-    cdef int[2] a = point2-point1
-    cdef int x1,y1,x2,y2
-    x1 = b[0]
-    y1 = b[1]
-    for t in range(1,n+2):
-        x2 = b[0] + (a[0]*t)/(n+1)
-        y2 = b[1] + (a[1]*t)/(n+1)
-        if map[x2][y2] > map[x1][y1]:
+
+
+@cython.boundscheck(False) # type: ignore
+@cython.wraparound(False) # type: ignore
+cdef is_path_free_low(cnp.ndarray[cnp.float32_t, ndim=2] map, int x0,int y0,int x1,int y1):
+    cdef int dx = x1 - x0
+    cdef int dy = y1 - y0
+    cdef int yi = 1
+    if dy < 0:
+        yi = -1
+        dy = -dy
+    cdef int D = (2 * dy) - dx
+    cdef int y = y0
+
+    for x in range(x0,x1+1):
+        if map[x][y] > map[x0][y0]:
             return False
-        x1 = x2
-        y1 = y2
+        if D > 0:
+            y = y + yi
+            D = D + (2 * (dy - dx))
+        else:
+            D = D + 2*dy
+
     return True
 
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False) # turn off negative indexing for entire function
+@cython.boundscheck(False) # type: ignore
+@cython.wraparound(False) # type: ignore
+cdef is_path_free_high(cnp.ndarray[cnp.float32_t, ndim=2] map, int x0,int y0,int x1,int y1):
+    cdef int dx = x1 - x0
+    cdef int dy = y1 - y0
+    cdef int xi = 1
+    if dx < 0:
+        xi = -1
+        dx = -dx
+    cdef int D = (2 * dx) - dy
+    cdef int x = x0
+
+    for y in range(y0, y1+1):
+        if map[x][y] > map[x0][y0]:
+            return False
+        if D > 0:
+            x = x + xi
+            D = D + (2 * (dx - dy))
+        else:
+            D = D + 2*dx
+
+    return True
+
+
+@cython.boundscheck(False) # type: ignore
+@cython.wraparound(False) # type: ignore
+cdef is_path_free(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=1] point0, cnp.ndarray[cnp.int64_t, ndim=1] point1):
+    cdef int x0=point0[0],y0=point0[1],x1=point1[0],y1=point1[1]
+    if abs(y1 - y0) < abs(x1 - x0):
+        if x0 > x1:
+            return is_path_free_low(map, x1, y1, x0, y0)
+        else:
+            return is_path_free_low(map, x0, y0, x1, y1)
+    else:
+        if y0 > y1:
+            return is_path_free_high(map, x1, y1, x0, y0)
+        else:
+            return is_path_free_high(map, x0, y0, x1, y1)
+
+
+
+@cython.boundscheck(False) # type: ignore
+@cython.wraparound(False) # type: ignore
 cdef smooth_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t, ndim=2] path):
 
     if len(path)<2:
@@ -108,8 +152,8 @@ cdef smooth_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int64_t
         path_index += 1
     return new_path[:path_index-1]
 
-@cython.boundscheck(False) # turn off bounds-checking for entire function
-@cython.wraparound(False) # turn off negative indexing for entire function
+@cython.boundscheck(False) # type: ignore
+@cython.wraparound(False) # type: ignore
 cdef segmentize(cnp.ndarray[cnp.int64_t, ndim=2] path, int i):
     cdef int num_sub_segments = np.sqrt(np.sum((path[i+1]-path[i])**2))/SUB_SEGMENT_SIZE
     return [np.rint(interpolate_path(path[i], path[i+1], t/(num_sub_segments+1))) for t in range(num_sub_segments+2)]
