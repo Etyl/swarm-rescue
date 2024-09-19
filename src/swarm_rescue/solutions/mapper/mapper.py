@@ -8,7 +8,7 @@ from typing import List, TYPE_CHECKING, Optional, Dict
 from solutions.utils.types import Vector2D  # type: ignore
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
 from solutions.mapper.grid import Grid # type: ignore
-from solutions.pathfinder.pathfinder import pathfinder # type: ignore
+from solutions.pathfinder.pathfinder import pathfinder, pathfinder_fast # type: ignore
 
 from solutions.pathfinder.pathfinder import * # type: ignore
 from solutions.mapper.utils import display_grid # type: ignore
@@ -273,7 +273,7 @@ class Map:
         #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         #self.update_map()
     
-    def shortest_path(self, start: Vector2D, end: Vector2D) -> Optional[List[Vector2D]]:
+    def shortest_path(self, start: Vector2D, end: Vector2D, fast=False) -> Optional[List[Vector2D]]:
         """
         returns the shortest path between start and end
         Params:
@@ -311,7 +311,12 @@ class Map:
         grid_start = zoom_factor * self.world_to_grid(start)
         grid_end = zoom_factor * self.world_to_grid(end)
 
-        grid_path : Optional[np.ndarray] = pathfinder(obstacle_grid, grid_start.array, grid_end.array, robot_radius=40//zoom_factor)
+        grid_path: Optional[np.ndarray] = None
+        if fast:
+            grid_path = pathfinder_fast(obstacle_grid, grid_start.array, grid_end.array)
+        else:
+            grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, robot_radius=40//zoom_factor)
+
 
         if grid_path is None:
             return None

@@ -285,3 +285,15 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30
 
     return path_refined
 
+
+def pathfinder_fast(map:np.ndarray, start:np.ndarray, end:np.ndarray) -> Optional[np.ndarray]:
+    """
+    Returns the A* path between start and end without any trajectory optimization
+    """
+    map_border = np.ones(map.shape).astype(np.float32)
+    map_border[map>1.5] = np.inf
+
+    start,end = findPointsAvailable(map_border, start, end)
+    path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
+
+    return path

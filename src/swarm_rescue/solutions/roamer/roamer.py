@@ -541,7 +541,7 @@ class Roamer:
             - target: the target
         """
         if target is None: return np.inf, 1
-        path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
+        path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target), fast=True)
 
         if path is None or len(path) <= 1:
             return np.inf, 1
