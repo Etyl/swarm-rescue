@@ -69,3 +69,4 @@ src/swarm_rescue/solutions/mapper/src/grid_c.c
 *.o
 /src/swarm_rescue/solutions/mapper/build/
 /src/swarm_rescue/solutions/pathfinder/build/
+/src/swarm_rescue/solutions/roamer/build/

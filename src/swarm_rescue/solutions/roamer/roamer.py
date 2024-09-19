@@ -281,10 +281,13 @@ class Roamer:
         if self.debug_mode: print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position.array))
         
         drone_position_grid = self.map.world_to_grid(drone_position)
-        frontiers, frontier_count = get_frontiers(map_matrix_copy, drone_position_grid, frontiers_threshold)
-        self.frontiers = frontiers
+        frontiers_output, frontier_count = get_frontiers(map_matrix_copy, drone_position_grid.array, frontiers_threshold)
+        vector_frontiers = []
+        for frontier in frontiers_output:
+            vector_frontiers.append([Vector2D(p[0], p[1]) for p in frontier])
+        self.frontiers = vector_frontiers
 
-        if not frontiers:
+        if not self.frontiers:
             return None  # No frontiers found
 
         # Find the frontier with the closest center to the robot
@@ -298,7 +301,7 @@ class Roamer:
         selected_frontiers_repulsion_angle : List[float] = []
         
         # select the closest frontiers
-        for idx, frontier in enumerate(frontiers):
+        for idx, frontier in enumerate(self.frontiers):
             
             frontier_center = Vector2D(
                 sum(point.x for point in frontier) / len(frontier),
@@ -319,7 +322,7 @@ class Roamer:
         
         # calculate the path length for each selected frontier
         for idx,frontier_id in enumerate(selected_frontiers_id):
-            frontier = frontiers[frontier_id]
+            frontier = self.frontiers[frontier_id]
             frontier_center = Vector2D(
                 sum(point.x for point in frontier) / len(frontier),
                 sum(point.y for point in frontier) / len(frontier)
@@ -329,7 +332,7 @@ class Roamer:
             selected_frontiers_repulsion_angle.append(repulsion_angle)
 
         # parameters
-        frontiers = [frontiers[idx] for idx in selected_frontiers_id]
+        frontiers = [self.frontiers[idx] for idx in selected_frontiers_id]
         frontier_count = np.array([frontier_count[idx] for idx in selected_frontiers_id])
         selected_frontiers_distance_array = np.array(selected_frontiers_distance)
         selected_frontiers_repulsion_angle_array = np.array(selected_frontiers_repulsion_angle)
