@@ -266,7 +266,9 @@ class Roamer:
         with open(output_path, 'a') as file:
             np.savetxt(file, numeric_map, fmt='%3d', delimiter=', ')
             file.write('\n') 
-    
+
+
+    # TODO : optimize and parallelize
     def find_next_unexplored_target(self, frontiers_threshold: int) -> Optional[Vector2D]:
         """
         Find the closest unexplored target from the drone's curretn position
@@ -541,7 +543,7 @@ class Roamer:
             - target: the target
         """
         if target is None: return np.inf, 1
-        path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target), fast=True)
+        path : Optional[List[Vector2D]] = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target), fast=True)
 
         if path is None or len(path) <= 1:
             return np.inf, 1
@@ -550,20 +552,14 @@ class Roamer:
         for k in range(len(path)-1):
             path_length += path[k].distance(path[k+1])
         
-        repulsion = self.drone.repulsion
-        if repulsion.norm()>0 : repulsion = repulsion.normalize()
-        
         next_waypoint = path[-2]
         waypoint_direction : Vector2D = next_waypoint - self.drone.get_position()
         waypoint_direction.normalize()
 
         angle_waypoint = waypoint_direction.get_angle(Vector2D(1,0))
         angle_waypoint = normalize_angle(angle_waypoint+self.drone.get_angle())
-        angle_repulsion = repulsion.get_angle(Vector2D(1,0))
-        angle = normalize_angle(angle_repulsion-angle_waypoint)
 
-        return path_length, abs(angle)/np.pi
-
+        return path_length, abs(angle_waypoint)/np.pi
 
 
     def find_path(self, frontiers_threshold):
