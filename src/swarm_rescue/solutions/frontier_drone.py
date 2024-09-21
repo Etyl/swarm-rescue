@@ -48,7 +48,7 @@ class FrontierDrone(DroneAbstract):
         self.drone_angle : float = 0 # The angle of the drone
         self.drone_angle_offset : float = 0 # The angle offset of the drone that can be changed by the states
         self.found_wounded : bool = False # True if the drone has found a wounded person
-        self.wounded_visible : bool = False # True if the wounded person is visible
+        self.last_wounded_seen : int = 10000 # time (frames) since the wounded was last seen
         self.last_angles : Deque[float] = deque() # queue of the last angles
         self.last_positions : Deque[Vector2D] = deque() # queue of the last positions
         self.repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the other drones
@@ -58,9 +58,9 @@ class FrontierDrone(DroneAbstract):
         self.on_center : bool = False # True if the drone is in the center and needs to stop to deliver wounded
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
 
+        self.rescue_center_position: Optional[Vector2D] = None
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
         self.wounded_target : Optional[Vector2D] = None # The wounded position to go to
-
         self.drone_list : List[DroneData] = [] # The list of drones
 
         ## Debug controls
@@ -71,6 +71,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False
+        self.debug_mapper = False
         self.debug_lidar = False
         self.debug_repulsion = False
         self.debug_kill_zones = False
@@ -86,9 +87,7 @@ class FrontierDrone(DroneAbstract):
                         "rotation": 0.0,
                         "grasper": 0}
 
-        self.map : Map = Map(drone=self, area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, identifier=self.identifier, debug_mode=True)
-        self.rescue_center_position : Optional[Vector2D] = None
-
+        self.map : Map = Map(drone=self, area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, identifier=self.identifier, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer : Localizer = Localizer()
@@ -117,6 +116,10 @@ class FrontierDrone(DroneAbstract):
     @property
     def found_center(self) -> bool:
         return self.rescue_center_position is not None
+
+    @property
+    def wounded_visible(self) -> bool:
+        return self.last_wounded_seen < 20
 
 
     def compute_point_of_interest(self):
@@ -304,7 +307,7 @@ class FrontierDrone(DroneAbstract):
         # check if wounded target is visible
         wounded_pos = get_wounded_position()
         if self.wounded_target is not None and wounded_pos.distance(self.wounded_target) < FrontierDrone.WOUNDED_DISTANCE:
-            self.wounded_visible = True
+            self.last_wounded_seen = 0
 
         for k in range(len(self.wounded_found_list)):
             wounded = self.wounded_found_list[k]
@@ -464,7 +467,7 @@ class FrontierDrone(DroneAbstract):
 
         self.clear_wounded_found()
 
-        self.wounded_visible = False
+        self.last_wounded_seen += 1
         if detection_semantic:
             for data in detection_semantic:
                 # If the wounded person detected is held by nobody
