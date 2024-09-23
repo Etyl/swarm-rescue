@@ -36,12 +36,10 @@ class Zone(Enum):
     INEXPLORED = -1
 
 class Map:
-    def __init__(self, drone : FrontierDrone, area_world, drone_lidar, resolution, identifier, debug_mode=False):
+    def __init__(self, area_world, resolution, identifier, debug_mode=False):
         self.resolution = resolution
         self.debug_mode = debug_mode
-        self.drone_lidar = drone_lidar
-        self.drone_id : int = identifier
-        self.drone : FrontierDrone = drone
+        drone_id : int = identifier
 
         self.area_world = area_world
 
@@ -61,12 +59,12 @@ class Map:
         self.no_gps_zones : List[Vector2D] = []
 
     
-    def update_confidence_grid(self, pose):
+    def update_confidence_grid(self, pose, lidar, drone: FrontierDrone):
         """
         Update confidence grid with drone's semantic sensor data
         """
-        lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
-        lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
+        lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
+        lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
         # downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
         # downsample_indices = downsample_indices[downsample_indices % 2 == 0]
@@ -80,7 +78,7 @@ class Map:
 
         world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
-        if not self.drone.gps_disabled:
+        if not drone.gps_disabled:
             self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE)
         else:
             self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE/2)
@@ -88,13 +86,13 @@ class Map:
         #     self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 
         self.confidence_grid_downsampled.set_grid(np.clip(self.confidence_grid_downsampled.get_grid(), 0, CONFIDENCE_THRESHOLD))
-        #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(self.drone_id))
+        #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(drone_id))
         # Resize confidence_grid_downsampled to the size of the confidence_grid
         self.confidence_grid.set_grid(cv2.resize(self.confidence_grid_downsampled.get_grid(), (self.height, self.width), interpolation=cv2.INTER_LINEAR_EXACT))
 
-        #display_grid(self.confidence_grid_downsampled, pose, title="Confidence grid of drone {}".format(self.drone_id))
+        #display_grid(self.confidence_grid_downsampled, pose, title="Confidence grid of drone {}".format(drone_id))
 
-    def update_occupancy_grid(self, pose):
+    def update_occupancy_grid(self, pose, lidar, drone: FrontierDrone):
         """
         Update occupancy grid with drone's semantic sensor data
         """
@@ -102,11 +100,11 @@ class Map:
         boundary_mask = np.logical_or(self.occupancy_grid.get_grid() == THRESHOLD_MIN, self.occupancy_grid.get_grid() == THRESHOLD_MAX)
         buffer = self.occupancy_grid.get_grid().copy()
 
-        lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
-        lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
+        lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
+        lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        lidar_dist = self.drone_lidar.get_sensor_values()[::EVERY_N].copy()
-        lidar_angles = self.drone_lidar.ray_angles[::EVERY_N].copy()
+        lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
+        lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
         #downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
         #downsample_indices = downsample_indices[downsample_indices % 2 == 0]
@@ -121,7 +119,7 @@ class Map:
         downsampled_lidar_dist = lidar_dist
         downsampled_lidar_angles = lidar_angles
 
-        if self.drone.gps_disabled:
+        if drone.gps_disabled:
             max_range = 0.9 * MAX_RANGE_LIDAR_SENSOR
         else:
             max_range = 0.65 * MAX_RANGE_LIDAR_SENSOR
@@ -146,8 +144,8 @@ class Map:
         self.binary_occupancy_grid = np.where(self.occupancy_grid.get_grid() > 0, 1, -1)
 
         #self.filter_occupancy_grid()
-        #self.occupancy_grid.display(pose, title="Occupancy grid of drone {}".format(self.drone_id))
-        #display_grid(self.occupancy_grid, pose, title="Occupancy grid of drone {}".format(self.drone_id))
+        #self.occupancy_grid.display(pose, title="Occupancy grid of drone {}".format(drone_id))
+        #display_grid(self.occupancy_grid, pose, title="Occupancy grid of drone {}".format(drone_id))
     
     def filter_occupancy_grid(self):
         """
@@ -156,14 +154,14 @@ class Map:
         #self.binary_occupancy_grid = cv2.erode(self.binary_occupancy_grid, np.ones((2,2), np.uint8), iterations=1)
 
 
-    def update_map(self):
+    def update_map(self, drone: FrontierDrone):
         """
         Update the map with the occupancy grid and the confidence grid
         """
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        if self.drone.debug_map and self.drone_id==0:
+        if drone.debug_map and drone_id==0:
            self.display_map()
 
     def __setitem__(self, pos, zone):
@@ -246,15 +244,15 @@ class Map:
     def get_height(self):
         return self.height
     
-    def update(self, pose):
+    def update(self, pose, lidar, drone: FrontierDrone):
         """
         Update the map
         """
-        self.update_confidence_grid(pose)
-        self.update_occupancy_grid(pose)
-        self.update_map()
+        self.update_confidence_grid(pose, lidar, drone)
+        self.update_occupancy_grid(pose, lidar, drone)
+        self.update_map(drone)
 
-    def merge(self, other_map : "Map"):
+    def merge(self, other_map : "Map", drone: FrontierDrone):
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
@@ -268,8 +266,8 @@ class Map:
                 self.kill_zones[other_id] = other_map.kill_zones[other_id]
                 reset = True
         if reset:
-            self.drone.path = []
-            self.drone.nextWaypoint = None
+            drone.path = []
+            drone.nextWaypoint = None
         #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         #self.update_map()
     

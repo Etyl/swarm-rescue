@@ -87,7 +87,7 @@ class FrontierDrone(DroneAbstract):
                         "rotation": 0.0,
                         "grasper": 0}
 
-        self.map : Map = Map(drone=self, area_world=self.size_area, drone_lidar=self.lidar(), resolution=8, identifier=self.identifier, debug_mode=self.debug_mapper)
+        self.map : Map = Map(area_world=self.size_area, resolution=8, identifier=self.identifier, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer : Localizer = Localizer()
@@ -818,19 +818,19 @@ class FrontierDrone(DroneAbstract):
         # max_vel_angle = 0.08
         # if abs(self.measured_angular_velocity()) < max_vel_angle:
         if not self.gps_disabled:
-            self.map.update(estimated_pose)
+            self.map.update(estimated_pose, self.lidar(), self)
         else:
             max_vel_angle = 0.08
             if abs(self.measured_angular_velocity()) < max_vel_angle:
                 self.map.update_confidence_wall_map()
-                self.map.update(estimated_pose)
+                self.map.update(estimated_pose, self.lidar(), self)
         # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
         # self.newmap.update_map()
         # self.newmap.display_map()
         for other_drone in self.drone_list:
             if other_drone.id == self.identifier: continue
-            self.map.merge(other_drone.map)
+            self.map.merge(other_drone.map, self)
 
 
     def set_selected_frontier_id(self, frontierId : int):
