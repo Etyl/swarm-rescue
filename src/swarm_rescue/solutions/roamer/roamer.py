@@ -4,18 +4,18 @@ implements roaming behavior of the drone
 """
 from __future__ import annotations
 
-from statemachine import StateMachine, State
-
 from solutions.mapper.mapper import Map  # type: ignore
 from solutions.mapper.mapper import Zone  # type: ignore
 from solutions.roamer.frontier_explorer import get_frontiers  # type: ignore
 from solutions.utils.types import Vector2D # type: ignore
 from solutions.utils.utils import normalize_angle # type: ignore
 
+from statemachine import StateMachine, State
 from typing import TYPE_CHECKING, Optional, Tuple, List
 import numpy as np
 import os
 import cv2
+from multiprocessing.pool import ThreadPool as Pool
 
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
@@ -323,15 +323,23 @@ class Roamer:
                 continue
         
         # calculate the path length for each selected frontier
+        frontiers = []
         for idx,frontier_id in enumerate(selected_frontiers_id):
             frontier = self.frontiers[frontier_id]
             frontier_center = Vector2D(
                 sum(point.x for point in frontier) / len(frontier),
                 sum(point.y for point in frontier) / len(frontier)
             )
-            distance, repulsion_angle = self.get_path_length(frontier_center)
-            selected_frontiers_distance[idx] = distance
-            selected_frontiers_repulsion_angle.append(repulsion_angle)
+            frontiers.append(frontier_center)
+
+        # TODO use fork pools instead
+        with Pool(len(frontiers)) as pool:
+            results = pool.map(self.get_path_length, frontiers)
+            for idx, (frontier_id, result) in enumerate(zip(selected_frontiers_id, results)):
+                distance, repulsion_angle = result
+                selected_frontiers_distance[idx] = distance
+                selected_frontiers_repulsion_angle.append(repulsion_angle)
+
 
         # parameters
         frontiers = [self.frontiers[idx] for idx in selected_frontiers_id]
@@ -536,6 +544,8 @@ class Roamer:
         # Si aucun point n'est trouvé, retourner None
         return None
 
+
+    # TODO: fix angle (fast shortest_path gives A* path so no indication on direction)
     def get_path_length(self, target : Optional[Vector2D]) -> Tuple[float,float]:
         """
         Get the length of the path to the target
