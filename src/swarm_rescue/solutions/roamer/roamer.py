@@ -69,17 +69,17 @@ class RoamerController(StateMachine):
         going_to_target.to(going_to_target)
     )
 
-    def __init__(self, drone: FrontierDrone, map: Map, debug_mode: bool = False):
+    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False) -> None:
         self.drone : FrontierDrone = drone
-        self.map = map
+        self.map : Map = drone_map
         self.command = {"forward": 0.0,
                         "lateral": 0.0,
                         "rotation": 0.0,
                         "grasper": 0}
-        self.debug_mode = debug_mode
-        self.roamer = Roamer(drone, map, debug_mode)
+        self.debug_mode: bool = debug_mode
+        self.roamer: Roamer = Roamer(drone, drone_map, debug_mode)
 
-        self.loop_count_going_to_target = 0
+        self.loop_count_going_to_target: int = 0
 
         self.target : Optional[Vector2D] = None
         self.none_target_count : int = 0
@@ -96,7 +96,7 @@ class RoamerController(StateMachine):
         self.waiting_time : int = 0
         self.last_time_updates : int = self._COMPUTE_FRONTIER_COOLDOWN
         self.first_time : bool = True
-        self.first_time_cooldown = 0
+        self.first_time_cooldown: int = 0
 
         super(RoamerController, self).__init__()
 
@@ -139,7 +139,7 @@ class RoamerController(StateMachine):
         return self.drone.get_position() is not None and not np.isnan(self.drone.get_position().array).any()
 
     def target_discorvered(self):
-        return (self.map[self.target] != Zone.UNEXPLORED or self.drone.nextWaypoint is None)
+        return self.map[self.target] != Zone.UNEXPLORED or self.drone.nextWaypoint is None
 
     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
         message = ". " + message if message else ""
@@ -248,18 +248,18 @@ class Roamer:
     Roamer class
     defines the roaming behavior of the drone
     """
-    def __init__(self, drone: FrontierDrone, map: Map, debug_mode: bool = False):
+    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False):
         self.frontiers : List[List[Vector2D]] = []
         self.drone : FrontierDrone = drone
-        self.map : Map = map
+        self.map : Map = drone_map
         self.debug_mode : bool = debug_mode
     
-    def print_num_map(self, map : Map, output_file='output.txt'):
+    def print_num_map(self, drone_map : Map, output_file='output.txt'):
         """
         Print the map to a file
         Debugging purposes
         """
-        numeric_map = np.vectorize(lambda x: x.value)(map)        
+        numeric_map = np.vectorize(lambda x: x.value)(drone_map)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         output_path = os.path.join(script_dir, output_file)
 
@@ -276,8 +276,7 @@ class Roamer:
         """
 
         map_matrix_copy = self.map.get_map_matrix().copy() # copy map (to not modify the original)
-  
-        map_matrix_copy = np.vectorize(lambda zone: zone.value)(map_matrix_copy) # convert to int (for the Frontier Explorer algorithms)
+
         drone_position = self.drone.get_position()
 
         if self.debug_mode: print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position.array))
@@ -292,12 +291,6 @@ class Roamer:
         if not self.frontiers:
             return None  # No frontiers found
 
-        # Find the frontier with the closest center to the robot
-        best_distance = float('inf')
-        best_frontier_idx = 0
-        best_count = 0
-
-        max_distance = np.inf
         selected_frontiers_id : List[int] = []
         selected_frontiers_distance : List[float] = []
         selected_frontiers_repulsion_angle : List[float] = []
@@ -364,7 +357,7 @@ class Roamer:
 
         #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)
         # select the best frontier
-        best_frontier_idx = np.argmax(score)
+        best_frontier_idx = int(np.argmax(score))
         #best_frontier_idx = np.random.choice(np.arange(len(frontiers)), p=softmax)
 
         # Return the center and the points of the chosen frontier
@@ -385,7 +378,7 @@ class Roamer:
         return chosen_frontier_center
 
 
-    def map_to_image(self, map):
+    def map_to_image(self, drone_map: Map):
         """
         returns the map as an image
         debuggin purposes
@@ -403,7 +396,7 @@ class Roamer:
         img = np.zeros((x_max_grid, y_max_grid, 3), np.uint8)
         for x in range(x_max_grid):
             for y in range(y_max_grid):
-                img[x][y] = color_map[map[x, y]]
+                img[x][y] = color_map[drone_map[x, y]]
 
         # zoom image
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
@@ -460,88 +453,6 @@ class Roamer:
         cv2.imshow("map_debug" + str(target_id), np.transpose(img, (1, 0, 2)))
         cv2.waitKey(1)
 
-
-    def convert_matrix_for_astar(self, matrix):
-        """
-        Convert the map matrix to a matrix that can be used by the A* algorithm
-        params:
-            - matrix: the map matrix with the Zone values
-        """
-        INF = 1000 # INF = 1000 c'est bien connu
-
-        conversion_dict = {
-            Zone.UNEXPLORED: INF,
-            Zone.OBSTACLE: INF,
-            Zone.RESCUE_CENTER: INF,
-            Zone.WOUNDED: 1,
-            Zone.EMPTY: 1,
-        }
-
-        converted_matrix = np.vectorize(lambda x: conversion_dict[x])(matrix)
-        return converted_matrix.astype(np.float32)
-    
-
-    def convert_matrix_for_pathfinder(self, matrix):
-        """
-        Convert the map matrix to a matrix that can be used by the A* algorithm
-        params:
-            - matrix: the map matrix with the Zone values
-        """
-        INF = 1000 # INF = 1000 c'est bien connu
-
-        conversion_dict = {
-            Zone.UNEXPLORED: 0,
-            Zone.OBSTACLE: 0,
-            Zone.RESCUE_CENTER: 0,
-            Zone.WOUNDED: 1,
-            Zone.EMPTY: 1,
-        }
-
-        converted_matrix = np.vectorize(lambda x: conversion_dict[x])(matrix)
-        return converted_matrix.astype(np.float32)
-    
-    def thicken_walls(self, matrix, n):
-        """
-        Thicken the walls in the map
-        in order to allow a smoother path
-        """
-        new_matrix = np.copy(matrix)
-        rows, cols = matrix.shape
-
-        for i in range(rows):
-            for j in range(cols):
-                if matrix[i, j] == Zone.OBSTACLE:
-                    for x in range(max(0, i - n), min(rows, i + n + 1)):
-                        for y in range(max(0, j - n), min(cols, j + n + 1)):
-                            if matrix[x, y] == Zone.EMPTY:
-                                new_matrix[x, y] = Zone.OBSTACLE
-
-        return new_matrix
-
-    def find_empty_point_near_wall(self, drone_position, grid_map, p):
-        x_max, y_max = grid_map.shape
-
-        # Définir la liste des voisins pour un point donné
-        def neighbors(point):
-            x, y = point
-            return [(x + i, y + j) for i in [-1, 0, 1] for j in [-1, 0, 1]
-                    if 0 <= x + i < x_max and 0 <= y + j < y_max and (i != 0 or j != 0)]
-
-        # Parcourir les points dans l'ordre croissant de distance depuis le drone
-        for d in range(1, max(x_max, y_max)):
-            for i in range(-d, d + 1):
-                for j in range(-d, d + 1):
-                    current_point = (drone_position[0] + i, drone_position[1] + j)
-
-                    # Vérifier si le point est à une distance minimale d'une case mur
-                    if (0 <= current_point[0] < x_max and 0 <= current_point[1] < y_max
-                            and grid_map[current_point] == 1):
-                        if all(grid_map[neighbor] != 1000 for neighbor in neighbors(current_point)):
-                            # Trouvé un point vide éloigné d'au moins p cases d'une case mur
-                            return current_point
-
-        # Si aucun point n'est trouvé, retourner None
-        return None
 
 
     # TODO: fix angle (fast shortest_path gives A* path so no indication on direction)

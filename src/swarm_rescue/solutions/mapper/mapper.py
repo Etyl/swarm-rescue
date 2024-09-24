@@ -35,20 +35,20 @@ class Zone:
     UNEXPLORED = -1
 
 class Map:
-    def __init__(self, area_world: List[int], resolution: int, debug_mode=False) -> None:
-        self.resolution = resolution
-        self.debug_mode = debug_mode
+    def __init__(self, area_world: List[int], resolution: int, debug_mode: bool=False) -> None:
+        self.resolution: int = resolution
+        self.debug_mode: bool = debug_mode
 
         self.width : int = int(area_world[0] / self.resolution + 0.5)
         self.height : int = int(area_world[1] / self.resolution + 0.5)
 
         self.occupancy_grid : Grid = Grid(area_world, resolution)
         self.binary_occupancy_grid : np.ndarray = np.zeros((self.width, self.height)).astype(np.uint8)
-        self.confidence_grid = Grid(area_world, resolution)
+        self.confidence_grid : Grid = Grid(area_world, resolution)
         self.confidence_grid_downsampled : Grid = Grid(area_world, resolution * 2)
         self.confidence_wall_map : np.ndarray = np.zeros((self.width, self.height)).astype(np.float64)
         
-        self.map = np.full((self.width, self.height), Zone.UNEXPLORED)
+        self.map : np.ndarray = np.full((self.width, self.height), Zone.UNEXPLORED)
 
         self.rescue_center : Optional[Vector2D] = None
         self.kill_zones : Dict[int, Vector2D] = {}
