@@ -101,8 +101,6 @@ class RoamerController(StateMachine):
         super(RoamerController, self).__init__()
 
     def no_path_to_target(self):
-        # TODO change implementation
-        # right now, we only increment a counter each time the check is called
         # if the counter reaches a certain threshold, we restart the search
         if self.loop_count_going_to_target >= self._LOOP_COUNT_GOING_TO_TARGET_THRESHOLD: return True
 
@@ -148,7 +146,6 @@ class RoamerController(StateMachine):
     def before_going_to_target(self):
         if self.debug_mode: print(f"Going to target {self.target}")
 
-        # TODO change implementation
         self.loop_count_going_to_target = 0 # reset position counter
 
         self.none_target_count = 0 # reset none target counter
@@ -215,7 +212,6 @@ class RoamerController(StateMachine):
 
     @going_to_target.enter
     def on_enter_going_to_target(self):
-        # TODO change implementation
         self.loop_count_going_to_target += 1 # increment position counter
 
         if self.test_position_close_start_point():
@@ -226,10 +222,6 @@ class RoamerController(StateMachine):
     def on_enter_searching_for_target(self):
         if self.debug_mode: print("Entering searching for target state")
         self.search_for_target()
-
-        # OTHER IMPL - ASYNC        
-        # asyncio.run(self.search_for_target())
-        # END OTHER IMPL - ASYNC
 
     def on_enter_start_roaming(self):
         if self.debug_mode: print("Entering start roaming state")
@@ -243,6 +235,8 @@ class RoamerController(StateMachine):
         dist = self.drone.get_position().distance(self.previous_searching_start_point)
         return dist < threshold
 
+
+# TODO idea for improvement: get frontiers from other neighbor drones to save some processing time and better spread the drones to the frontiers
 class Roamer:
     """
     Roamer class
@@ -268,7 +262,6 @@ class Roamer:
             file.write('\n') 
 
 
-    # TODO : optimize and parallelize
     def find_next_unexplored_target(self, frontiers_threshold: int) -> Optional[Vector2D]:
         """
         Find the closest unexplored target from the drone's curretn position
