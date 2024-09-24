@@ -87,7 +87,7 @@ class FrontierDrone(DroneAbstract):
                         "rotation": 0.0,
                         "grasper": 0}
 
-        self.map : Map = Map(area_world=self.size_area, resolution=8, identifier=self.identifier, debug_mode=self.debug_mapper)
+        self.map : Map = Map(area_world=self.size_area, resolution=8, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer : Localizer = Localizer()
@@ -715,7 +715,7 @@ class FrontierDrone(DroneAbstract):
                     self.nextWaypoint = None
                     kill_zone_x = self.last_other_drones_position[droneId][0].x + 50*math.cos(self.last_other_drones_position[droneId][1])
                     kill_zone_y = self.last_other_drones_position[droneId][0].y + 50*math.sin(self.last_other_drones_position[droneId][1])
-                    self.map.add_kill_zone(droneId, [kill_zone_x, kill_zone_y])
+                    self.map.add_kill_zone(droneId, Vector2D(kill_zone_x, kill_zone_y))
                     killed_ids.append(droneId)
                 else:
                     #print(f"Drone {droneId} left")

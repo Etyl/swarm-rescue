@@ -139,7 +139,7 @@ class RoamerController(StateMachine):
         return self.drone.get_position() is not None and not np.isnan(self.drone.get_position().array).any()
 
     def target_discorvered(self):
-        return (self.map[self.target] != Zone.INEXPLORED or self.drone.nextWaypoint is None)
+        return (self.map[self.target] != Zone.UNEXPLORED or self.drone.nextWaypoint is None)
 
     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
         message = ". " + message if message else ""
@@ -397,7 +397,7 @@ class Roamer:
             Zone.EMPTY: (255, 255, 255),
             Zone.WOUNDED: (0, 0, 255),
             Zone.RESCUE_CENTER: (255, 255, 0),
-            Zone.INEXPLORED: (0, 0, 0)
+            Zone.UNEXPLORED: (0, 0, 0)
         }
         
         img = np.zeros((x_max_grid, y_max_grid, 3), np.uint8)
@@ -421,7 +421,7 @@ class Roamer:
             Zone.EMPTY: (255, 255, 255),
             Zone.WOUNDED: (0, 0, 255),
             Zone.RESCUE_CENTER: (255, 255, 0),
-            Zone.INEXPLORED: (0, 0, 0),
+            Zone.UNEXPLORED: (0, 0, 0),
             1: (255, 255, 255),  # Color for points with value 1 (white)
             1000: (139, 69, 19)  # Color for points with value 1000 (brown)
         }
@@ -470,7 +470,7 @@ class Roamer:
         INF = 1000 # INF = 1000 c'est bien connu
 
         conversion_dict = {
-            Zone.INEXPLORED: INF,
+            Zone.UNEXPLORED: INF,
             Zone.OBSTACLE: INF,
             Zone.RESCUE_CENTER: INF,
             Zone.WOUNDED: 1,
@@ -490,7 +490,7 @@ class Roamer:
         INF = 1000 # INF = 1000 c'est bien connu
 
         conversion_dict = {
-            Zone.INEXPLORED: 0,
+            Zone.UNEXPLORED: 0,
             Zone.OBSTACLE: 0,
             Zone.RESCUE_CENTER: 0,
             Zone.WOUNDED: 1,

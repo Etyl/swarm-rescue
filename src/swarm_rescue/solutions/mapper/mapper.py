@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from enum import Enum
 import numpy as np
 import cv2
 from typing import List, TYPE_CHECKING, Optional, Dict
@@ -28,33 +27,30 @@ CONFIDENCE_THRESHOLD = 1000
 CONFIDENCE_THRESHOLD_MIN = 0
 KILL_ZONE_SIZE = 5
 
-class Zone(Enum):
+class Zone:
     EMPTY = 0
     OBSTACLE = 1
     WOUNDED = 2
     RESCUE_CENTER = 3
-    INEXPLORED = -1
+    UNEXPLORED = -1
 
 class Map:
-    def __init__(self, area_world, resolution, identifier, debug_mode=False):
+    def __init__(self, area_world: List[int], resolution: int, debug_mode=False) -> None:
         self.resolution = resolution
         self.debug_mode = debug_mode
-        drone_id : int = identifier
-
-        self.area_world = area_world
 
         self.width : int = int(area_world[0] / self.resolution + 0.5)
         self.height : int = int(area_world[1] / self.resolution + 0.5)
 
         self.occupancy_grid : Grid = Grid(area_world, resolution)
-        self.binary_occupancy_grid = np.zeros((self.width, self.height)).astype(np.uint8)
+        self.binary_occupancy_grid : np.ndarray = np.zeros((self.width, self.height)).astype(np.uint8)
         self.confidence_grid = Grid(area_world, resolution)
-        self.confidence_grid_downsampled = Grid(area_world, resolution * 2)
-        self.confidence_wall_map = np.zeros((self.width, self.height)).astype(np.float64)
+        self.confidence_grid_downsampled : Grid = Grid(area_world, resolution * 2)
+        self.confidence_wall_map : np.ndarray = np.zeros((self.width, self.height)).astype(np.float64)
         
-        self.map = np.full((self.width, self.height), Zone.INEXPLORED)
+        self.map = np.full((self.width, self.height), Zone.UNEXPLORED)
 
-        self.rescue_center = None
+        self.rescue_center : Optional[Vector2D] = None
         self.kill_zones : Dict[int, Vector2D] = {}
         self.no_gps_zones : List[Vector2D] = []
 
@@ -100,8 +96,8 @@ class Map:
         boundary_mask = np.logical_or(self.occupancy_grid.get_grid() == THRESHOLD_MIN, self.occupancy_grid.get_grid() == THRESHOLD_MAX)
         buffer = self.occupancy_grid.get_grid().copy()
 
-        lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
-        lidar_angles = lidar.ray_angles[::EVERY_N].copy()
+        #lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
+        #lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
@@ -161,7 +157,7 @@ class Map:
         #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        if drone.debug_map and drone_id==0:
+        if drone.debug_map and drone.identifier==0:
            self.display_map()
 
     def __setitem__(self, pos, zone):
@@ -175,19 +171,19 @@ class Map:
     def get_map_matrix(self):
         return self.map
     
-    def add_kill_zone(self, id, kill_zone):
+    def add_kill_zone(self, zone_id: int, kill_zone: Vector2D):
         """
         Add a kill zone to the map
         """
-        if id not in self.kill_zones:
-            self.kill_zones[id] = kill_zone
+        if zone_id not in self.kill_zones:
+            self.kill_zones[zone_id] = kill_zone
 
-    def remove_kill_zone(self, id):
+    def remove_kill_zone(self, zone_id: int):
         """
         Remove a kill zone from the map
         """
-        if id in self.kill_zones:
-            self.kill_zones.pop(id)
+        if zone_id in self.kill_zones:
+            self.kill_zones.pop(zone_id)
 
     def display_map(self):
         """
@@ -198,7 +194,7 @@ class Map:
             Zone.EMPTY: (255, 255, 255),
             Zone.WOUNDED: (0, 0, 255),
             Zone.RESCUE_CENTER: (255, 255, 0),
-            Zone.INEXPLORED: (0, 0, 0),
+            Zone.UNEXPLORED: (0, 0, 0),
             1: (255, 255, 255),  # Color for points with value 1 (white)
             1000: (139, 69, 19)  # Color for points with value 1000 (brown)
         }
@@ -281,7 +277,7 @@ class Map:
             - path: list of positions (world coordinates)
         """
         # self.binary_occupancy_grid = 1 if obstacle or unexplored, 0 if free
-        obstacle_grid = np.where(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.INEXPLORED), 2, 0).astype(np.float64)
+        obstacle_grid = np.where(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.UNEXPLORED), 2, 0).astype(np.float64)
         kill_zone_grid = np.zeros((self.width, self.height)).astype(np.float64)
         # put kill zones as obstacles
         if self.kill_zones:
@@ -311,7 +307,7 @@ class Map:
 
         grid_path: Optional[np.ndarray] = None
         if fast:
-            grid_path = pathfinder_fast(obstacle_grid, grid_start.array, grid_end.array)
+            grid_path  = pathfinder_fast(obstacle_grid, grid_start.array, grid_end.array)
         else:
             grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, robot_radius=40//zoom_factor)
 
