@@ -332,7 +332,6 @@ class Roamer:
             )
             frontiers.append(frontier_center)
 
-        # TODO use fork pools instead
         with Pool(len(frontiers)) as pool:
             results = pool.map(self.get_path_length, frontiers)
             for idx, (frontier_id, result) in enumerate(zip(selected_frontiers_id, results)):
