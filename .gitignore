@@ -2,6 +2,7 @@
 /docs
 src/swarm_rescue/tools/generated_code.py
 src/swarm_rescue/various
+src/swarm_rescue/solutions_off
 __pycache__
 *.profile
 *.calltree
@@ -61,12 +62,3 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
-./src/swarm_rescue/spg_overlay/gui_map/closed_playground.py
-
-*.png
-src/swarm_rescue/solutions/pathfinder/src/pathfinder_c.c
-src/swarm_rescue/solutions/mapper/src/grid_c.c
-*.o
-/src/swarm_rescue/solutions/mapper/build/
-/src/swarm_rescue/solutions/pathfinder/build/
-/src/swarm_rescue/solutions/roamer/build/
