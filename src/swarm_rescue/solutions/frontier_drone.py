@@ -66,9 +66,9 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = True # True if the path must be displayed
-        self.debug_wounded = True
-        self.debug_positions = True
+        self.debug_path = False # True if the path must be displayed
+        self.debug_wounded = False
+        self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False
@@ -336,14 +336,6 @@ class FrontierDrone(DroneAbstract):
         """
         updates the data of the drones
         """
-
-        """
-        # update the visibility of the drones
-        for data in self.drone_list:
-            data.visible = False
-        #drone_data.visible = True
-        """
-
         # update the wounded list
         if drone_data.wounded_target is not None:
             for k in range(len(self.wounded_found_list)):
