@@ -107,7 +107,7 @@ class RoamerController(StateMachine):
         if self.count_close_previous_searching_start_point >= self._COUNT_CLOSE_PREVIOUS_SEARCHING_START_POINT_THRESHOLD: return True
 
         # in case the drone has ended its path
-        if self.drone.nextWaypoint is None: return True
+        if self.drone.waypoint_index is None: return True
 
         # if there is no target
         if self.target is None or self.target==0: return True
@@ -129,7 +129,7 @@ class RoamerController(StateMachine):
         if v1.norm() == 0 or v2.norm() == 0:
             turning_angle = 0
         else: 
-            turning_angle = v1.dot(v2)/(v1.norm()*v2.norm())
+            turning_angle = (v1@v2)/(v1.norm()*v2.norm())
 
         return dist < 20 + (1+turning_angle)*20
 
@@ -137,7 +137,7 @@ class RoamerController(StateMachine):
         return self.drone.get_position() is not None and not np.isnan(self.drone.get_position().array).any()
 
     def target_discorvered(self):
-        return self.map[self.target] != Zone.UNEXPLORED or self.drone.nextWaypoint is None
+        return self.map[self.target] != Zone.UNEXPLORED or self.drone.waypoint_index is None
 
     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
         message = ". " + message if message else ""
@@ -150,7 +150,7 @@ class RoamerController(StateMachine):
 
         self.none_target_count = 0 # reset none target counter
 
-        self.drone.nextWaypoint = self.drone.path.pop()
+        self.drone.waypoint_index = 0
         self.drone.onRoute = True
     
     def search_for_target(self):

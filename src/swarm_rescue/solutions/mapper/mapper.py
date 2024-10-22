@@ -263,7 +263,7 @@ class Map:
                 reset = True
         if reset:
             drone.path = []
-            drone.nextWaypoint = None
+            drone.waypoint_index = None
         #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         #self.update_map()
     
@@ -316,7 +316,6 @@ class Map:
             return None
         path = [self.grid_to_world(Vector2D(pos[0] / zoom_factor, pos[1] / zoom_factor)) for pos in grid_path]
 
-        path.reverse()
         return path
 
     def update_confidence_wall_map(self):

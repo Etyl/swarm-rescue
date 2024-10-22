@@ -42,8 +42,7 @@ class FrontierDrone(DroneAbstract):
         self.drone_prev_position : Optional[Vector2D] = None
         self.onRoute : bool = False # True if the drone is on the route to the waypoint
         self.path : List[Vector2D] = []
-        self.lastWaypoint : Optional[Vector2D] = None # The last waypoint reached
-        self.nextWaypoint : Optional[Vector2D] = None # The next waypoint to go to
+        self.waypoint_index : Optional[int] = None # The index to the next waypoint to go to
         self.drone_position : Vector2D = Vector2D(0, 0) # The position of the drone
         self.drone_angle : float = 0 # The angle of the drone
         self.drone_angle_offset : float = 0 # The angle offset of the drone that can be changed by the states
@@ -109,6 +108,11 @@ class FrontierDrone(DroneAbstract):
         self.time : int = 0
         self.time_in_no_gps : int = 0
 
+
+        # TEMP / DEBUG
+
+        self.curr_proj: Optional[Vector2D] = None
+
     @property
     def gps_disabled(self) -> bool:
         return self.measured_compass_angle() is None
@@ -120,6 +124,13 @@ class FrontierDrone(DroneAbstract):
     @property
     def wounded_visible(self) -> bool:
         return self.last_wounded_seen < 20
+
+    @property
+    def next_waypoint(self) -> Optional[Vector2D]:
+        if self.waypoint_index is None or self.waypoint_index>=len(self.path):
+            return None
+        else:
+            return self.path[self.waypoint_index]
 
 
     def compute_point_of_interest(self):
@@ -147,13 +158,13 @@ class FrontierDrone(DroneAbstract):
         gives the angle to turn to in order to go to the next waypoint
         """
 
-        if self.nextWaypoint is None:
+        if self.next_waypoint is None:
             return 0
 
         def angle(v1, v2):
             return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
 
-        waypoint_vect = (self.nextWaypoint - pos).array
+        waypoint_vect = (self.next_waypoint - pos).array
         ref_vect = np.array([1, 0])
 
         drone_angle = normalize_angle(self.get_angle())
@@ -166,17 +177,17 @@ class FrontierDrone(DroneAbstract):
         """
         checks if the drone has reached the waypoint
         """
-
-        dist = pos.distance(self.nextWaypoint)
+        next_waypoint: Vector2D = self.next_waypoint
+        dist = pos.distance(next_waypoint)
         if len(self.path) == 0: return dist < 30
 
-        v1 : Vector2D = self.nextWaypoint - pos
-        v2 : Vector2D = self.path[-1] - self.nextWaypoint
+        v1 : Vector2D = next_waypoint - pos
+        v2 : Vector2D = self.path[-1] - next_waypoint
 
         if v1.norm() == 0 or v2.norm() == 0:
             turning_angle = 0
         else:
-            turning_angle = (v1.dot(v2))/(v1.norm()*v2.norm())
+            turning_angle = (v1@v2)/(v1.norm()*v2.norm())
 
         return dist < 15 + (1+turning_angle)*20
 
@@ -191,7 +202,7 @@ class FrontierDrone(DroneAbstract):
             map = self.map,
             semantic_values = self.semantic_values(),
             kill_zone_mode = self.kill_zone_mode,
-            nextWaypoint = self.nextWaypoint,
+            next_waypoint= self.next_waypoint,
         )
         return data
 
@@ -532,15 +543,30 @@ class FrontierDrone(DroneAbstract):
         command["forward"] = command["forward"]/norm
         command["lateral"] = command["lateral"]/norm
 
-        if self.nextWaypoint is not None and self.check_waypoint(pos):
+        if self.next_waypoint is not None and self.check_waypoint(pos):
             if self.check_waypoint(pos):
-                if len(self.path) > 0:
-                    self.lastWaypoint = self.nextWaypoint.copy()
-                    self.nextWaypoint = self.path.pop()
+                if self.waypoint_index < len(self.path)-1:
+                    self.waypoint_index += 1
                 else:
-                    self.nextWaypoint = None
+                    self.path = []
+                    self.waypoint_index = None
                     self.onRoute = False
+        self.update_waypoint_index()
+
         return command
+
+
+    def update_waypoint_index(self) -> None:
+        if self.waypoint_index is None:
+            return
+
+        curr_proj: Optional[Vector2D] = None
+        if 0 < self.waypoint_index <= len(self.path) - 1 and self.path[self.waypoint_index-1] != self.path[self.waypoint_index]:
+            curr_proj = self.get_position().project(self.path[self.waypoint_index-1],self.path[self.waypoint_index])
+            curr_proj += (self.path[self.waypoint_index]-self.path[self.waypoint_index-1]).normalize()*80
+
+        self.curr_proj = curr_proj
+
 
 
     def compute_rescue_center_position(self):
@@ -673,15 +699,15 @@ class FrontierDrone(DroneAbstract):
                 closest_drone = drone
 
         if (closest_drone is not None and
-            self.nextWaypoint is not None and
-            closest_drone.nextWaypoint is not None and
-            self.nextWaypoint.distance(closest_drone.nextWaypoint) < 30 and
+            self.next_waypoint is not None and
+            closest_drone.next_waypoint is not None and
+            self.next_waypoint.distance(closest_drone.next_waypoint) < 30 and
             self.identifier < closest_drone.id):
 
             self.ignore_repulsion = 30
 
         self.path = []
-        self.nextWaypoint = None
+        self.waypoint_index = None
         if self.controller.current_state == self.controller.approaching_wounded:
             self.controller.force_drone_stuck()
 
@@ -712,7 +738,7 @@ class FrontierDrone(DroneAbstract):
                 if (self.last_other_drones_position[droneId][0].distance(self.drone_position)) < RANGE_COMMUNICATION * 0.85:
                     #print(f"Drone {droneId} killed")
                     self.path = []
-                    self.nextWaypoint = None
+                    self.waypoint_index = None
                     kill_zone_x = self.last_other_drones_position[droneId][0].x + 50*math.cos(self.last_other_drones_position[droneId][1])
                     kill_zone_y = self.last_other_drones_position[droneId][0].y + 50*math.sin(self.last_other_drones_position[droneId][1])
                     self.map.add_kill_zone(droneId, Vector2D(kill_zone_x, kill_zone_y))
@@ -907,13 +933,21 @@ class FrontierDrone(DroneAbstract):
         if self.odometer_values() is None: return
 
         if self.debug_path:
-            drawn_path = self.path.copy()
-            if self.nextWaypoint is not None: drawn_path.append(self.nextWaypoint)
-            drawn_path.append(self.get_position())
-            for k in range(len(drawn_path)-1):
-                pt1 = np.array(drawn_path[k].array) + np.array(self.size_area) / 2
-                pt2 = np.array(drawn_path[k+1].array) + np.array(self.size_area) / 2
-                arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 255))
+            for k in range(len(self.path)-1):
+                pt1 = self.path[k].array + np.array(self.size_area) / 2
+                pt2 = self.path[k+1].array + np.array(self.size_area) / 2
+                arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(0, 255, 0))
+
+            if self.next_waypoint is not None:
+                pt1 = self.next_waypoint.array + np.array(self.size_area) / 2
+                pt2 = self.drone_position.array + np.array(self.size_area) / 2
+                arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 0))
+
+            if self.curr_proj is not None:
+                pt = self.curr_proj.array + np.array(self.size_area) / 2
+                arcade.draw_circle_filled(pt[0], pt[1], 10, [255,0,255])
+
+
 
         if self.debug_kill_zones and self.kill_zone_mode:
             for killed_drone_pos in self.map.kill_zones.values():

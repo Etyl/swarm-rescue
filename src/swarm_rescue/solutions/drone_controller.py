@@ -98,48 +98,26 @@ class DroneController(StateMachine):
         # self.drone.onRoute = False
         pass
 
-    """
-    def before_going_to_wounded(self):
-        min_dist = np.inf
-        target, target_path = None, None
-        for wounded in self.drone.wounded_found_list:
-            path = self.drone.get_path(wounded["position"])
-            if path is None: continue
-            dist = 0
-            for i in range(len(path)-1):
-                dist += np.sqrt((path[i+1][0] - path[i][0])**2 + (path[i+1][1] - path[i][1])**2)
-            if dist < min_dist:
-                min_dist = dist
-                target = wounded["position"]
-                target_path = path
-        if target is None: return
-        
-
-        self.drone.wounded_target = target
-        self.drone.path = target_path
-        self.drone.nextWaypoint = self.drone.path.pop()
-        self.drone.onRoute = True
-        """
 
     def before_going_to_wounded(self) -> None:
         self.drone.onRoute = False
-        self.drone.nextWaypoint = None
+        self.drone.waypoint_index = None
         self.drone.path = []
 
     @going_to_wounded.enter
     def on_enter_going_to_wounded(self) -> None:
-        if len(self.drone.path)==0 and self.drone.nextWaypoint is None:
+        if len(self.drone.path)==0 and self.drone.waypoint_index is None:
             self.drone.path = self.drone.get_path(self.drone.wounded_target)
             if self.drone.path is None: 
                 self.drone.path = []
                 return
             else:
-                self.drone.nextWaypoint = self.drone.path.pop()
+                self.drone.waypoint_index = 0
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
 
     def before_approaching_wounded(self) -> None:
         self.drone.onRoute = False
-        self.drone.nextWaypoint = None
+        self.drone.waypoint_index = None
         self.drone.path = []
     
     @approaching_wounded.enter
@@ -160,19 +138,19 @@ class DroneController(StateMachine):
         if self.drone.path is None: 
             self.drone.path = []
             return
-        self.drone.nextWaypoint = self.drone.path.pop()
+        self.drone.waypoint_index = 0
         self.drone.onRoute = True
 
     @going_to_center.enter
     def on_enter_going_to_center(self) -> None:
         self.drone.drone_angle_offset = np.pi
-        if len(self.drone.path)==0 and self.drone.nextWaypoint is None:
+        if len(self.drone.path)==0 and self.drone.waypoint_index is None:
             self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
             if self.drone.path is None: 
                 self.drone.path = []
                 return
             else:
-                self.drone.nextWaypoint = self.drone.path.pop()
+                self.drone.waypoint_index = 0
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
 
@@ -182,7 +160,7 @@ class DroneController(StateMachine):
 
     def before_approaching_center(self) -> None:
         self.drone.onRoute = False
-        self.drone.nextWaypoint = None
+        self.drone.waypoint_index = None
         self.drone.path = []
     
     @approaching_center.enter

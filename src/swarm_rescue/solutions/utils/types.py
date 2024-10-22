@@ -4,6 +4,8 @@ from typing import Optional, List, Union
 import numpy as np
 from dataclasses import dataclass
 
+from scipy.constants import point
+
 
 class Vector2D:
     def __init__(self, x : float = 0, y: float = 0, pointList : Union[List,np.ndarray,None] = None):
@@ -31,8 +33,11 @@ class Vector2D:
     def __neg__(self):
         return Vector2D(pointList=(self.array * -1))
 
-    def dot(self, other: 'Vector2D') -> float:
+    def __matmul__(self, other: 'Vector2D') -> float:
         return self.array @ other.array
+
+    def __rmatmul__(self, other: 'Vector2D') -> float:
+        return other.array @ other.array
 
     def distance(self, position) -> float:
         return np.linalg.norm(self.array - position.array)
@@ -58,6 +63,15 @@ class Vector2D:
         v1 = self.normalize()
         v2 = other.normalize()
         return (math.atan2(v2.y,v2.x) - math.atan2(v1.y,v1.x)) % (2 * np.pi)
+
+    def project(self, v1: 'Vector2D', v2: 'Vector2D') -> 'Vector2D':
+        """
+        Returns the projected vector on the line defined by v1 and v2
+        """
+        if v1 == v2: return self.copy()
+        x1: Vector2D = self-v1
+        x2: Vector2D = (v2-v1).normalize()
+        return v1 + (x1@x2)*x2
 
     @property
     def x(self):
@@ -92,4 +106,4 @@ class DroneData:
     map : typing.Any
     semantic_values: np.ndarray
     kill_zone_mode: bool
-    nextWaypoint : Vector2D
+    next_waypoint : Vector2D
