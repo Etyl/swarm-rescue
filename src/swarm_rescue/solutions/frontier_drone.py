@@ -57,6 +57,7 @@ class FrontierDrone(DroneAbstract):
         self.is_near_center : bool = False # True if the drone is near the center and switches state
         self.on_center : bool = False # True if the drone is in the center and needs to stop to deliver wounded
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
+        self.target: Optional[Vector2D] = None # target for the drone for the path planning
 
         self.rescue_center_position: Optional[Vector2D] = None
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
@@ -110,9 +111,6 @@ class FrontierDrone(DroneAbstract):
         self.time_in_no_gps : int = 0
 
 
-        # TEMP / DEBUG
-
-        self.curr_proj: Optional[Vector2D] = None
 
     @property
     def gps_disabled(self) -> bool:
@@ -159,11 +157,11 @@ class FrontierDrone(DroneAbstract):
         gives the angle to turn to in order to go to the next waypoint
         """
 
-        if self.curr_proj is None:
+        if self.target is None:
             return 0
 
         drone_angle = normalize_angle(self.get_angle())
-        waypoint_angle = Vector2D(1,0).get_angle(self.curr_proj - pos)
+        waypoint_angle = Vector2D(1,0).get_angle(self.target - pos)
 
         return normalize_angle(waypoint_angle - drone_angle)
 
@@ -509,9 +507,8 @@ class FrontierDrone(DroneAbstract):
 
     def get_power(self) -> float:
         curr_velocity = self.odometer_values()[0]
-        dist_to_target = self.get_position().distance(self.curr_proj)
+        dist_to_target = self.get_position().distance(self.target)
         target_velocity = 3 + (1-math.exp(-dist_to_target/50))*7
-        print(curr_velocity, target_velocity)
         return math.tanh(target_velocity-curr_velocity)
 
 
@@ -535,7 +532,7 @@ class FrontierDrone(DroneAbstract):
                     self.waypoint_index = None
                     self.onRoute = False
 
-        if self.curr_proj is None or self.drone_position is None:
+        if self.target is None or self.drone_position is None:
             return command
 
         angle_from_target = self.adapt_angle_direction(pos) + self.drone_angle_offset
@@ -570,7 +567,7 @@ class FrontierDrone(DroneAbstract):
             else:
                 curr_proj = adv_proj
 
-        self.curr_proj = curr_proj
+        self.target = curr_proj
 
 
 
@@ -948,8 +945,8 @@ class FrontierDrone(DroneAbstract):
                 pt2 = self.drone_position.array + np.array(self.size_area) / 2
                 arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 0))
 
-            if self.curr_proj is not None:
-                pt = self.curr_proj.array + np.array(self.size_area) / 2
+            if self.target is not None:
+                pt = self.target.array + np.array(self.size_area) / 2
                 arcade.draw_circle_filled(pt[0], pt[1], 10, [255,0,255])
 
 
