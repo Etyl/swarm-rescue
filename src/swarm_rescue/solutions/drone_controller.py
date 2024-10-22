@@ -112,7 +112,7 @@ class DroneController(StateMachine):
                 self.drone.path = []
                 return
             else:
-                self.drone.waypoint_index = 0
+                self.drone.waypoint_index = 1
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
 
     def before_approaching_wounded(self) -> None:
@@ -138,7 +138,7 @@ class DroneController(StateMachine):
         if self.drone.path is None: 
             self.drone.path = []
             return
-        self.drone.waypoint_index = 0
+        self.drone.waypoint_index = 1
         self.drone.onRoute = True
 
     @going_to_center.enter
@@ -150,7 +150,7 @@ class DroneController(StateMachine):
                 self.drone.path = []
                 return
             else:
-                self.drone.waypoint_index = 0
+                self.drone.waypoint_index = 1
         self.command = self.drone.get_control_from_path(self.drone.drone_position)
         self.command["grasper"] = 1
 

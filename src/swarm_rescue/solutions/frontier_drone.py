@@ -5,6 +5,7 @@ import numpy as np
 from typing import Optional, List, Tuple, Deque, Dict
 import arcade
 from collections import deque
+
 from statemachine import exceptions
 
 from spg_overlay.entities.drone_abstract import DroneAbstract  # type: ignore
@@ -158,17 +159,11 @@ class FrontierDrone(DroneAbstract):
         gives the angle to turn to in order to go to the next waypoint
         """
 
-        if self.next_waypoint is None:
+        if self.curr_proj is None:
             return 0
 
-        def angle(v1, v2):
-            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
-
-        waypoint_vect = (self.next_waypoint - pos).array
-        ref_vect = np.array([1, 0])
-
         drone_angle = normalize_angle(self.get_angle())
-        waypoint_angle = normalize_angle(angle(ref_vect, waypoint_vect))
+        waypoint_angle = Vector2D(1,0).get_angle(self.curr_proj - pos)
 
         return normalize_angle(waypoint_angle - drone_angle)
 
@@ -427,9 +422,6 @@ class FrontierDrone(DroneAbstract):
 
     def get_control_from_semantic(self):
 
-        def angle(v1, v2):
-            return math.atan2(v2[1],v2[0]) - math.atan2(v1[1],v1[0])
-
         angular_vel_controller_max = 1.0
 
         command = {"forward": 1.0,
@@ -438,7 +430,7 @@ class FrontierDrone(DroneAbstract):
                     "grasper": 0}
 
         if self.found_wounded:
-            best_angle = normalize_angle(angle(np.array([1,0]), self.wounded_target.array - self.drone_position.array))
+            best_angle = Vector2D(1,0).get_angle(self.wounded_target - self.get_position())
             best_angle = normalize_angle(best_angle - normalize_angle(self.get_angle()))
 
             kp = 2.0
@@ -515,6 +507,13 @@ class FrontierDrone(DroneAbstract):
         """
         return self.map.shortest_path(self.drone_position, pos)
 
+    def get_power(self) -> float:
+        curr_velocity = self.odometer_values()[0]
+        dist_to_target = self.get_position().distance(self.curr_proj)
+        target_velocity = 3 + (1-math.exp(-dist_to_target/50))*7
+        print(curr_velocity, target_velocity)
+        return math.tanh(target_velocity-curr_velocity)
+
 
     def get_control_from_path(self, pos):
         """
@@ -526,23 +525,7 @@ class FrontierDrone(DroneAbstract):
                    "rotation": 0.0,
                    "grasper": 0}
 
-        angle_from_waypoint = self.adapt_angle_direction(pos) + self.drone_angle_offset
-        angle_from_waypoint = normalize_angle(angle_from_waypoint)
-
-        if angle_from_waypoint > 0.8:
-            command["rotation"] =  1.0
-        elif angle_from_waypoint < -0.8:
-            command["rotation"] =  -1.0
-        else:
-            command["rotation"] = angle_from_waypoint
-
-        angle_from_waypoint = normalize_angle(angle_from_waypoint - self.drone_angle_offset)
-        command["forward"] = math.cos(angle_from_waypoint)
-        command["lateral"] = math.sin(angle_from_waypoint)
-        norm = max(abs(command["forward"]),abs(command["lateral"]))
-        command["forward"] = command["forward"]/norm
-        command["lateral"] = command["lateral"]/norm
-
+        self.update_waypoint_index()
         if self.next_waypoint is not None and self.check_waypoint(pos):
             if self.check_waypoint(pos):
                 if self.waypoint_index < len(self.path)-1:
@@ -551,7 +534,25 @@ class FrontierDrone(DroneAbstract):
                     self.path = []
                     self.waypoint_index = None
                     self.onRoute = False
-        self.update_waypoint_index()
+
+        if self.curr_proj is None or self.drone_position is None:
+            return command
+
+        angle_from_target = self.adapt_angle_direction(pos) + self.drone_angle_offset
+        angle_from_target = normalize_angle(angle_from_target)
+        power = self.get_power()
+
+        if angle_from_target > 0.8:
+            command["rotation"] =  1.0
+
+        elif angle_from_target < -0.8:
+            command["rotation"] =  -1.0
+        else:
+            command["rotation"] = angle_from_target
+
+        angle_from_target = normalize_angle(angle_from_target - self.drone_angle_offset)
+        command["forward"] = power*math.cos(angle_from_target)
+        command["lateral"] = power*math.sin(angle_from_target)
 
         return command
 
@@ -563,7 +564,11 @@ class FrontierDrone(DroneAbstract):
         curr_proj: Optional[Vector2D] = None
         if 0 < self.waypoint_index <= len(self.path) - 1 and self.path[self.waypoint_index-1] != self.path[self.waypoint_index]:
             curr_proj = self.get_position().project(self.path[self.waypoint_index-1],self.path[self.waypoint_index])
-            curr_proj += (self.path[self.waypoint_index]-self.path[self.waypoint_index-1]).normalize()*80
+            adv_proj = curr_proj + (self.path[self.waypoint_index]-self.path[self.waypoint_index-1]).normalize()*80
+            if adv_proj.distance(self.path[self.waypoint_index-1]) >= self.path[self.waypoint_index].distance(self.path[self.waypoint_index-1]):
+                curr_proj = self.path[self.waypoint_index]
+            else:
+                curr_proj = adv_proj
 
         self.curr_proj = curr_proj
 

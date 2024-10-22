@@ -150,7 +150,7 @@ class RoamerController(StateMachine):
 
         self.none_target_count = 0 # reset none target counter
 
-        self.drone.waypoint_index = 0
+        self.drone.waypoint_index = 1
         self.drone.onRoute = True
     
     def search_for_target(self):
