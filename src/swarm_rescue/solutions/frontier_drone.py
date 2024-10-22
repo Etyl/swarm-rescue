@@ -561,7 +561,7 @@ class FrontierDrone(DroneAbstract):
         curr_proj: Optional[Vector2D] = None
         if 0 < self.waypoint_index <= len(self.path) - 1 and self.path[self.waypoint_index-1] != self.path[self.waypoint_index]:
             curr_proj = self.get_position().project(self.path[self.waypoint_index-1],self.path[self.waypoint_index])
-            adv_proj = curr_proj + (self.path[self.waypoint_index]-self.path[self.waypoint_index-1]).normalize()*80
+            adv_proj = curr_proj + (self.path[self.waypoint_index]-self.path[self.waypoint_index-1]).normalize()*40
             if adv_proj.distance(self.path[self.waypoint_index-1]) >= self.path[self.waypoint_index].distance(self.path[self.waypoint_index-1]):
                 curr_proj = self.path[self.waypoint_index]
             else:
@@ -600,7 +600,14 @@ class FrontierDrone(DroneAbstract):
                 angle = data.angle
                 dist = data.distance
                 min_dist = min(min_dist, dist)
-                repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
+                drone = None
+                for d in self.drone_list:
+                    if d.position.distance(Vector2D(dist*math.cos(angle+self.drone_angle), dist*math.sin(angle+self.drone_angle))+self.get_position()) < 30:
+                        drone = d
+                if drone is None or drone.id>self.identifier:
+                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
+                else:
+                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
 
         if repulsion.norm() == 0:
             self.repulsion = Vector2D(0,0)
