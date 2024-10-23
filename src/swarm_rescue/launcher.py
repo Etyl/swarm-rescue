@@ -6,6 +6,8 @@ from typing import Tuple
 import traceback
 
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
+from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
+from maps.map_final_2023_24_03 import MyMapFinal_2023_24_03
 from spg_overlay.entities.sensor_disablers import ZoneType
 from spg_overlay.reporting.result_path_creator import ResultPathCreator
 from spg_overlay.utils.constants import DRONE_INITIAL_HEALTH
@@ -69,7 +71,7 @@ class Launcher:
         self.eval_plan = EvalPlan()
 
         zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
-        eval_config = EvalConfig(map_type=MyMapFinal_2023_24_01, zones_config=zones_config)
+        eval_config = EvalConfig(map_type=MyMapFinal_2023_24_02, zones_config=zones_config)
         self.eval_plan.add(eval_config=eval_config)
 
         self.number_drones = None

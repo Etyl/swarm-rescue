@@ -77,10 +77,10 @@ class DroneController(StateMachine):
         return len(self.drone.base.grasper.grasped_entities) > 0
     
     def found_center(self) -> bool:
-        return self.drone.found_center and self.drone.is_near_center
+        return self.drone.rescue_center_dist is not None
     
     def lost_center(self) -> bool:
-        return not self.drone.found_center
+        return self.drone.rescue_center_dist is None
     
     def lost_wounded(self) -> bool:
         return not self.drone.base.grasper.grasped_entities
@@ -144,9 +144,9 @@ class DroneController(StateMachine):
     @going_to_center.enter
     def on_enter_going_to_center(self) -> None:
         self.drone.drone_angle_offset = np.pi
-        if len(self.drone.path)==0 and self.drone.waypoint_index is None:
+        if self.drone.next_waypoint is None:
             self.drone.path = self.drone.get_path(self.drone.rescue_center_position)
-            if self.drone.path is None: 
+            if self.drone.path is None:
                 self.drone.path = []
                 return
             else:

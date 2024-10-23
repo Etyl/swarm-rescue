@@ -53,9 +53,8 @@ class FrontierDrone(DroneAbstract):
         self.last_positions : Deque[Vector2D] = deque() # queue of the last positions
         self.repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the other drones
         self.wall_repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the walls
-        self.center_angle : Optional[float] = None
-        self.is_near_center : bool = False # True if the drone is near the center and switches state
-        self.on_center : bool = False # True if the drone is in the center and needs to stop to deliver wounded
+        self.center_angle : Optional[float] = None # angle from the visible rescue center
+        self.rescue_center_dist : Optional[float] = None # distance from the visible rescue center
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
         self.target: Optional[Vector2D] = None # target for the drone for the path planning
 
@@ -110,7 +109,9 @@ class FrontierDrone(DroneAbstract):
         self.time : int = 0
         self.time_in_no_gps : int = 0
 
-
+    @property
+    def near_center(self) -> bool:
+        return self.rescue_center_dist is not None and self.rescue_center_dist < MAX_RANGE_SEMANTIC_SENSOR*(2/3)
 
     @property
     def gps_disabled(self) -> bool:
@@ -446,9 +447,10 @@ class FrontierDrone(DroneAbstract):
             if abs(a) == 1:
                 command["forward"] = 0.2
 
-        if self.found_center and self.on_center:
+        if self.near_center and self.rescue_center_dist < 40:
             command["forward"] = 0
             command["rotation"] = 0.5
+            command["lateral"]=0.2
 
         return command
 
@@ -468,27 +470,23 @@ class FrontierDrone(DroneAbstract):
                     # wounded: WoundedData = WoundedData(data)
                     self.add_wounded(data)
 
-        found_rescue_center = False
-        is_near,on_center = False,False
+        rescue_center_dist = float('inf')
         angles_list = []
         if (detection_semantic and
             (self.controller.current_state == self.controller.going_to_center
             or self.controller.current_state == self.controller.approaching_center)):
             for data in detection_semantic:
                 if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER:
-                    found_rescue_center = True
+                    rescue_center_dist = min(rescue_center_dist,data.distance)
                     angles_list.append(data.angle)
-                    is_near = (data.distance <= MAX_RANGE_SEMANTIC_SENSOR*(3/4))
-                    on_center = (data.distance <= 50)
 
-        if found_rescue_center:
+
+        if rescue_center_dist != float('inf'):
             self.center_angle = circular_mean(np.array(angles_list))
-            self.is_near_center = is_near
-            self.on_center = on_center
+            self.rescue_center_dist = rescue_center_dist
         else:
             self.center_angle = None
-            self.is_near_center = False
-            self.on_center = False
+            self.rescue_center_dist = None
 
 
     def get_path(self, pos:Vector2D):
