@@ -4,7 +4,8 @@ from typing import Tuple
 from spg.playground import Playground
 from spg.utils.definitions import CollisionTypes
 
-from spg_overlay.entities.drone_abstract import drone_collision_wall, drone_collision_drone
+from spg_overlay.entities.drone_abstract import (drone_collision_wall,
+                                                 drone_collision_drone)
 from spg_overlay.entities.normal_wall import NormalWall
 from spg_overlay.entities.rescue_center import wounded_rescue_center_collision
 from spg_overlay.entities.sensor_disablers import srdisabler_disables_device
@@ -34,7 +35,7 @@ class ClosedPlayground(Playground):
 
     def __init__(self, size: Tuple[int, int], border_thickness: int = 6):
         background = (220, 220, 220)
-        use_shaders = False
+        use_shaders = True
         if platform.system() == "Darwin":
             use_shaders = False
 
