@@ -57,6 +57,7 @@ class FrontierDrone(DroneAbstract):
         self.rescue_center_dist : Optional[float] = None # distance from the visible rescue center
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
         self.target: Optional[Vector2D] = None # target for the drone for the path planning
+        self.killed_drones : List[int] = [] # the list of killed drones ids
 
         self.rescue_center_position: Optional[Vector2D] = None
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
@@ -65,7 +66,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
@@ -74,7 +75,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_mapper = False
         self.debug_lidar = False
         self.debug_repulsion = False
-        self.debug_kill_zones = False
+        self.debug_kill_zones = True
         self.debug_wall_repulsion = False
         self.debug_frontiers = False
 
@@ -721,45 +722,57 @@ class FrontierDrone(DroneAbstract):
             return 0
         vel_angle = math.atan2(vel[1], vel[0])
         return vel_angle
-
-    def check_other_drones_killed(self):
+    
+    def update_last_other_drones_position(self):
         """
-        checks if the other drones are killed
+        updates the last drones seen
         """
+        self.last_other_drones_position = {}
         for drone in self.drone_list:
             if drone.id == self.identifier: continue
             self.last_other_drones_position[drone.id] = (drone.position, drone.vel_angle)
 
-        # check if other drones are killed by checking it's not in drone_list anymore and have last seen distance < MAX_RANGE_LIDAR_SENSOR / 2
+    def reset_path(self):
+        """
+        resets the path
+        """
+        self.path = []
+        self.waypoint_index = None
+    def compute_kill_zone(self):
+        """
+        computes the kill zone
+        """
+        other_drones_id = [drone.id for drone in self.drone_list]
         killed_ids = []
         for droneId in self.last_other_drones_position:
-            if droneId not in [drone.id for drone in self.drone_list]:
-                if (self.last_other_drones_position[droneId][0].distance(self.drone_position)) < RANGE_COMMUNICATION * 0.85:
-                    #print(f"Drone {droneId} killed")
-                    self.path = []
-                    self.waypoint_index = None
-                    kill_zone_x = self.last_other_drones_position[droneId][0].x + 50*math.cos(self.last_other_drones_position[droneId][1])
-                    kill_zone_y = self.last_other_drones_position[droneId][0].y + 50*math.sin(self.last_other_drones_position[droneId][1])
+            if droneId not in other_drones_id:
+                last_pos = self.last_other_drones_position[droneId][0]
+                last_angle = self.last_other_drones_position[droneId][1]
+                if (last_pos.distance(self.drone_position)) < RANGE_COMMUNICATION * 0.7:
+                    kill_zone_x = last_pos.x + 30 * math.cos(last_angle)
+                    kill_zone_y = last_pos.y + 30 * math.sin(last_angle)
                     self.map.add_kill_zone(droneId, Vector2D(kill_zone_x, kill_zone_y))
+                    self.reset_path()
                     killed_ids.append(droneId)
-                else:
-                    #print(f"Drone {droneId} left")
-                    killed_ids.append(droneId)
-
         for droneId in killed_ids:
             self.last_other_drones_position.pop(droneId)
+            self.killed_drones.append(droneId)
 
-        for droneId, kill_zone in self.map.kill_zones.items():
-            if droneId in [drone.id for drone in self.drone_list]:
+    def check_if_no_com_zone_mode(self):
+        """
+        checks if the map is in no communication zone mode by checking if we communicate with other drones that should be dead
+        """
+        for drone in self.drone_list:
+            if drone.id == self.identifier: continue
+            if drone.id in self.killed_drones:
                 self.kill_zone_mode = False
-
 
     def control(self):
 
         # check if drone is dead
         if self.odometer_values() is None:
             return
-
+        
         self.stuck_iteration += 1
         self.time += 1
         self.update_localization()
@@ -768,22 +781,15 @@ class FrontierDrone(DroneAbstract):
         self.process_semantic_sensor()
         self.process_communicator()
         self.check_wounded_available()
-        if not self.communicator_is_disabled():
-            self.check_other_drones_killed()
         self.test_stuck()
 
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
 
-        for drone in self.drone_list:
-            if drone.id == self.identifier: continue
-            if not drone.kill_zone_mode:
-                self.kill_zone_mode = False
-        if not self.communicator_is_disabled() and self.stuck_iteration > 2 and self.kill_zone_mode:
-            self.check_other_drones_killed()
-        else:
-            self.last_other_drones_position = {}
-
+        if self.kill_zone_mode:
+            self.compute_kill_zone()
+            self.check_if_no_com_zone_mode()
+        self.update_last_other_drones_position()
         if self.time > 50:
             if self.roaming:
                 try:
@@ -950,6 +956,5 @@ class FrontierDrone(DroneAbstract):
 
         if self.debug_kill_zones and self.kill_zone_mode:
             for killed_drone_pos in self.map.kill_zones.values():
-                pos = np.array(killed_drone_pos) + np.array(self.size_area)/2
                 # draw a rectangle
-                arcade.draw_rectangle_filled(pos[0], pos[1], 100, 100, arcade.color.RED)
+                arcade.draw_rectangle_filled(killed_drone_pos.x + self.size_area[0]/2, killed_drone_pos.y + self.size_area[1]/2, 100, 100, arcade.color.RED)
