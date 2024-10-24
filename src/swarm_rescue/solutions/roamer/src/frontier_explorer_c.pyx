@@ -34,6 +34,9 @@ cdef find_frontier(wavefront_map, int start_row,int start_col, visited):
     while len(stack)>0:
         (current_row, current_col) = stack.pop()
 
+        if wavefront_map[current_row, current_col] != INEXPLORED or visited[current_row, current_col]:
+            continue
+
         has_empty_neighbor = False
         for n_row, n_col in [
             (current_row - 1, current_col),
@@ -48,16 +51,18 @@ cdef find_frontier(wavefront_map, int start_row,int start_col, visited):
                 break
 
 
-        if wavefront_map[current_row, current_col] == INEXPLORED and (current_row, current_col) not in visited and has_empty_neighbor:
+        if not has_empty_neighbor:
+            continue
 
-            frontier.append([current_row, current_col])
-            visited.add((current_row, current_col))
+        frontier.append([current_row, current_col])
+        visited[current_row, current_col] = True
 
-            neighbors = [(current_row + x, current_col + y) for x in [-1, 0, 1] for y in [-1, 0, 1] if (x != 0 or y != 0)]
+        neighbors = [(current_row + x, current_col + y) for x in [-1, 0, 1] for y in [-1, 0, 1] if (x != 0 or y != 0)]
 
-            for neighbor in neighbors:
-                if 0 <= neighbor[0] < wavefront_map.shape[0] and 0 <= neighbor[1] < wavefront_map.shape[1]:
-                    stack.append(neighbor)
+        for (i,j) in neighbors:
+            if 0 <= i < wavefront_map.shape[0] and 0 <= j < wavefront_map.shape[1] and not visited[i,j] and wavefront_map[i,j]==INEXPLORED:
+                stack.append((i,j))
+
     return frontier
 
 cdef extract_frontiers(wavefront_map, int min_points=5):
@@ -69,11 +74,11 @@ cdef extract_frontiers(wavefront_map, int min_points=5):
     """
     # Extract frontiers from the wavefront map
     frontiers = []
-    visited = set()
+    cdef cnp.ndarray[cnp.int8_t, ndim=2, cast=True] visited = np.zeros(wavefront_map.shape, dtype=bool)
 
     for i in range(wavefront_map.shape[0]):
         for j in range(wavefront_map.shape[1]):
-            if wavefront_map[i, j] == INEXPLORED and (i, j) not in visited:
+            if wavefront_map[i, j] == INEXPLORED and not visited[i,j]:
                 frontier = find_frontier(wavefront_map, i, j, visited)
                 if len(frontier) > min_points:
                     frontiers.append(frontier)
@@ -114,7 +119,7 @@ cdef getFrontiersCount(frontiers, connectedMap, connectedCount):
 
     return frontier_count
 
-def get_frontiers(map: np.ndarray, drone_position: np.ndarray, frontiers_threshold: int):
+def get_frontiers(map, drone_position, frontiers_threshold: int):
     """
     Compute the Wavefront Detector algorithm on the current map
     """
