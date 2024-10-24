@@ -294,14 +294,15 @@ class Map:
         # plt.savefig("./map.png")
 
         zoom_factor = 1
-
-        if zoom_factor != 1:
-            obstacle_grid = cv2.resize(obstacle_grid, (0, 0), fx=zoom_factor, fy=zoom_factor)
-            # erosion
-            # kernel = np.ones((2,2),np.uint8)
-            # obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
+        #
+        # if zoom_factor != 1:
+        #     obstacle_grid = cv2.resize(obstacle_grid, (0, 0), fx=zoom_factor, fy=zoom_factor)
+        #     # erosion
+        #     # kernel = np.ones((2,2),np.uint8)
+        #     # obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
         # save obstacle grid as image
         #cv2.imwrite("./map.png", obstacle_grid.T * 255/2)
+
         grid_start = zoom_factor * self.world_to_grid(start)
         grid_end = zoom_factor * self.world_to_grid(end)
 

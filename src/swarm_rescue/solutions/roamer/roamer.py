@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, List
 import numpy as np
 import os
 import cv2
-from multiprocessing.pool import ThreadPool as Pool
+# from multiprocessing.pool import ThreadPool as Pool
 
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
@@ -25,6 +25,7 @@ if TYPE_CHECKING: # type: ignore
 # import threading
 
 FRONTIER_SELECTION_SIZE : int = 10
+MAP_SCALE : int = 2
 
 class RoamerController(StateMachine):
 
@@ -268,17 +269,16 @@ class Roamer:
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
 
-        map_matrix_copy = self.map.get_map_matrix().copy() # copy map (to not modify the original)
-
         drone_position = self.drone.get_position()
 
         if self.debug_mode: print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position.array))
-        
+
         drone_position_grid = self.map.world_to_grid(drone_position)
-        frontiers_output, frontier_count = get_frontiers(map_matrix_copy, drone_position_grid.array, frontiers_threshold)
+        map_matrix = cv2.resize(self.map.get_map_matrix(), (0, 0), fx=1/MAP_SCALE, fy=1/MAP_SCALE, interpolation=cv2.INTER_NEAREST)
+        frontiers_output, frontier_count = get_frontiers(map_matrix, drone_position_grid.array//MAP_SCALE, frontiers_threshold)
         vector_frontiers = []
         for frontier in frontiers_output:
-            vector_frontiers.append([Vector2D(p[0], p[1]) for p in frontier])
+            vector_frontiers.append([Vector2D(p[0]*MAP_SCALE, p[1]*MAP_SCALE) for p in frontier])
         self.frontiers = vector_frontiers
 
         if not self.frontiers:
@@ -318,12 +318,11 @@ class Roamer:
             )
             frontiers.append(frontier_center)
 
-        with Pool(len(frontiers)) as pool:
-            results = pool.map(self.get_path_length, frontiers)
-            for idx, (frontier_id, result) in enumerate(zip(selected_frontiers_id, results)):
-                distance, repulsion_angle = result
-                selected_frontiers_distance[idx] = distance
-                selected_frontiers_repulsion_angle.append(repulsion_angle)
+        # results = pool.map(self.get_path_length, frontiers)
+        for idx, frontier in enumerate(frontiers):
+            distance, repulsion_angle = self.get_path_length(frontier)
+            selected_frontiers_distance[idx] = distance
+            selected_frontiers_repulsion_angle.append(repulsion_angle)
 
 
         # parameters
