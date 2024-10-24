@@ -66,7 +66,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = True # True if the path must be displayed
+        self.debug_path = False # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
@@ -75,7 +75,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_mapper = False
         self.debug_lidar = False
         self.debug_repulsion = False
-        self.debug_kill_zones = True
+        self.debug_kill_zones = False
         self.debug_wall_repulsion = False
         self.debug_frontiers = False
 
@@ -88,7 +88,7 @@ class FrontierDrone(DroneAbstract):
                         "rotation": 0.0,
                         "grasper": 0}
 
-        self.map : Map = Map(area_world=self.size_area, resolution=8, debug_mode=self.debug_mapper)
+        self.map : Map = Map(area_world=self.size_area, resolution=4, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer : Localizer = Localizer()

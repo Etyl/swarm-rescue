@@ -293,7 +293,7 @@ class Map:
         # plt.imshow(obstacle_grid)
         # plt.savefig("./map.png")
 
-        zoom_factor = 3
+        zoom_factor = 1
 
         if zoom_factor != 1:
             obstacle_grid = cv2.resize(obstacle_grid, (0, 0), fx=zoom_factor, fy=zoom_factor)

@@ -70,8 +70,10 @@ class Launcher:
         self.team_info = TeamInfo()
         self.eval_plan = EvalPlan()
 
-        zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
-        eval_config = EvalConfig(map_type=MyMapFinal_2023_24_02, zones_config=zones_config)
+        # zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)
+        # eval_config = EvalConfig(map_type=MyMapFinal_2023_24_01, zones_config=zones_config)
+        eval_config = EvalConfig(map_type=MyMapFinal_2023_24_01)
+
         self.eval_plan.add(eval_config=eval_config)
 
         self.number_drones = None
