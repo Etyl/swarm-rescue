@@ -92,7 +92,6 @@ class FrontierDrone(DroneAbstract):
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer : Localizer = Localizer(self)
-        self.theoretical_velocity : Vector2D = Vector2D(0, 0)
 
         self.controller : DroneController = DroneController(self, debug_mode=self.debug_controller)
 
@@ -152,20 +151,6 @@ class FrontierDrone(DroneAbstract):
         drone_col = self.identifier // num
 
         return drone_row * size + size/2, drone_col * size + size/2
-
-
-    def adapt_angle_direction(self, pos: Vector2D) -> float:
-        """
-        gives the angle to turn to in order to go to the next waypoint
-        """
-
-        if self.target is None:
-            return 0
-
-        drone_angle = normalize_angle(self.get_angle())
-        waypoint_angle = Vector2D(1,0).get_angle(self.target - pos)
-
-        return normalize_angle(waypoint_angle - drone_angle)
 
 
     def check_waypoint(self):
@@ -754,8 +739,6 @@ class FrontierDrone(DroneAbstract):
             direction = direction@rot
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
 
-            direction = self.theoretical_velocity
-            arcade.draw_line(pos[0], pos[1], pos[0]+direction.x*20, pos[1]+direction.y*20, arcade.color.GREEN)
 
         # draw frontiers
         if self.debug_frontiers:

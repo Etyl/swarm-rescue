@@ -8,12 +8,13 @@ from solutions.utils.types import Vector2D
 from solutions.utils.utils import normalize_angle
 from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR
 
-if TYPE_CHECKING: # type: ignore
-    from solutions.frontier_drone import FrontierDrone # type: ignore
+if TYPE_CHECKING:
+    from solutions.frontier_drone import FrontierDrone
 
 class Localizer:
     def __init__(self, drone: FrontierDrone):
         self.drone = drone
+        self.theoretical_velocity: Vector2D = Vector2D()
 
     @property
     def drone_velocity(self) -> float:
@@ -22,6 +23,29 @@ class Localizer:
     @property
     def drone_velocity_angle(self) -> float:
         return normalize_angle(self.drone.odometer_values()[1])
+
+    @property
+    def drone_position(self) -> Vector2D:
+        return self.drone.drone_position
+
+    @property
+    def drone_angle(self) -> float:
+        return self.drone.drone_angle
+
+
+    def get_angle_to_target(self) -> float:
+        """
+        gives the angle to turn to in order to go to the next waypoint
+        """
+
+        if self.drone.target is None:
+            return 0
+
+        drone_angle = normalize_angle(self.drone_angle)
+        waypoint_angle = Vector2D(1,0).get_angle(self.drone.target - self.drone_position)
+
+        return normalize_angle(waypoint_angle - drone_angle)
+
 
     def get_power(self) -> float:
         curr_velocity = self.drone.odometer_values()[0]
@@ -94,9 +118,9 @@ class Localizer:
         if self.drone.target is None or self.drone.drone_position is None:
             return command
 
-        angle_from_target = self.drone.adapt_angle_direction(self.drone.drone_position) + self.drone.drone_angle_offset
+        angle_from_target = self.get_angle_to_target() + self.drone.drone_angle_offset
         angle_from_target = normalize_angle(angle_from_target)
-        power = self.drone.get_power()
+        power = self.get_power()
 
         if angle_from_target > 0.8:
             command["rotation"] =  1.0
@@ -174,15 +198,15 @@ class Localizer:
         command = Vector2D(self.drone.command["forward"], self.drone.command["lateral"])
         command.rotate(angle)
 
-        theoretical_velocity = self.drone.theoretical_velocity + ((command * 0.56) - (self.drone.theoretical_velocity * 0.095))
+        theoretical_velocity = self.theoretical_velocity + ((command * 0.56) - (self.theoretical_velocity * 0.095))
         v = self.drone.odometer_values()[0]
 
         if measured_position is not None and abs(v) > 5:
-            self.drone.theoretical_velocity = Vector2D((v * math.cos(angle) + theoretical_velocity.x) / 2, (v * math.sin(angle) + theoretical_velocity.y) / 2)
-            theoretical_position = self.drone_position + self.theoretical_velocity
+            self.theoretical_velocity = Vector2D((v * math.cos(angle) + theoretical_velocity.x) / 2, (v * math.sin(angle) + theoretical_velocity.y) / 2)
+            theoretical_position = self.drone.drone_position + self.theoretical_velocity
             self.drone.drone_position = (self.measured_gps_position() + theoretical_position) / 2
         elif measured_position is not None:
-            self.drone.theoretical_velocity = Vector2D(pointList=np.array([v * math.cos(angle), v * math.sin(angle)]) / 2)
+            self.theoretical_velocity = Vector2D(pointList=np.array([v * math.cos(angle), v * math.sin(angle)]) / 2)
             self.drone.drone_position =  self.measured_gps_position()
         else:
             self.drone.drone_position.setX(self.drone.drone_position.x + self.drone_velocity * np.cos(self.drone.drone_angle + self.drone_velocity_angle))
