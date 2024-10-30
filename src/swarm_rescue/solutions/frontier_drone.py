@@ -8,19 +8,19 @@ from collections import deque
 
 from statemachine import exceptions
 
-from spg_overlay.entities.drone_abstract import DroneAbstract  # type: ignore
-from spg_overlay.utils.misc_data import MiscData  # type: ignore
-from spg_overlay.utils.utils import circular_mean # type: ignore
-from solutions.utils.utils import normalize_angle, map_id_to_color  # type: ignore
-from spg_overlay.utils.pose import Pose # type: ignore
-from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor # type: ignore
-from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR # type: ignore
+from spg_overlay.entities.drone_abstract import DroneAbstract
+from spg_overlay.utils.misc_data import MiscData
+from spg_overlay.utils.utils import circular_mean
+from solutions.utils.utils import normalize_angle, map_id_to_color
+from spg_overlay.utils.pose import Pose
+from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
+from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR
 
-from solutions.utils.types import DroneData, WoundedData, Vector2D # type: ignore
-from solutions.localizer.localizer import Localizer # type: ignore
-from solutions.mapper.mapper import Map # type: ignore
-from solutions.drone_controller import DroneController # type: ignore
-from solutions.roamer.roamer import RoamerController # type: ignore
+from solutions.utils.types import DroneData, WoundedData, Vector2D
+from solutions.localizer.localizer import Localizer
+from solutions.mapper.mapper import Map
+from solutions.drone_controller import DroneController
+from solutions.roamer.roamer import RoamerController
 
 class FrontierDrone(DroneAbstract):
 
@@ -214,90 +214,6 @@ class FrontierDrone(DroneAbstract):
         return self.drone_angle
 
 
-    def optimise_localization(self):
-        """
-        optimises the localization of the drone using SLAM
-        """
-        # starting_pos = self.drone_position
-        # starting_angle = self.drone_angle
-        starting_pos = self.get_position()
-        starting_angle = self.get_angle()
-
-        lidar_dists = self.lidar().get_sensor_values()[::10].copy()
-        lidar_angles = self.lidar().ray_angles[::10].copy()
-        measures = []
-        for k in range(len(lidar_dists)):
-            if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
-                measures.append([lidar_dists[k], lidar_angles[k]])
-        def Q(x):
-            [posX, posY, angle] = x
-            value = 0
-            for [lidar_dist,lidar_angle] in measures:
-                point = Vector2D(0,0)
-                point.setX(starting_pos.x + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle))
-                point.setY(starting_pos.y + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle))
-                point = self.map.world_to_grid(point)
-                if point.x < 0 or point.x >= self.map.width or point.y < 0 or point.y >= self.map.height:
-                    continue
-                #value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
-                value -= self.map.get_confidence_wall_map(int(point.x),int(point.y))
-            return value
-
-        mindx, mindy, mindangle = 0,0,0
-
-        for k in range(30):
-            dx, dy, dangle = np.random.normal(0,1), np.random.normal(0,1), np.random.normal(0,0.1)
-            if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
-                mindx, mindy, mindangle = dx, dy, dangle
-
-        self.drone_position = Vector2D(starting_pos.x + mindx, starting_pos.y + mindy)
-        self.drone_angle = starting_angle + mindangle
-
-
-    # TODO: improve angle estimation
-    def update_localization(self) -> None:
-        """
-        returns the position of the drone
-        """
-
-        rot = self.command["rotation"]
-        measured_angle = self.measured_compass_angle()
-        if measured_angle is not None:
-            self.drone_angle = measured_angle
-            self.time_in_no_gps = 0
-        else:
-            self.drone_angle = self.drone_angle + 0.2*rot
-            #self.drone_angle += self.odometer_values()[2]
-
-        measured_position = self.measured_gps_position()
-
-        angle = self.drone_angle
-        command = Vector2D(self.command["forward"], self.command["lateral"])
-        command.rotate(angle)
-
-        theoretical_velocity = self.theoretical_velocity + ((command * 0.56) - (self.theoretical_velocity * 0.095))
-        v = self.odometer_values()[0]
-
-        if measured_position is not None and abs(v) > 5:
-            self.theoretical_velocity = Vector2D((v * math.cos(angle) + theoretical_velocity.x) / 2, (v * math.sin(angle) + theoretical_velocity.y) / 2)
-            theoretical_position = self.drone_position + self.theoretical_velocity
-            self.drone_position = (self.measured_gps_position() + theoretical_position) / 2
-        elif measured_position is not None:
-            self.theoretical_velocity = Vector2D(pointList=np.array([v * math.cos(angle), v * math.sin(angle)]) / 2)
-            self.drone_position =  self.measured_gps_position()
-        else:
-            self.drone_position.setX(self.drone_position.x + self.odometer_values()[0] * np.cos(self.drone_angle + self.odometer_values()[1]))
-            self.drone_position.setY(self.drone_position.y + self.odometer_values()[0] * np.sin(self.drone_angle + self.odometer_values()[1]))
-            # self.theoretical_velocity = theoretical_velocity
-            # self.drone_position = self.drone_position + self.theoretical_velocity
-            self.optimise_localization()
-
-    def measured_gps_position(self) -> Optional[Vector2D]:
-        measured_position = super().measured_gps_position()
-        if measured_position is None:
-            return None
-        return Vector2D(pointList=measured_position)
-
     def add_wounded(self, data_wounded):
         """
         compares the wounded persons detected with the ones already detected
@@ -453,13 +369,8 @@ class FrontierDrone(DroneAbstract):
         """
         return self.map.shortest_path(self.drone_position, pos)
 
-    def get_power(self) -> float:
-        curr_velocity = self.odometer_values()[0]
-        dist_to_target = self.get_position().distance(self.target)
-        target_velocity = 3 + (1-math.exp(-dist_to_target/50))*7
-        return math.tanh(target_velocity-curr_velocity)
 
-
+    # TODO improve using pure pursuit
     def update_waypoint_index(self) -> None:
         if self.waypoint_index is None:
             return
@@ -701,7 +612,7 @@ class FrontierDrone(DroneAbstract):
         
         self.stuck_iteration += 1
         self.time += 1
-        self.update_localization()
+        self.localizer.update_localization()
         if self.gps_disabled:
             self.time_in_no_gps += 1
         self.process_semantic_sensor()
@@ -877,8 +788,6 @@ class FrontierDrone(DroneAbstract):
             if self.target is not None:
                 pt = self.target.array + np.array(self.size_area) / 2
                 arcade.draw_circle_filled(pt[0], pt[1], 10, [255,0,255])
-
-
 
         if self.debug_kill_zones and self.kill_zone_mode:
             for killed_drone_pos in self.map.kill_zones.values():
