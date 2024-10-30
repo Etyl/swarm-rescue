@@ -218,7 +218,7 @@ class RoamerController(StateMachine):
         if self.test_position_close_start_point():
             self.count_close_previous_searching_start_point += 1
 
-        self.command = self.drone.get_control_from_path(self.drone.get_position())
+        self.command = self.drone.localizer.get_control_from_path()
 
     def on_enter_searching_for_target(self):
         if self.debug_mode: print("Entering searching for target state")

@@ -1,144 +1,97 @@
+from __future__ import annotations
 
+from typing import List, TYPE_CHECKING, Optional, Dict
 import math
-import numpy as np
-from spg_overlay.utils.utils import circular_mean, normalize_angle
 
+from solutions.utils.types import Vector2D
+from solutions.utils.utils import normalize_angle
 
+if TYPE_CHECKING: # type: ignore
+    from solutions.frontier_drone import FrontierDrone # type: ignore
 
-# Covariance for EKF simulation
-Q = np.diag([
-    0.1,  # variance of location on x-axis
-    0.1,  # variance of location on y-axis
-    np.deg2rad(1.0),  # variance of yaw angle
-    1.0  # variance of velocity
-]) ** 2  # predict state covariance
-R = np.diag([1.0, 1.0]) ** 2  # Observation x,y position covariance
+class Localizer:
+    def __init__(self, drone: FrontierDrone):
+        self.drone = drone
 
+    def get_control_from_semantic(self):
 
+        angular_vel_controller_max = 1.0
 
+        command = {"forward": 1.0,
+                   "lateral": 0.0,
+                   "rotation": 0.0,
+                   "grasper": 0}
 
+        if self.drone.found_wounded:
+            best_angle = Vector2D(1, 0).get_angle(self.drone.wounded_target - self.drone.get_position())
+            best_angle = normalize_angle(best_angle - normalize_angle(self.drone.get_angle()))
 
-def motion_model(x, u):
-    F = np.array([[1.0, 0, 0, 0],
-                  [0, 1.0, 0, 0],
-                  [0, 0, 1.0, 0],
-                  [0, 0, 0, 0]])
+            kp = 2.0
+            a = kp * best_angle
+            a = min(a, 1.0)
+            a = max(a, -1.0)
+            command["rotation"] = a
 
-    B = np.array([[math.cos(x[2, 0]), 0],
-                  [math.sin(x[2, 0]), 0],
-                  [0.0, 1.0],
-                  [1.0, 0.0]])
+            # reduce speed if we need to turn a lot
+            if abs(a) == 1:
+                command["forward"] = 0.4
 
-    x = F @ x + B @ u
+        if self.drone.found_center and self.drone.center_angle is not None:
+            # simple P controller
+            # The robot will turn until best_angle is 0
+            kp = 2.0
+            a = kp * self.drone.center_angle
+            a = min(a, 1.0)
+            a = max(a, -1.0)
+            command["rotation"] = a * angular_vel_controller_max
 
-    return x
+            # reduce speed if we need to turn a lot
+            if abs(a) == 1:
+                command["forward"] = 0.2
 
+        if self.drone.near_center and self.drone.rescue_center_dist < 40:
+            command["forward"] = 0
+            command["rotation"] = 0.5
+            command["lateral"] = 0.2
 
-def observation_model(x):
-    H = np.array([
-        [1, 0, 0, 0],
-        [0, 1, 0, 0]
-    ])
+        return command
 
-    z = H @ x
+    # TODO updates params
+    def get_control_from_path(self):
+        """
+        returns the control to follow the path
+        """
 
-    return z
+        command = {"forward": 0.0,
+                   "lateral": 0.0,
+                   "rotation": 0.0,
+                   "grasper": 0}
 
+        self.drone.update_waypoint_index()
+        if self.drone.next_waypoint is not None and self.drone.check_waypoint():
+            if self.drone.check_waypoint():
+                if self.drone.waypoint_index < len(self.drone.path)-1:
+                    self.drone.waypoint_index += 1
+                else:
+                    self.drone.reset_path()
 
-def jacob_f(x, u):
-    """
-    Jacobian of Motion Model
+        if self.drone.target is None or self.drone.drone_position is None:
+            return command
 
-    motion model
-    x_{t+1} = x_t+v*dt*cos(yaw)
-    y_{t+1} = y_t+v*dt*sin(yaw)
-    yaw_{t+1} = yaw_t+omega*dt
-    v_{t+1} = v{t}
-    so
-    dx/dyaw = -v*dt*sin(yaw)
-    dx/dv = dt*cos(yaw)
-    dy/dyaw = v*dt*cos(yaw)
-    dy/dv = dt*sin(yaw)
-    """
-    yaw = x[2, 0]
-    v = u[0, 0]
-    jF = np.array([
-        [1.0, 0.0, -v * math.sin(yaw), math.cos(yaw)],
-        [0.0, 1.0, v * math.cos(yaw), math.sin(yaw)],
-        [0.0, 0.0, 1.0, 0.0],
-        [0.0, 0.0, 0.0, 1.0]])
+        angle_from_target = self.drone.adapt_angle_direction(self.drone.drone_position) + self.drone.drone_angle_offset
+        angle_from_target = normalize_angle(angle_from_target)
+        power = self.drone.get_power()
 
-    return jF
+        if angle_from_target > 0.8:
+            command["rotation"] =  1.0
 
-
-def jacob_h():
-    # Jacobian of Observation Model
-    jH = np.array([
-        [1, 0, 0, 0],
-        [0, 1, 0, 0]
-    ])
-
-    return jH
-
-
-def ekf_estimation(xEst, PEst, z, u):
-    #  Predict
-    xPred = motion_model(xEst, u)
-    jF = jacob_f(xEst, u)
-    PPred = jF @ PEst @ jF.T + Q
-
-    #  Update
-    jH = jacob_h()
-    zPred = observation_model(xPred)
-    y = z - zPred
-    S = jH @ PPred @ jH.T + R
-    K = PPred @ jH.T @ np.linalg.inv(S)
-    xEst = xPred + K @ y
-    PEst = (np.eye(len(xEst)) - K @ jH) @ PPred
-    return xEst, PEst
-
-
-
-
-
-class Localizer():
-    def __init__(self):
-
-        # State Vector [x y yaw v]'
-        self.xEst = np.zeros((4, 1))
-        self.PEst = np.eye(4)
-
-        self.xDR = np.zeros((4, 1))  # Dead reckoning
-
-        # history
-        self.hxEst = []
-        self.hz = []
-
-        self.isInitialized = False
-
-    def localize(self, gps_pos, odometer_v, odometer_angle):
-
-        if not self.isInitialized:
-            self.xEst = np.array([[gps_pos[0]], [gps_pos[1]], [0.0], [0.0]])
-            self.isInitialized = True
-
-        prev_angle = self.xEst[2, 0]
-
-        u = np.array([[odometer_v], [normalize_angle(odometer_angle-prev_angle)]])
-
-        if gps_pos is None:
-            self.xEst = motion_model(self.xEst, u)
-        
+        elif angle_from_target < -0.8:
+            command["rotation"] =  -1.0
         else:
-            z = np.array([[gps_pos[0]],[gps_pos[1]]])
+            command["rotation"] = angle_from_target
 
-            self.xEst, self.PEst = ekf_estimation(self.xEst, self.PEst, z, u)
-            self.hz.append((self.hz, z))
+        angle_from_target = normalize_angle(angle_from_target - self.drone.drone_angle_offset)
+        command["forward"] = power*math.cos(angle_from_target)
+        command["lateral"] = power*math.sin(angle_from_target)
 
-
-        # store data history
-        self.hxEst.append((self.hxEst, self.xEst))
-        
-
-        return self.xEst
-
+        return command

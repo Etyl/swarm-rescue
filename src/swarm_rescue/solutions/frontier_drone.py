@@ -91,7 +91,7 @@ class FrontierDrone(DroneAbstract):
         self.map : Map = Map(area_world=self.size_area, resolution=4, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
-        self.localizer : Localizer = Localizer()
+        self.localizer : Localizer = Localizer(self)
         self.theoretical_velocity : Vector2D = Vector2D(0, 0)
 
         self.controller : DroneController = DroneController(self, debug_mode=self.debug_controller)
@@ -168,15 +168,15 @@ class FrontierDrone(DroneAbstract):
         return normalize_angle(waypoint_angle - drone_angle)
 
 
-    def check_waypoint(self, pos: Vector2D):
+    def check_waypoint(self):
         """
         checks if the drone has reached the waypoint
         """
         next_waypoint: Vector2D = self.next_waypoint
-        dist = pos.distance(next_waypoint)
+        dist = self.drone_position.distance(next_waypoint)
         if len(self.path) == 0: return dist < 30
 
-        v1 : Vector2D = next_waypoint - pos
+        v1 : Vector2D = next_waypoint - self.drone_position
         v2 : Vector2D = self.path[-1] - next_waypoint
 
         if v1.norm() == 0 or v2.norm() == 0:
@@ -412,49 +412,6 @@ class FrontierDrone(DroneAbstract):
         self.wounded_target = self.wounded_found_list[best_position].position
 
 
-    def get_control_from_semantic(self):
-
-        angular_vel_controller_max = 1.0
-
-        command = {"forward": 1.0,
-                    "lateral": 0.0,
-                    "rotation": 0.0,
-                    "grasper": 0}
-
-        if self.found_wounded:
-            best_angle = Vector2D(1,0).get_angle(self.wounded_target - self.get_position())
-            best_angle = normalize_angle(best_angle - normalize_angle(self.get_angle()))
-
-            kp = 2.0
-            a = kp * best_angle
-            a = min(a, 1.0)
-            a = max(a, -1.0)
-            command["rotation"] = a
-
-            # reduce speed if we need to turn a lot
-            if abs(a) == 1:
-                command["forward"] = 0.4
-
-        if self.found_center and self.center_angle is not None:
-            # simple P controller
-            # The robot will turn until best_angle is 0
-            kp = 2.0
-            a = kp * self.center_angle
-            a = min(a, 1.0)
-            a = max(a, -1.0)
-            command["rotation"] = a * angular_vel_controller_max
-
-            # reduce speed if we need to turn a lot
-            if abs(a) == 1:
-                command["forward"] = 0.2
-
-        if self.near_center and self.rescue_center_dist < 40:
-            command["forward"] = 0
-            command["rotation"] = 0.5
-            command["lateral"]=0.2
-
-        return command
-
     def process_semantic_sensor(self):
         """
         According to his state in the state machine, the Drone will move towards a wound person or the rescue center
@@ -503,48 +460,6 @@ class FrontierDrone(DroneAbstract):
         return math.tanh(target_velocity-curr_velocity)
 
 
-    def get_control_from_path(self, pos):
-        """
-        returns the control to follow the path
-        """
-
-        command = {"forward": 0.0,
-                   "lateral": 0.0,
-                   "rotation": 0.0,
-                   "grasper": 0}
-
-        self.update_waypoint_index()
-        if self.next_waypoint is not None and self.check_waypoint(pos):
-            if self.check_waypoint(pos):
-                if self.waypoint_index < len(self.path)-1:
-                    self.waypoint_index += 1
-                else:
-                    self.path = []
-                    self.waypoint_index = None
-                    self.onRoute = False
-
-        if self.target is None or self.drone_position is None:
-            return command
-
-        angle_from_target = self.adapt_angle_direction(pos) + self.drone_angle_offset
-        angle_from_target = normalize_angle(angle_from_target)
-        power = self.get_power()
-
-        if angle_from_target > 0.8:
-            command["rotation"] =  1.0
-
-        elif angle_from_target < -0.8:
-            command["rotation"] =  -1.0
-        else:
-            command["rotation"] = angle_from_target
-
-        angle_from_target = normalize_angle(angle_from_target - self.drone_angle_offset)
-        command["forward"] = power*math.cos(angle_from_target)
-        command["lateral"] = power*math.sin(angle_from_target)
-
-        return command
-
-
     def update_waypoint_index(self) -> None:
         if self.waypoint_index is None:
             return
@@ -559,7 +474,6 @@ class FrontierDrone(DroneAbstract):
                 curr_proj = adv_proj
 
         self.target = curr_proj
-
 
 
     def compute_rescue_center_position(self):
@@ -732,12 +646,24 @@ class FrontierDrone(DroneAbstract):
             if drone.id == self.identifier: continue
             self.last_other_drones_position[drone.id] = (drone.position, drone.vel_angle)
 
-    def reset_path(self):
+    def reset_path(self) -> None:
         """
         resets the path
         """
         self.path = []
         self.waypoint_index = None
+        self.onRoute = False
+
+    def set_path(self, path: Optional[List[Vector2D]]) -> None:
+        """
+        set a new path
+        """
+        if path is None:
+            return
+        self.path = path
+        self.waypoint_index = 0
+        self.onRoute = True
+
     def compute_kill_zone(self):
         """
         computes the kill zone
