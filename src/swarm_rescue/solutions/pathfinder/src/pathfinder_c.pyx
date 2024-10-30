@@ -4,6 +4,7 @@ import cython
 from typing import Optional
 cimport numpy as cnp
 from libc.math cimport sqrt
+import matplotlib.pyplot as plt
 
 cnp.import_array()
 DTYPE = np.int64
@@ -19,26 +20,25 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
         map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
         robot_radius: radius of the robot in pixels
     Returns:
-        new_map: 2D numpy array of R+ -> 0=free, inf=occupied
+        new_map: 2D numpy array of R+ -> 1=free, inf=occupied
     """
     
-    new_map = np.zeros(map.shape).astype(np.float32)
-    new_map[map > 1.5] = 1
+    new_map = np.zeros_like(map).astype(np.float32)
+    roll_map = np.zeros_like(map).astype(np.float32)
+    roll_map[map > 1.5] = 1
 
     for _ in range(robot_radius):
-        roll_map = (np.roll(new_map,(1, 0), axis=(1, 0))+
-                    np.roll(new_map,(0, 1), axis=(1, 0))+
-                    np.roll(new_map,(-1, 0), axis=(1, 0))+
-                    np.roll(new_map,(0, -1), axis=(1, 0))+
-                    np.roll(new_map,(1, 1), axis=(1, 0))+
-                    np.roll(new_map,(-1, -1), axis=(1, 0))+
-                    np.roll(new_map,(1, -1), axis=(1, 0))+
-                    np.roll(new_map,(-1, 1), axis=(1, 0)))
+        roll_map = (np.roll(roll_map,(1, 0), axis=(1, 0))+
+                    np.roll(roll_map,(0, 1), axis=(1, 0))+
+                    np.roll(roll_map,(-1, 0), axis=(1, 0))+
+                    np.roll(roll_map,(0, -1), axis=(1, 0))+
+                    np.roll(roll_map,(1, 1), axis=(1, 0))+
+                    np.roll(roll_map,(-1, -1), axis=(1, 0))+
+                    np.roll(roll_map,(1, -1), axis=(1, 0))+
+                    np.roll(roll_map,(-1, 1), axis=(1, 0)))
         roll_map[roll_map>0.5] = 1
         new_map += roll_map
     new_map[map > 1.5] = np.inf
-
-    new_map = new_map*robot_radius
     
     bump_map = (len(map)+len(map[0]))*np.ones(map.shape).astype(np.float32)
     bump_map[new_map < 0.5] = 0
@@ -64,10 +64,14 @@ cdef is_path_free_low(cnp.ndarray[cnp.float32_t, ndim=2] map, int x0,int y0,int 
         dy = -dy
     cdef int D = (2 * dy) - dx
     cdef int y = y0
+    cdef int last_x=x0
+    cdef int last_y=y0
 
     for x in range(x0,x1+1):
-        if map[x][y] > map[x0][y0]:
+        if map[x,y] > map[last_x,last_y]:
             return False
+        last_x = x
+        last_y = y
         if D > 0:
             y = y + yi
             D = D + (2 * (dy - dx))
@@ -87,10 +91,13 @@ cdef is_path_free_high(cnp.ndarray[cnp.float32_t, ndim=2] map, int x0,int y0,int
         dx = -dx
     cdef int D = (2 * dx) - dy
     cdef int x = x0
+    cdef int last_x=x0, last_y=y0
 
     for y in range(y0, y1+1):
-        if map[x][y] > map[x0][y0]:
+        if map[x,y] > map[last_x,last_y]:
             return False
+        last_x = x
+        last_y = y
         if D > 0:
             x = x + xi
             D = D + (2 * (dx - dy))
@@ -198,35 +205,14 @@ cdef segmentize_path(cnp.ndarray[cnp.float32_t, ndim=2] map, cnp.ndarray[cnp.int
     return new_path
 
 cdef neighbors(map,point):
-    neighbors = []
-    if point[0]>0:
-        neighbors.append((point[0]-1,point[1]))
-    if point[0]<map.shape[0]-1:
-        neighbors.append((point[0]+1,point[1]))
-    if point[1]>0:
-        neighbors.append((point[0],point[1]-1))
-    if point[1]<map.shape[1]-1:
-        neighbors.append((point[0],point[1]+1))
-    return neighbors
+    return [(point[0]+i,point[1]+j) for i in range(-1,2) for j in range(-1,2)
+                 if 0<=point[0]+i<len(map) and 0<=point[1]+j<len(map[0]) and (i,j)!=(0,0)]
 
-cdef findPointsAvailable(map_border : np.ndarray, start, end):
+
+cdef findPointsAvailable(map_border : np.ndarray, robot_radius:int, start, end):
     # find closest available point to start and end using BFS
     start = np.array(start)
     end = np.array(end)
-    explored = np.zeros(map_border.shape).astype(bool)
-    
-    queue = [start]
-    while len(queue)>0:
-        current = queue.pop(0)
-        if explored[current[0]][current[1]]:
-            continue
-        if map_border[current[0]][current[1]] < 2*len(map_border)*len(map_border[0]):
-            start = current
-            break
-        explored[current[0]][current[1]] = True
-        for neighbor in neighbors(map_border, current):
-            if not explored[neighbor[0]][neighbor[1]]:
-                queue.append(neighbor)
     explored = np.zeros(map_border.shape).astype(bool)
 
     def is_min_local(point):
@@ -235,32 +221,44 @@ cdef findPointsAvailable(map_border : np.ndarray, start, end):
                 return False
         return True
     
-    queue = [end]
+    queue = [start]
+    explored[start[0]][start[1]] = True
     while len(queue)>0:
         current = queue.pop(0)
-        if explored[current[0]][current[1]]:
-            continue
-        if map_border[current[0]][current[1]] < 2*len(map_border)*len(map_border[0]) and is_min_local(current):
-            end = current
+        if map_border[current[0]][current[1]]==1 or (map_border[current[0]][current[1]] <= min(len(map_border)*len(map_border[0])+robot_radius//2,map_border[start[0],start[1]]) and is_min_local(current)):
+            start = current
             break
-        explored[current[0]][current[1]] = True
         for neighbor in neighbors(map_border, current):
             if not explored[neighbor[0]][neighbor[1]]:
                 queue.append(neighbor)
-    
+                explored[neighbor[0]][neighbor[1]] = True
+
+    explored = np.zeros(map_border.shape).astype(bool)
+    queue = [end]
+    explored[end[0]][end[1]] = True
+    while len(queue)>0:
+        current = queue.pop(0)
+        if map_border[current[0]][current[1]]==1 or (map_border[current[0]][current[1]] < min(len(map_border)*len(map_border[0])+robot_radius//2,map_border[end[0],end[1]]) and is_min_local(current)):
+            end = current
+            break
+        for neighbor in neighbors(map_border, current):
+            if not explored[neighbor[0]][neighbor[1]]:
+                queue.append(neighbor)
+                explored[neighbor[0]][neighbor[1]] = True
+
     return start, end
 
 
-def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius=30) -> Optional[np.ndarray]:
+def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius) -> Optional[np.ndarray]:
     """
-    Args:
+    Params:
         map: 2D numpy array of [0,1]U{2} -> 0=free, 1=partially occupied and 2=occupied
         start: tuple of start coordinates
         end: tuple of end coordinates
     """
     map_border = border_from_map_np(map, robot_radius)
 
-    start,end = findPointsAvailable(map_border, start, end)
+    start,end = findPointsAvailable(map_border, robot_radius, start, end)
 
     path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
     if path is None:
@@ -285,7 +283,7 @@ def pathfinder_fast(map:np.ndarray, start:np.ndarray, end:np.ndarray) -> Optiona
     map_border = np.ones(map.shape).astype(np.float32)
     map_border[map>1.5] = np.inf
 
-    start,end = findPointsAvailable(map_border, start, end)
+    start,end = findPointsAvailable(map_border, 1000, start, end)
     path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
 
     return path

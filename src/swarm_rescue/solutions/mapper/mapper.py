@@ -310,7 +310,7 @@ class Map:
         if fast:
             grid_path  = pathfinder_fast(obstacle_grid, grid_start.array, grid_end.array)
         else:
-            grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, robot_radius=40//zoom_factor)
+            grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, 7*zoom_factor)
 
 
         if grid_path is None:
