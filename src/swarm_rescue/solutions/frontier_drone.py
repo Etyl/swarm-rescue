@@ -75,7 +75,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_mapper = False
         self.debug_lidar = False
         self.debug_repulsion = False
-        self.debug_kill_zones = False
+        self.debug_kill_zones = True
         self.debug_wall_repulsion = False
         self.debug_frontiers = False
 
@@ -587,7 +587,12 @@ class FrontierDrone(DroneAbstract):
         for drone in self.drone_list:
             if drone.id == self.identifier: continue
             if drone.id in self.killed_drones:
+                print("No communication zone mode")
+                self.kill_zones = []
+                self.killed_drones = []
+                self.map.reset_kill_zones()
                 self.kill_zone_mode = False
+                self.reset_path()
 
     def control(self):
 
