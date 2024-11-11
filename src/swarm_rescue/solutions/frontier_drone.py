@@ -192,7 +192,7 @@ class FrontierDrone(DroneAbstract):
             id = self.identifier,
             position = self.get_position(),
             angle = self.get_angle(),
-            vel_angle = self.compute_vel_angle(),
+            vel_angle = self.localizer.drone_velocity_angle,
             wounded_target = self.wounded_target,
             map = self.map,
             semantic_values = self.semantic_values(),
@@ -395,8 +395,9 @@ class FrontierDrone(DroneAbstract):
 
         if len(semantic_lidar)>0 and self.rescue_center_position is None:
             d = semantic_lidar[0].distance
-            a = semantic_lidar[0].angle + self.drone_angle
+            a = semantic_lidar[0].angle+self.drone_angle
             self.rescue_center_position = Vector2D(self.drone_position.x+d*np.cos(a),self.drone_position.y+d*np.sin(a))
+            print("ok")
 
 
     def update_drone_repulsion(self):
@@ -537,17 +538,6 @@ class FrontierDrone(DroneAbstract):
         if self.controller.current_state == self.controller.approaching_wounded:
             self.controller.force_drone_stuck()
 
-
-    def compute_vel_angle(self):
-        """
-        compute the velocity angle
-        """
-        # use previous position to calculate velocity
-        vel = self.measured_velocity()
-        if vel is None:
-            return 0
-        vel_angle = math.atan2(vel[1], vel[0])
-        return vel_angle
     
     def update_last_other_drones_position(self):
         """

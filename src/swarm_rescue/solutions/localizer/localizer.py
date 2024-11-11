@@ -58,10 +58,10 @@ class Localizer:
         self._measured_angle: Optional[float] = None
         self._measured_velocity_angle: Optional[float] = None
 
-        self._previous_velocity: Deque[Vector2D] = deque([Vector2D()])
-        self._previous_velocity_angle: Deque[float] = deque([0])
-        self._previous_position: Deque[Vector2D] = deque([Vector2D()])
-        self._previous_angle: Deque[float] = deque([0])
+        self._previous_velocity: Deque[Vector2D] = deque([])
+        self._previous_velocity_angle: Deque[float] = deque()
+        self._previous_position: Deque[Vector2D] = deque([])
+        self._previous_angle: Deque[float] = deque([])
 
         self._theoretical_position: Vector2D = Vector2D(INF,INF)
         self._theoretical_velocity: Vector2D = Vector2D(INF,INF)
@@ -142,7 +142,7 @@ class Localizer:
             last_v: Vector2D = Vector2D()
             for v in self._previous_velocity:
                 last_v += v
-            last_v = last_v / Localizer.queue_size
+            last_v = last_v / len(self._previous_velocity)
             self._drone_velocity = last_v + get_acceleration(last_v, self.drone.prev_command, self._drone_angle)
         else:
             self._drone_velocity = self._theoretical_velocity
@@ -152,7 +152,7 @@ class Localizer:
             last_pos: Vector2D = Vector2D()
             for p in self._previous_position:
                 last_pos += p
-            last_pos = last_pos / Localizer.queue_size
+            last_pos = last_pos / len(self._previous_position)
             self._drone_position = last_pos + self._drone_velocity
         else:
             self._drone_position = self._theoretical_position
@@ -163,16 +163,16 @@ class Localizer:
         self.drone.drone_angle = self._drone_angle
         self.drone.drone_velocity = self._drone_velocity
 
-        # path = os.path.dirname(os.path.abspath(__file__))
-        # with open(path+"./data/measured_pos.txt", 'a') as f:
-        #     f.write(f"{self.drone.true_position()[0]} {self.drone.true_position()[1]} "+
-        #             f"{self._drone_position.x} {self._drone_position.y} "+
-        #             f"{self._measured_position.x} {self._measured_position.y} "+
-        #             f"{self.drone.true_velocity()[0]} {self.drone.true_velocity()[1]} "+
-        #             f"{self.drone_velocity.x} {self.drone_velocity.y} "+
-        #             f"{self._measured_velocity.x} {self._measured_velocity.y} "+
-        #             f"{self.drone.true_angle()} {self._drone_angle} {self._measured_angle}"
-        #             '\n')
+        path = os.path.dirname(os.path.abspath(__file__))
+        with open(path+"./data/measured_pos.txt", 'a') as f:
+            f.write(f"{self.drone.true_position()[0]} {self.drone.true_position()[1]} "+
+                    f"{self._drone_position.x} {self._drone_position.y} "+
+                    f"{self._measured_position.x} {self._measured_position.y} "+
+                    f"{self.drone.true_velocity()[0]} {self.drone.true_velocity()[1]} "+
+                    f"{self.drone_velocity.x} {self.drone_velocity.y} "+
+                    f"{self._measured_velocity.x} {self._measured_velocity.y} "+
+                    f"{self.drone.true_angle()} {self._drone_angle} {self._measured_angle}"
+                    '\n')
 
     @property
     def drone_velocity(self) -> Vector2D:
