@@ -1,37 +1,203 @@
 from __future__ import annotations
 
-from typing import List, TYPE_CHECKING, Optional, Dict
+from collections import deque
+from typing import List, TYPE_CHECKING, Optional, Dict, Deque
 import math
 import numpy as np
+import os
 
 from solutions.utils.types import Vector2D
 from solutions.utils.utils import normalize_angle
 from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR
+from spg_overlay.utils.utils import circular_mean
 
 if TYPE_CHECKING:
     from solutions.frontier_drone import FrontierDrone
 
+
+def get_acceleration(velocity: Vector2D, command, drone_angle: float) -> Vector2D:
+    B = Vector2D(command["forward"], command["lateral"])
+    if B.norm()==0:
+        return Vector2D(0,0)
+    B.rotate(drone_angle)
+    if B.norm() > 1:
+        B = B.normalize()
+    B = Localizer.velocity_const * B
+    return Vector2D((B.x - velocity.x) / Localizer.tau, (B.y - velocity.y) / Localizer.tau)
+
+
+def get_angular_velocity(command) -> float:
+    return Localizer.angle_const * command["rotation"]
+
+def angle_distance(a1, a2)-> float:
+    r = abs(a1 - a2)
+    r = min(r, a1-a2+2*np.pi)
+    r = min(r, a2-a1-2*np.pi)
+    return r
+
 class Localizer:
+    velocity_const = 11.72052117358362
+    angle_const = 0.171
+    tau = 20
+    queue_size = 3
+
     def __init__(self, drone: FrontierDrone):
         self.drone = drone
-        self.theoretical_velocity: Vector2D = Vector2D()
+        self.last_impact: int = 10000
+
+        self._drone_velocity: Vector2D = Vector2D()
+        self._drone_velocity_angle: float = 0
+        self._drone_position: Vector2D = Vector2D()
+        self._drone_angle: float = 0
+
+        self._measured_position: Optional[Vector2D] = None
+        self._measured_velocity: Optional[Vector2D] = None
+        self._measured_angle: Optional[float] = None
+        self._measured_velocity_angle: Optional[float] = None
+
+        self._previous_velocity: Deque[Vector2D] = deque([Vector2D()])
+        self._previous_velocity_angle: Deque[float] = deque([0])
+        self._previous_position: Deque[Vector2D] = deque([Vector2D()])
+        self._previous_angle: Deque[float] = deque([0])
+
+        self._theoretical_position: Vector2D = Vector2D()
+        self._theoretical_velocity: Vector2D = Vector2D()
+        self._theoretical_angle: float = 0
+        self._theoretical_angle_velocity: float = 0
+
+    def update_previous(self) -> None:
+        if self._measured_velocity is not None:
+            self._previous_velocity.append(self._measured_velocity)
+        if self._measured_velocity_angle is not None:
+            self._previous_velocity_angle.append(self._measured_velocity_angle)
+        if self._measured_position is not None:
+            self._previous_position.append(self._measured_position)
+        if self._measured_velocity_angle is not None:
+            self._previous_angle.append(self._measured_angle)
+
+        if len(self._previous_position)>Localizer.queue_size or (self._measured_position is None and len(self._previous_position)>0):
+            self._previous_position.popleft()
+        if len(self._previous_velocity)>Localizer.queue_size or (self._measured_velocity is None and len(self._previous_velocity)>0):
+            self._previous_velocity.popleft()
+        if len(self._previous_velocity_angle)>Localizer.queue_size or (self._measured_velocity_angle is None and len(self._previous_velocity_angle)>0):
+            self._previous_velocity_angle.popleft()
+        if len(self._previous_angle)>Localizer.queue_size or (self._measured_angle is None and len(self._previous_angle)>0):
+            self._previous_angle.popleft()
+
+    def update_measured_values(self) -> None:
+        if self.drone.measured_gps_position() is None:
+            self._measured_position = None
+        else:
+            self._measured_position = Vector2D(pointList=self.drone.measured_gps_position())
+
+        if self.drone.measured_velocity() is None:
+            self._measured_velocity = None
+        else:
+            self._measured_velocity = Vector2D(pointList=self.drone.measured_velocity())
+
+        self._measured_angle = self.drone.measured_compass_angle()
+        self._measured_velocity_angle = self.drone.measured_angular_velocity()
+
+    def update_theoretical_values(self) -> None:
+        """
+        Called before estimating drone values (=> previous drone values)
+        """
+        previous_command = self.drone.prev_command
+        if self.last_impact<=Localizer.queue_size and self._measured_velocity is not None:
+            self._theoretical_velocity = self._measured_velocity
+        else:
+            a = get_acceleration(self._drone_velocity, previous_command, self._drone_angle)
+            self._theoretical_velocity = self._drone_velocity + a
+
+        if self._measured_position is not None and (self.last_impact<=Localizer.queue_size or self._theoretical_position.distance(self._measured_position)>20):
+            self._theoretical_position = self._measured_position
+        else:
+            self._theoretical_position = self._drone_position + self._theoretical_velocity
+
+        self._theoretical_angle_velocity = get_angular_velocity(previous_command)
+        self._theoretical_angle = self._drone_angle + self._theoretical_angle_velocity
+
+    def localize(self) -> None:
+        if self.drone.has_collided:
+            self.last_impact = 0
+        else:
+            self.last_impact += 1
+        self.update_measured_values()
+        self.update_theoretical_values()
+        self.update_previous()
+
+        # Estimate drone angle
+        if self._measured_angle is not None:
+            self._drone_angle = self._measured_angle
+        else:
+            self._drone_angle = self._theoretical_angle
+
+        # Estimate drone velocity
+        if self._measured_velocity is not None and self.last_impact<=Localizer.queue_size:
+            self._drone_velocity = self._measured_velocity
+        elif self._measured_velocity is not None:
+            last_v: Vector2D = Vector2D()
+            for v in self._previous_velocity:
+                last_v += v
+            last_v = last_v / Localizer.queue_size
+            self._drone_velocity = last_v + get_acceleration(last_v, self.drone.prev_command, self._drone_angle)
+        else:
+            self._drone_velocity = self._theoretical_velocity
+
+        # Estimate drone position
+        if self._measured_position is not None:
+            last_pos: Vector2D = Vector2D()
+            for p in self._previous_position:
+                last_pos += p
+            last_pos = last_pos / Localizer.queue_size
+            self._drone_position = last_pos + self._drone_velocity
+        else:
+            self._drone_position = self._theoretical_position
+            self.optimise_localization()
+
+        # Update values
+        self.drone.drone_position = self._drone_position
+        self.drone.drone_angle = self._drone_angle
+        self.drone.drone_velocity = self._drone_velocity
+
+        # path = os.path.dirname(os.path.abspath(__file__))
+        # with open(path+"./data/measured_pos.txt", 'a') as f:
+        #     f.write(f"{self.drone.true_position()[0]} {self.drone.true_position()[1]} "+
+        #             f"{self._drone_position.x} {self._drone_position.y} "+
+        #             f"{self._measured_position.x} {self._measured_position.y} "+
+        #             f"{self.drone.true_velocity()[0]} {self.drone.true_velocity()[1]} "+
+        #             f"{self.drone_velocity.x} {self.drone_velocity.y} "+
+        #             f"{self._measured_velocity.x} {self._measured_velocity.y} "+
+        #             f"{self.drone.true_angle()} {self._drone_angle} {self._measured_angle}"
+        #             '\n')
 
     @property
-    def drone_velocity(self) -> float:
-        return self.drone.odometer_values()[0]
+    def drone_velocity(self) -> Vector2D:
+        return self._drone_velocity
 
     @property
     def drone_velocity_angle(self) -> float:
-        return normalize_angle(self.drone.odometer_values()[1])
+        return self._drone_velocity_angle
 
     @property
     def drone_position(self) -> Vector2D:
-        return self.drone.drone_position
+        return self._drone_position
 
     @property
     def drone_angle(self) -> float:
-        return self.drone.drone_angle
+        return self._drone_angle
 
+    @property
+    def theoretical_position(self) -> Vector2D:
+        return self._theoretical_position
+
+    @property
+    def theoretical_velocity(self) -> Vector2D:
+        return self._theoretical_velocity
+
+    @property
+    def measured_position(self) -> Vector2D:
+        return self._measured_position
 
     def get_angle_to_target(self) -> float:
         """
@@ -175,48 +341,3 @@ class Localizer:
 
         self.drone.drone_position = Vector2D(starting_pos.x + mindx, starting_pos.y + mindy)
         self.drone.drone_angle = starting_angle + mindangle
-
-
-    # TODO: improve angle estimation
-    def update_localization(self) -> None:
-        """
-        returns the position of the drone
-        """
-
-        rot = self.drone.command["rotation"]
-        measured_angle = self.drone.measured_compass_angle()
-        if measured_angle is not None:
-            self.drone.drone_angle = measured_angle
-            self.drone.time_in_no_gps = 0
-        else:
-            self.drone.drone_angle = self.drone.drone_angle + 0.2*rot
-            #self.drone_angle += self.odometer_values()[2]
-
-        measured_position = self.measured_gps_position()
-
-        angle = self.drone.drone_angle
-        command = Vector2D(self.drone.command["forward"], self.drone.command["lateral"])
-        command.rotate(angle)
-
-        theoretical_velocity = self.theoretical_velocity + ((command * 0.56) - (self.theoretical_velocity * 0.095))
-        v = self.drone.odometer_values()[0]
-
-        if measured_position is not None and abs(v) > 5:
-            self.theoretical_velocity = Vector2D((v * math.cos(angle) + theoretical_velocity.x) / 2, (v * math.sin(angle) + theoretical_velocity.y) / 2)
-            theoretical_position = self.drone.drone_position + self.theoretical_velocity
-            self.drone.drone_position = (self.measured_gps_position() + theoretical_position) / 2
-        elif measured_position is not None:
-            self.theoretical_velocity = Vector2D(pointList=np.array([v * math.cos(angle), v * math.sin(angle)]) / 2)
-            self.drone.drone_position =  self.measured_gps_position()
-        else:
-            self.drone.drone_position.setX(self.drone.drone_position.x + self.drone_velocity * np.cos(self.drone.drone_angle + self.drone_velocity_angle))
-            self.drone.drone_position.setY(self.drone.drone_position.y + self.drone_velocity * np.sin(self.drone.drone_angle + self.drone_velocity_angle))
-            # self.theoretical_velocity = theoretical_velocity
-            # self.drone_position = self.drone_position + self.theoretical_velocity
-            self.optimise_localization()
-
-    def measured_gps_position(self) -> Optional[Vector2D]:
-        measured_position = self.drone.measured_gps_position()
-        if measured_position is None:
-            return None
-        return Vector2D(pointList=measured_position)

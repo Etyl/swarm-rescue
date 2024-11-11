@@ -27,23 +27,22 @@ def get_accel(velocity: Vector2D, control, drone_angle: float) -> Vector2D:
 def main():
     true_positions = []
     true_velocity = []
-    true_angle = []
     with open("data/raw_measures.txt", "r") as f:
         for line in f:
             l = list(map(float,line.strip().split()))
             true_positions.append(l[:2])
             true_velocity.append(l[2:4])
-            true_angle.append(l[4])
 
     true_positions = np.array(true_positions)
     true_velocity = np.array(true_velocity)
-    true_angle = np.array(true_angle)
 
     pos_pred = [true_positions[0]]
+    vel_pred = [np.array([0,0])]
     for i in range(len(true_velocity)):
         y = pos_pred[-1]
-        v = true_velocity[i]
+        v = vel_pred[-1] + accel_pred(vel_pred[-1])
         pos_pred.append(y+v)
+        vel_pred.append(v)
     pos_pred = np.array(pos_pred)
 
     plt.figure()
@@ -55,7 +54,7 @@ def main():
     plt.figure()
     plt.title("X speed")
     plt.plot(range(len(true_velocity)), true_velocity[:,0], color="blue")
-    # plt.plot(range(len(velocity)), velocity_pred, color="red", linestyle="dashed")
+    plt.plot(range(len(vel_pred)), vel_pred, color="red", linestyle="dashed")
     #
     #
     # plt.figure()

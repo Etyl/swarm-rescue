@@ -58,6 +58,13 @@ class FrontierDrone(DroneAbstract):
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
         self.target: Optional[Vector2D] = None # target for the drone for the path planning
         self.killed_drones : List[int] = [] # the list of killed drones ids
+        self.killed_drones : List[int] = [] # the list of killed drones ids
+        self.prev_command : Dict = {
+            "forward": 0.0,
+            "lateral": 0.0,
+            "rotation": 0.0,
+            "grasper": 0
+        }
 
         self.rescue_center_position: Optional[Vector2D] = None
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
@@ -83,10 +90,13 @@ class FrontierDrone(DroneAbstract):
         # self.controller._graph().write_png("./graph.png")
 
         self.roaming = False
-        self.command = {"forward": 0.0,
-                        "lateral": 0.0,
-                        "rotation": 0.0,
-                        "grasper": 0}
+        self.command: Dict[str, float] = {
+            "forward": 0.0,
+            "lateral": 0.0,
+            "rotation": 0.0,
+            "grasper": 0
+        }
+        self.prev_command: Dict[str, float] = self.command
 
         self.map : Map = Map(area_world=self.size_area, resolution=4, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
@@ -108,6 +118,7 @@ class FrontierDrone(DroneAbstract):
         self.stuck_iteration : int = 0
         self.time : int = 0
         self.time_in_no_gps : int = 0
+        self.previous_drone_health: int = self.drone_health
 
     @property
     def near_center(self) -> bool:
@@ -131,6 +142,10 @@ class FrontierDrone(DroneAbstract):
             return None
         else:
             return self.path[self.waypoint_index]
+
+    @property
+    def has_collided(self) -> bool:
+        return self.previous_drone_health != self.drone_health
 
 
     def compute_point_of_interest(self):
@@ -597,7 +612,7 @@ class FrontierDrone(DroneAbstract):
         
         self.stuck_iteration += 1
         self.time += 1
-        self.localizer.update_localization()
+        self.localizer.localize()
         if self.gps_disabled:
             self.time_in_no_gps += 1
         self.process_semantic_sensor()
@@ -658,6 +673,8 @@ class FrontierDrone(DroneAbstract):
         self.drone_prev_position = self.drone_position.copy()
 
         self.point_of_interest = self.compute_point_of_interest()
+        self.prev_command = self.command
+        self.previous_drone_health = self.drone_health
 
         return self.command
 
