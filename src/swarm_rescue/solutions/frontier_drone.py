@@ -391,11 +391,12 @@ class FrontierDrone(DroneAbstract):
         """
         computes the position of the rescue center
         """
-        semantic_lidar_dist = [data.distance for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
-        min_dist = min(semantic_lidar_dist) if len(semantic_lidar_dist) > 0 else np.inf
+        semantic_lidar = [data for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
 
-        if min_dist > 10:
-            self.rescue_center_position = self.drone_position.copy()
+        if len(semantic_lidar)>0 and self.rescue_center_position is None:
+            d = semantic_lidar[0].distance
+            a = semantic_lidar[0].angle + self.drone_angle
+            self.rescue_center_position = Vector2D(self.drone_position.x+d*np.cos(a),self.drone_position.y+d*np.sin(a))
 
 
     def update_drone_repulsion(self):
@@ -612,9 +613,10 @@ class FrontierDrone(DroneAbstract):
         
         self.stuck_iteration += 1
         self.time += 1
-        self.localizer.localize()
         if self.gps_disabled:
             self.time_in_no_gps += 1
+
+        self.localizer.localize()
         self.process_semantic_sensor()
         self.process_communicator()
         self.check_wounded_available()

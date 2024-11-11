@@ -14,6 +14,7 @@ from spg_overlay.utils.utils import circular_mean
 if TYPE_CHECKING:
     from solutions.frontier_drone import FrontierDrone
 
+INF: float = 100000
 
 def get_acceleration(velocity: Vector2D, command, drone_angle: float) -> Vector2D:
     B = Vector2D(command["forward"], command["lateral"])
@@ -62,8 +63,8 @@ class Localizer:
         self._previous_position: Deque[Vector2D] = deque([Vector2D()])
         self._previous_angle: Deque[float] = deque([0])
 
-        self._theoretical_position: Vector2D = Vector2D()
-        self._theoretical_velocity: Vector2D = Vector2D()
+        self._theoretical_position: Vector2D = Vector2D(INF,INF)
+        self._theoretical_velocity: Vector2D = Vector2D(INF,INF)
         self._theoretical_angle: float = 0
         self._theoretical_angle_velocity: float = 0
 
@@ -105,7 +106,7 @@ class Localizer:
         Called before estimating drone values (=> previous drone values)
         """
         previous_command = self.drone.prev_command
-        if self.last_impact<=Localizer.queue_size and self._measured_velocity is not None:
+        if self._measured_velocity is not None and (self.last_impact<=Localizer.queue_size or self.theoretical_velocity.distance(self._measured_velocity)>10):
             self._theoretical_velocity = self._measured_velocity
         else:
             a = get_acceleration(self._drone_velocity, previous_command, self._drone_angle)
