@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import List, TYPE_CHECKING, Optional, Dict, Deque
+from typing import TYPE_CHECKING, Optional, Deque
 import math
 import numpy as np
 import os
@@ -30,9 +30,11 @@ def get_angular_velocity(command) -> float:
     return Localizer.angle_const * command["rotation"]
 
 def angle_distance(a1, a2)-> float:
+    a1 = normalize_angle(a1)
+    a2 = normalize_angle(a2)
     r = abs(a1 - a2)
-    r = min(r, a1-a2+2*np.pi)
-    r = min(r, a2-a1-2*np.pi)
+    r = min(r, abs(a1-a2+2*np.pi))
+    r = min(r, abs(a1-a2-2*np.pi))
     return r
 
 class Localizer:
