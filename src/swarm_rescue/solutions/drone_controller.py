@@ -132,7 +132,7 @@ class DroneController(StateMachine):
     @going_to_center.enter
     def on_enter_going_to_center(self) -> None:
         self.drone.drone_angle_offset = np.pi
-        if self.drone.next_waypoint is None:
+        if not self.drone.onRoute:
             path = self.drone.get_path(self.drone.rescue_center_position)
             self.drone.set_path(path)
         self.command = self.drone.localizer.get_control_from_path()

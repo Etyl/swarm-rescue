@@ -397,7 +397,6 @@ class FrontierDrone(DroneAbstract):
             d = semantic_lidar[0].distance
             a = semantic_lidar[0].angle+self.drone_angle
             self.rescue_center_position = Vector2D(self.drone_position.x+d*np.cos(a),self.drone_position.y+d*np.sin(a))
-            print("ok")
 
 
     def update_drone_repulsion(self):
@@ -761,6 +760,10 @@ class FrontierDrone(DroneAbstract):
                     else:
                         pos = np.array(self.map.grid_to_world(point)) + np.array(self.size_area)/2
                         arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
+
+        if True and self.rescue_center_position is not None:
+            pos = self.rescue_center_position.array + np.array(self.size_area) / 2
+            arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.PURPLE)
 
     def draw_bottom_layer(self):
         # check if drone is dead

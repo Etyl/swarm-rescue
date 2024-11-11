@@ -163,16 +163,16 @@ class Localizer:
         self.drone.drone_angle = self._drone_angle
         self.drone.drone_velocity = self._drone_velocity
 
-        path = os.path.dirname(os.path.abspath(__file__))
-        with open(path+"./data/measured_pos.txt", 'a') as f:
-            f.write(f"{self.drone.true_position()[0]} {self.drone.true_position()[1]} "+
-                    f"{self._drone_position.x} {self._drone_position.y} "+
-                    f"{self._measured_position.x} {self._measured_position.y} "+
-                    f"{self.drone.true_velocity()[0]} {self.drone.true_velocity()[1]} "+
-                    f"{self.drone_velocity.x} {self.drone_velocity.y} "+
-                    f"{self._measured_velocity.x} {self._measured_velocity.y} "+
-                    f"{self.drone.true_angle()} {self._drone_angle} {self._measured_angle}"
-                    '\n')
+        # path = os.path.dirname(os.path.abspath(__file__))
+        # with open(path+"./data/measured_pos.txt", 'a') as f:
+        #     f.write(f"{self.drone.true_position()[0]} {self.drone.true_position()[1]} "+
+        #             f"{self._drone_position.x} {self._drone_position.y} "+
+        #             f"{self._measured_position.x} {self._measured_position.y} "+
+        #             f"{self.drone.true_velocity()[0]} {self.drone.true_velocity()[1]} "+
+        #             f"{self.drone_velocity.x} {self.drone_velocity.y} "+
+        #             f"{self._measured_velocity.x} {self._measured_velocity.y} "+
+        #             f"{self.drone.true_angle()} {self._drone_angle} {self._measured_angle}"
+        #             '\n')
 
     @property
     def drone_velocity(self) -> Vector2D:
@@ -281,10 +281,12 @@ class Localizer:
             if self.drone.check_waypoint():
                 if self.drone.waypoint_index < len(self.drone.path)-1:
                     self.drone.waypoint_index += 1
+                    self.drone.update_waypoint_index()
                 else:
                     self.drone.reset_path()
 
         if self.drone.target is None or self.drone.drone_position is None:
+            self.drone.reset_path()
             return command
 
         angle_from_target = self.get_angle_to_target() + self.drone.drone_angle_offset
