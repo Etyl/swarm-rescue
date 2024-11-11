@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 from typing import List, TYPE_CHECKING, Optional, Dict
@@ -290,6 +291,7 @@ class Map:
         #cv2.imwrite("./kill_zones_smooth.png", kill_zone_grid * 255)
 
         obstacle_grid = obstacle_grid + kill_zone_grid
+
         # plt.imshow(obstacle_grid)
         # plt.savefig("./map.png")
 
@@ -314,6 +316,12 @@ class Map:
 
 
         if grid_path is None:
+            if not fast:
+                plt.figure()
+                plt.imshow(obstacle_grid)
+                plt.plot([grid_start.y, grid_end.y], [grid_start.x, grid_end.x], 'ro')
+                plt.savefig("obstacle_grid.png")
+                print("NO PATH")
             return None
         path = [self.grid_to_world(Vector2D(pos[0] / zoom_factor, pos[1] / zoom_factor)) for pos in grid_path]
 

@@ -173,18 +173,10 @@ class FrontierDrone(DroneAbstract):
         checks if the drone has reached the waypoint
         """
         next_waypoint: Vector2D = self.next_waypoint
-        dist = self.drone_position.distance(next_waypoint)
-        if len(self.path) == 0: return dist < 30
+        if next_waypoint is None:
+            return False
 
-        v1 : Vector2D = next_waypoint - self.drone_position
-        v2 : Vector2D = self.path[-1] - next_waypoint
-
-        if v1.norm() == 0 or v2.norm() == 0:
-            turning_angle = 0
-        else:
-            turning_angle = (v1@v2)/(v1.norm()*v2.norm())
-
-        return dist < 15 + (1+turning_angle)*20
+        return self.drone_position.distance(next_waypoint) < 40
 
 
     def define_message_for_all(self):
@@ -394,9 +386,7 @@ class FrontierDrone(DroneAbstract):
         semantic_lidar = [data for data in self.semantic_values() if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER]
 
         if len(semantic_lidar)>0 and self.rescue_center_position is None:
-            d = semantic_lidar[0].distance
-            a = semantic_lidar[0].angle+self.drone_angle
-            self.rescue_center_position = Vector2D(self.drone_position.x+d*np.cos(a),self.drone_position.y+d*np.sin(a))
+            self.rescue_center_position = self.drone_position.copy()
 
 
     def update_drone_repulsion(self):
