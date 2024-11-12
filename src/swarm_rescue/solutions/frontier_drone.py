@@ -183,6 +183,7 @@ class FrontierDrone(DroneAbstract):
             semantic_values = self.semantic_values(),
             kill_zone_mode = self.kill_zone_mode,
             next_waypoint= self.next_waypoint,
+            killed_drones = self.killed_drones
         )
         return data
 
@@ -246,6 +247,16 @@ class FrontierDrone(DroneAbstract):
                     #self.wounded_found_list[k].taken = True
                     self.wounded_found_list[k].drone_taker = drone_data.id
                     break
+
+        # update the kill zones
+        if not drone_data.kill_zone_mode and self.kill_zone_mode:
+            print("Found someone in no kill zone mode")
+            self.reset_kill_zones()
+
+        # update killed drones
+        for killed in drone_data.killed_drones:
+            if killed not in self.killed_drones:
+                self.killed_drones.append(killed)
 
         # update the drone information
         for k in range(len(self.drone_list)):
@@ -588,11 +599,15 @@ class FrontierDrone(DroneAbstract):
             if drone.id == self.identifier: continue
             if drone.id in self.killed_drones:
                 print("No communication zone mode")
-                self.kill_zones = []
-                self.killed_drones = []
-                self.map.reset_kill_zones()
-                self.kill_zone_mode = False
-                self.reset_path()
+                self.reset_kill_zones()
+
+    def reset_kill_zones(self):
+        print("No communication zone mode")
+        self.kill_zones = []
+        self.killed_drones = []
+        self.map.reset_kill_zones()
+        self.kill_zone_mode = False
+        self.reset_path()
 
     def control(self):
 
