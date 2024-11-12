@@ -107,3 +107,4 @@ class DroneData:
     semantic_values: np.ndarray
     kill_zone_mode: bool
     next_waypoint : Vector2D
+    killed_drones: List[int] # the list of killed drones ids

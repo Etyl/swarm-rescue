@@ -267,6 +267,12 @@ class Map:
             drone.waypoint_index = None
         #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         #self.update_map()
+
+    def reset_kill_zones(self):
+        """
+        Reset the kill zones
+        """
+        self.kill_zones = {}
     
     def shortest_path(self, start: Vector2D, end: Vector2D, fast=False) -> Optional[List[Vector2D]]:
         """
