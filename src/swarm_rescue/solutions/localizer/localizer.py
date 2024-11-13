@@ -315,8 +315,8 @@ class Localizer:
         """
         # starting_pos = self.drone_position
         # starting_angle = self.drone_angle
-        starting_pos = self.drone.get_position()
-        starting_angle = self.drone.get_angle()
+        starting_pos = self.drone_position
+        starting_angle = self.drone_angle
 
         lidar_dists = self.drone.lidar().get_sensor_values()[::10].copy()
         lidar_angles = self.drone.lidar().ray_angles[::10].copy()
@@ -345,5 +345,5 @@ class Localizer:
             if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
                 mindx, mindy, mindangle = dx, dy, dangle
 
-        self.drone.drone_position = Vector2D(starting_pos.x + mindx, starting_pos.y + mindy)
-        self.drone.drone_angle = starting_angle + mindangle
+        self._drone_position = starting_pos + Vector2D(mindx,mindy)
+        self._drone_angle = starting_angle + mindangle
