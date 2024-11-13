@@ -40,16 +40,12 @@ class FrontierDrone(DroneAbstract):
             display_lidar_graph=False,
             **kwargs)
 
-        self.drone_prev_position : Optional[Vector2D] = None
         self.path : List[Vector2D] = []
         self.waypoint_index : Optional[int] = None # The index to the next waypoint to go to
-        self.drone_position : Vector2D = Vector2D(0, 0) # The position of the drone
-        self.drone_angle : float = 0 # The angle of the drone
         self.drone_angle_offset : float = 0 # The angle offset of the drone that can be changed by the states
         self.found_wounded : bool = False # True if the drone has found a wounded person
+        self.last_positions : Deque[Vector2D] = deque()
         self.last_wounded_seen : int = 10000 # time (frames) since the wounded was last seen
-        self.last_angles : Deque[float] = deque() # queue of the last angles
-        self.last_positions : Deque[Vector2D] = deque() # queue of the last positions
         self.repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the other drones
         self.wall_repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the walls
         self.center_angle : Optional[float] = None # angle from the visible rescue center
@@ -145,6 +141,14 @@ class FrontierDrone(DroneAbstract):
     @property
     def has_collided(self) -> bool:
         return self.previous_drone_health != self.drone_health
+
+    @property
+    def drone_position(self) -> Vector2D:
+        return self.localizer.drone_position
+
+    @property
+    def drone_angle(self) -> float:
+        return self.localizer.drone_angle
 
 
     def compute_point_of_interest(self):
@@ -668,8 +672,6 @@ class FrontierDrone(DroneAbstract):
         self.command["forward"] = min(1,max(-1,self.command["forward"]))
         self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
 
-        self.drone_prev_position = self.drone_position.copy()
-
         self.point_of_interest = self.compute_point_of_interest()
         self.prev_command = self.command
         self.previous_drone_health = self.drone_health
@@ -701,11 +703,11 @@ class FrontierDrone(DroneAbstract):
             self.map.merge(other_drone.map, self)
 
 
-    def set_selected_frontier_id(self, frontierId : int):
+    def set_selected_frontier_id(self, frontier_id : int):
         """
         sets the selected frontier id
         """
-        self.selected_frontier_id = frontierId
+        self.selected_frontier_id = frontier_id
 
     def draw_top_layer(self):
         # check if drone is dead
