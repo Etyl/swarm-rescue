@@ -53,13 +53,13 @@ class FrontierDrone(DroneAbstract):
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
         self.target: Optional[Vector2D] = None # target for the drone for the path planning
         self.killed_drones : List[int] = [] # the list of killed drones ids
-        self.killed_drones : List[int] = [] # the list of killed drones ids
         self.prev_command : Dict = {
             "forward": 0.0,
             "lateral": 0.0,
             "rotation": 0.0,
             "grasper": 0
         }
+        self.visible_drones: List[Tuple[int,Vector2D]] = [] # List of (id,drone_position)
 
         self.rescue_center_position: Optional[Vector2D] = None
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
@@ -102,7 +102,6 @@ class FrontierDrone(DroneAbstract):
 
         self.last_other_drones_position : Dict[int, Tuple[Vector2D, float]] = {}
         self.kill_zones : List[Vector2D] = []
-        self.semantic_drone_pos : List[Vector2D] = []
         self.potential_kill_zones : List[Vector2D] = []
         self.kill_zone_mode = True
 
@@ -193,7 +192,9 @@ class FrontierDrone(DroneAbstract):
             semantic_values = self.semantic_values(),
             kill_zone_mode = self.kill_zone_mode,
             next_waypoint= self.next_waypoint,
-            killed_drones = self.killed_drones
+            killed_drones = self.killed_drones,
+            confidence_position = self.localizer.confidence_position,
+            visible_drones = self.visible_drones
         )
         return data
 
@@ -341,6 +342,7 @@ class FrontierDrone(DroneAbstract):
         detection_semantic = self.semantic_values()
 
         self.clear_wounded_found()
+        self.visible_drones = []
 
         self.last_wounded_seen += 1
         if detection_semantic:
@@ -349,6 +351,18 @@ class FrontierDrone(DroneAbstract):
                 if data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON and not data.grasped:
                     # wounded: WoundedData = WoundedData(data)
                     self.add_wounded(data)
+
+                if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+                    drone_pos = self.drone_position.copy()
+                    angle = data.angle + self.drone_angle
+                    drone_pos += data.distance * Vector2D(math.cos(angle), math.sin(angle))
+                    best_d,identifier = 10000000,-1
+                    for drone in self.drone_list:
+                        d = drone_pos.distance(drone.position)
+                        if d < best_d:
+                            best_d,identifier = d,drone.id
+                    if best_d < 50:
+                        self.visible_drones.append((identifier,drone_pos))
 
         rescue_center_dist = float('inf')
         angles_list = []
@@ -755,6 +769,7 @@ class FrontierDrone(DroneAbstract):
             rot = np.array([[math.cos(self.get_angle()), math.sin(self.get_angle())],[-math.sin(self.get_angle()), math.cos(self.get_angle())]])
             direction = direction@rot
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
+            arcade.draw_text(f"{self.localizer.confidence_position:.3f}", pos[0]+10, pos[1]+10, arcade.color.BLACK, font_size=15)
 
 
         # draw frontiers

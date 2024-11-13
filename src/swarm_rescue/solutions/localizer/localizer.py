@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import TYPE_CHECKING, Optional, Deque, Dict
+from typing import TYPE_CHECKING, Optional, Deque, Dict, List, Tuple
 import math
 import numpy as np
 import os
 
 from solutions.utils.types import Vector2D
 from solutions.utils.utils import normalize_angle
+from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor
 from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR
 from spg_overlay.utils.utils import circular_mean
 
@@ -47,6 +48,7 @@ class Localizer:
     def __init__(self, drone: FrontierDrone):
         self.drone = drone
         self.last_impact: int = 10000
+        self.confidence_position = 0
 
         self._drone_velocity: Vector2D = Vector2D()
         self._drone_velocity_angle: float = 0
@@ -75,6 +77,34 @@ class Localizer:
     @property
     def drone_speed_alpha(self) -> float:
         return self.drone.odometer_values()[1]
+
+    @property
+    def drone_velocity(self) -> Vector2D:
+        return self._drone_velocity
+
+    @property
+    def drone_velocity_angle(self) -> float:
+        return self._drone_velocity_angle
+
+    @property
+    def drone_position(self) -> Vector2D:
+        return self._drone_position
+
+    @property
+    def drone_angle(self) -> float:
+        return self._drone_angle
+
+    @property
+    def theoretical_position(self) -> Vector2D:
+        return self._theoretical_position
+
+    @property
+    def theoretical_velocity(self) -> Vector2D:
+        return self._theoretical_velocity
+
+    @property
+    def measured_position(self) -> Vector2D:
+        return self._measured_position
 
     def update_previous(self) -> None:
         if self._measured_velocity is not None:
@@ -128,6 +158,33 @@ class Localizer:
         self._theoretical_angle_velocity = get_angular_velocity(previous_command)
         self._theoretical_angle = self._drone_angle + self._theoretical_angle_velocity
 
+    def estimate_confidence(self, drone_confidences:List[float]) -> float:
+        decay = 0.01
+
+        p = self.confidence_position
+        n = 1
+        for x in drone_confidences:
+            if x>self.confidence_position:
+                p += x
+                n += 1
+        p /= n
+
+        return max(0,p - decay)
+
+    def update_confidence(self) -> None:
+        if self.drone.measured_gps_position() is not None:
+            self.confidence_position = 1
+            return
+
+        drone_confidences:List[float] = []
+        data_list = self.drone.communicator.received_messages
+        for (drone_communicator, drone_data) in data_list:
+            if drone_data.confidence_position<0.8:
+                continue
+            drone_confidences.append(drone_data.confidence_position)
+
+        self.confidence_position = self.estimate_confidence(drone_confidences)
+
     def localize(self) -> None:
         if self.drone.has_collided:
             self.last_impact = 0
@@ -164,12 +221,10 @@ class Localizer:
             self._drone_position = last_pos + self._drone_velocity
         else: # TODO improve
             self._drone_position += self.drone_speed * Vector2D(math.cos(self.drone_angle+self.drone_speed_alpha), math.sin(self.drone_angle+self.drone_speed_alpha))
-            self.optimise_localization()
+            self.optimise_from_scan_match()
+            # self.optimize_from_communicator()
 
-        # Update values
-        self.drone.drone_position = self._drone_position
-        self.drone.drone_angle = self._drone_angle
-        self.drone.drone_velocity = self._drone_velocity
+        self.update_confidence()
 
         # path = os.path.dirname(os.path.abspath(__file__))
         # with open(path+"./data/measured_pos.txt", 'a') as f:
@@ -182,33 +237,80 @@ class Localizer:
         #             f"{self.drone.true_angle()} {self._drone_angle} {self._measured_angle}"
         #             '\n')
 
-    @property
-    def drone_velocity(self) -> Vector2D:
-        return self._drone_velocity
 
-    @property
-    def drone_velocity_angle(self) -> float:
-        return self._drone_velocity_angle
 
-    @property
-    def drone_position(self) -> Vector2D:
-        return self._drone_position
 
-    @property
-    def drone_angle(self) -> float:
-        return self._drone_angle
+    def optimize_from_communicator(self) -> None:
+        drone_positions: List[Tuple[float,Vector2D]] = []
+        data_list = self.drone.communicator.received_messages
+        for (drone_communicator, drone_data) in data_list:
+            found: List[Vector2D] = []
+            for (x,y) in drone_data.visible_drones:
+                if x==self.drone.identifier:
+                    found.append(y)
+            if len(found)==0:
+                continue
+            pos: Vector2D = Vector2D()
+            for p in found: pos += p
+            pos /= len(found)
+            drone_positions.append((drone_data.confidence_position,pos))
 
-    @property
-    def theoretical_position(self) -> Vector2D:
-        return self._theoretical_position
 
-    @property
-    def theoretical_velocity(self) -> Vector2D:
-        return self._theoretical_velocity
+        estimated_pos = self.confidence_position * self.drone_position
+        C = self.confidence_position
+        for (c,pos) in drone_positions:
+            if c<0.9:
+                continue
+            estimated_pos += c * pos
+            C += c
 
-    @property
-    def measured_position(self) -> Vector2D:
-        return self._measured_position
+        estimated_pos /= C
+
+        self._drone_position = estimated_pos
+
+
+    def optimise_from_scan_match(self):
+        """
+        optimises the localization of the drone using SLAM
+        """
+        # starting_pos = self.drone_position
+        # starting_angle = self.drone_angle
+        starting_pos = self.drone_position
+        starting_angle = self.drone_angle
+
+        lidar_dists = self.drone.lidar().get_sensor_values()[::10].copy()
+        lidar_angles = self.drone.lidar().ray_angles[::10].copy()
+        measures = []
+        for k in range(len(lidar_dists)):
+            if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
+                measures.append([lidar_dists[k], lidar_angles[k]])
+        def Q(x):
+            [posX, posY, angle] = x
+            value = 0
+            for [lidar_dist,lidar_angle] in measures:
+                point = Vector2D(0,0)
+                point.setX(starting_pos.x + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle))
+                point.setY(starting_pos.y + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle))
+                point = self.drone.map.world_to_grid(point)
+                if point.x < 0 or point.x >= self.drone.map.width or point.y < 0 or point.y >= self.drone.map.height:
+                    continue
+                #value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
+                value -= self.drone.map.get_confidence_wall_map(int(point.x),int(point.y))
+            return value
+
+        mindx, mindy, mindangle = 0,0,0
+
+        for k in range(30):
+            dx, dy, dangle = np.random.normal(0,1), np.random.normal(0,1), np.random.normal(0,0.1)
+            if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
+                mindx, mindy, mindangle = dx, dy, dangle
+
+        self._drone_position = starting_pos + Vector2D(mindx,mindy)
+        self._drone_angle = starting_angle + mindangle
+
+
+
+    ### PATH PLANNING ###
 
     def get_angle_to_target(self, target:Vector2D) -> float:
         """
@@ -315,43 +417,3 @@ class Localizer:
         command = self.get_control_from_target(self.drone.target)
 
         return command
-
-
-    def optimise_localization(self):
-        """
-        optimises the localization of the drone using SLAM
-        """
-        # starting_pos = self.drone_position
-        # starting_angle = self.drone_angle
-        starting_pos = self.drone_position
-        starting_angle = self.drone_angle
-
-        lidar_dists = self.drone.lidar().get_sensor_values()[::10].copy()
-        lidar_angles = self.drone.lidar().ray_angles[::10].copy()
-        measures = []
-        for k in range(len(lidar_dists)):
-            if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
-                measures.append([lidar_dists[k], lidar_angles[k]])
-        def Q(x):
-            [posX, posY, angle] = x
-            value = 0
-            for [lidar_dist,lidar_angle] in measures:
-                point = Vector2D(0,0)
-                point.setX(starting_pos.x + posX + lidar_dist*math.cos(lidar_angle+starting_angle+angle))
-                point.setY(starting_pos.y + posY + lidar_dist*math.sin(lidar_angle+starting_angle+angle))
-                point = self.drone.map.world_to_grid(point)
-                if point.x < 0 or point.x >= self.drone.map.width or point.y < 0 or point.y >= self.drone.map.height:
-                    continue
-                #value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
-                value -= self.drone.map.get_confidence_wall_map(int(point.x),int(point.y))
-            return value
-
-        mindx, mindy, mindangle = 0,0,0
-
-        for k in range(30):
-            dx, dy, dangle = np.random.normal(0,1), np.random.normal(0,1), np.random.normal(0,0.1)
-            if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
-                mindx, mindy, mindangle = dx, dy, dangle
-
-        self._drone_position = starting_pos + Vector2D(mindx,mindy)
-        self._drone_angle = starting_angle + mindangle

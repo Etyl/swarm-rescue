@@ -1,6 +1,6 @@
 import math
 import typing
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict, Tuple
 import numpy as np
 from dataclasses import dataclass
 
@@ -108,3 +108,5 @@ class DroneData:
     kill_zone_mode: bool
     next_waypoint : Vector2D
     killed_drones: List[int] # the list of killed drones ids
+    confidence_position: float
+    visible_drones: List[Tuple[int, Vector2D]]
