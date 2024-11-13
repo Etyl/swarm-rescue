@@ -18,7 +18,7 @@ from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SEN
 
 from solutions.utils.types import DroneData, WoundedData, Vector2D
 from solutions.localizer.localizer import Localizer
-from solutions.mapper.mapper import Map
+from solutions.mapper.mapper import Map, DRONE_SIZE_RADIUS
 from solutions.drone_controller import DroneController
 from solutions.roamer.roamer import RoamerController
 
@@ -68,9 +68,9 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
-        self.debug_wounded = False
-        self.debug_positions = True
+        self.debug_path = True # True if the path must be displayed
+        self.debug_wounded = True
+        self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False
@@ -128,7 +128,7 @@ class FrontierDrone(DroneAbstract):
 
     @property
     def wounded_visible(self) -> bool:
-        return self.last_wounded_seen < 20
+        return self.last_wounded_seen < 5
 
     @property
     def next_waypoint(self) -> Optional[Vector2D]:
@@ -225,8 +225,11 @@ class FrontierDrone(DroneAbstract):
 
         # check if wounded target is visible
         wounded_pos = get_wounded_position()
+
+
         if self.wounded_target is not None and wounded_pos.distance(self.wounded_target) < FrontierDrone.WOUNDED_DISTANCE:
-            self.last_wounded_seen = 0
+            if self.drone_position.distance(self.wounded_target)<2*DRONE_SIZE_RADIUS or self.map.is_reachable(self.drone_position, self.wounded_target):
+                self.last_wounded_seen = 0
 
         for k in range(len(self.wounded_found_list)):
             wounded = self.wounded_found_list[k]
@@ -523,6 +526,8 @@ class FrontierDrone(DroneAbstract):
 
         # TODO : change repulsion according to drone direction (change forward and sideways command)
 
+
+    # TODO: rewrite
     def test_stuck(self):
         self.last_positions.append(self.get_position())
         if len(self.last_positions) >= FrontierDrone.POSITION_QUEUE_SIZE:
@@ -535,6 +540,10 @@ class FrontierDrone(DroneAbstract):
         if self.stuck_iteration < FrontierDrone.REFRESH_PATH_LIMIT:
             return
         self.stuck_iteration = 0
+
+        if self.target is not None and self.controller.current_state in [self.controller.going_to_center, self.controller.going_to_wounded, self.controller.roaming]:
+            if not self.map.is_reachable(self.drone_position, self.target):
+                self.reset_path()
 
         closest_drone = None
         dist = np.inf

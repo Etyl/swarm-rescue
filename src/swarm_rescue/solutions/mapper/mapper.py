@@ -28,6 +28,8 @@ CONFIDENCE_THRESHOLD = 1000
 CONFIDENCE_THRESHOLD_MIN = 0
 KILL_ZONE_SIZE = 10
 
+DRONE_SIZE_RADIUS = 12
+
 class Zone:
     EMPTY = 0
     OBSTACLE = 1
@@ -55,6 +57,30 @@ class Map:
         self.kill_zones : Dict[int, Vector2D] = {}
         self.no_gps_zones : List[Vector2D] = []
 
+
+    def has_wall(self, start: Vector2D, end:Vector2D) -> bool:
+        n = int(round((end-start).norm())+1)
+        for i in range(n+1):
+            p = start + (i/n)*(end-start)
+            x = int(round(p.x))
+            y = int(round(p.y))
+            if self.map[x, y] == Zone.OBSTACLE or self.map[x,y] == Zone.UNEXPLORED:
+                return True
+        return False
+
+    def is_reachable(self, position:Vector2D, target: Vector2D) -> bool:
+        d = (target - position).norm() - 2*DRONE_SIZE_RADIUS
+        target = position + d * (target-position).normalize()
+        position = self.world_to_grid(position)
+        target = self.world_to_grid(target)
+        normal = (target - position).normalize()
+        normal.rotate(np.pi / 2)
+        for i in range(-1,2):
+            start = position +  i*(DRONE_SIZE_RADIUS/self.resolution)*normal
+            end = target + i*(DRONE_SIZE_RADIUS/self.resolution)*normal
+            if self.has_wall(start,end):
+                return False
+        return True
     
     def update_confidence_grid(self, pose, lidar, drone: FrontierDrone):
         """
