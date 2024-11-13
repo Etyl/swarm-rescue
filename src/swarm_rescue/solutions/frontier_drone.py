@@ -41,7 +41,6 @@ class FrontierDrone(DroneAbstract):
             **kwargs)
 
         self.drone_prev_position : Optional[Vector2D] = None
-        self.onRoute : bool = False # True if the drone is on the route to the waypoint
         self.path : List[Vector2D] = []
         self.waypoint_index : Optional[int] = None # The index to the next waypoint to go to
         self.drone_position : Vector2D = Vector2D(0, 0) # The position of the drone
@@ -376,6 +375,7 @@ class FrontierDrone(DroneAbstract):
     # TODO improve using pure pursuit
     def update_waypoint_index(self) -> None:
         if self.waypoint_index is None:
+            self.target = None
             return
 
         curr_proj: Optional[Vector2D] = None
@@ -533,8 +533,7 @@ class FrontierDrone(DroneAbstract):
 
             self.ignore_repulsion = 30
 
-        self.path = []
-        self.waypoint_index = None
+        self.reset_path()
         if self.controller.current_state == self.controller.approaching_wounded:
             self.controller.force_drone_stuck()
 
@@ -554,7 +553,6 @@ class FrontierDrone(DroneAbstract):
         """
         self.path = []
         self.waypoint_index = None
-        self.onRoute = False
 
     def set_path(self, path: Optional[List[Vector2D]]) -> None:
         """
@@ -564,7 +562,6 @@ class FrontierDrone(DroneAbstract):
             return
         self.path = path
         self.waypoint_index = 0
-        self.onRoute = True
 
     def compute_kill_zone(self):
         """
@@ -771,9 +768,6 @@ class FrontierDrone(DroneAbstract):
                         pos = np.array(self.map.grid_to_world(point)) + np.array(self.size_area)/2
                         arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
 
-        if True and self.rescue_center_position is not None:
-            pos = self.rescue_center_position.array + np.array(self.size_area) / 2
-            arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.PURPLE)
 
     def draw_bottom_layer(self):
         # check if drone is dead

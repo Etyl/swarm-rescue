@@ -263,8 +263,7 @@ class Map:
                 self.kill_zones[other_id] = other_map.kill_zones[other_id]
                 reset = True
         if reset:
-            drone.path = []
-            drone.waypoint_index = None
+            drone.reset_path()
         #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
         #self.update_map()
 
@@ -322,12 +321,12 @@ class Map:
 
 
         if grid_path is None:
-            if not fast:
-                plt.figure()
-                plt.imshow(obstacle_grid)
-                plt.plot([grid_start.y, grid_end.y], [grid_start.x, grid_end.x], 'ro')
-                plt.savefig("obstacle_grid.png")
-                print("NO PATH")
+            # if not fast:
+            #     plt.figure()
+            #     plt.imshow(obstacle_grid)
+            #     plt.plot([grid_start.y, grid_end.y], [grid_start.x, grid_end.x], '.', color="red")
+            #     plt.savefig("obstacle_grid.png")
+            #     print("NO PATH")
             return None
         path = [self.grid_to_world(Vector2D(pos[0] / zoom_factor, pos[1] / zoom_factor)) for pos in grid_path]
 
