@@ -54,7 +54,7 @@ class Localizer:
         self._drone_angle: float = 0
 
         self._measured_position: Optional[Vector2D] = None
-        self._measured_velocity: Vector2D = Vector2D()
+        self._measured_velocity: Optional[Vector2D] = None
         self._measured_angle: Optional[float] = None
         self._measured_velocity_angle: Optional[float] = None
 
@@ -67,6 +67,14 @@ class Localizer:
         self._theoretical_velocity: Vector2D = Vector2D(INF,INF)
         self._theoretical_angle: float = 0
         self._theoretical_angle_velocity: float = 0
+
+    @property
+    def drone_speed(self) -> float:
+        return self.drone.odometer_values()[0]
+
+    @property
+    def drone_speed_alpha(self) -> float:
+        return self.drone.odometer_values()[1]
 
     def update_previous(self) -> None:
         if self._measured_velocity is not None:
@@ -94,13 +102,7 @@ class Localizer:
             self._measured_position = Vector2D(pointList=self.drone.measured_gps_position())
 
         if self.drone.measured_velocity() is None:
-            odom = self.drone.odometer_values()
-            if odom is not None:
-                speed = odom[0]
-                alpha = odom[1]
-                vx = speed * math.cos(self.drone_angle + alpha)
-                vy = speed * math.sin(self.drone_angle + alpha)
-                self._measured_velocity = Vector2D(vx,vy)
+            self._measured_velocity = None
         else:
             self._measured_velocity = Vector2D(pointList=self.drone.measured_velocity())
 
@@ -161,7 +163,7 @@ class Localizer:
             last_pos = last_pos / len(self._previous_position)
             self._drone_position = last_pos + self._drone_velocity
         else: # TODO improve
-            self._drone_position += self._drone_velocity
+            self._drone_position += self.drone_speed * Vector2D(math.cos(self.drone_angle+self.drone_speed_alpha), math.sin(self.drone_angle+self.drone_speed_alpha))
             self.optimise_localization()
 
         # Update values
