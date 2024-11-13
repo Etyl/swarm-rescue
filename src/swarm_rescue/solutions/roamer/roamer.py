@@ -51,7 +51,8 @@ class RoamerController(StateMachine):
     _FRONTIERS_THRESHOLD : int = 6
 
     # the cooldown for computing the frontier
-    _COMPUTE_FRONTIER_COOLDOWN : int = 4
+    # TODO rewrite/refactor
+    _COMPUTE_FRONTIER_COOLDOWN : int = 1
 
     start_roaming = State('Start Roaming', initial=True)
     searching_for_target = State('Searching for target')

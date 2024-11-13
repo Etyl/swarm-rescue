@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import TYPE_CHECKING, Optional, Deque
+from typing import TYPE_CHECKING, Optional, Deque, Dict
 import math
 import numpy as np
 import os
@@ -202,48 +202,62 @@ class Localizer:
     def measured_position(self) -> Vector2D:
         return self._measured_position
 
-    def get_angle_to_target(self) -> float:
+    def get_angle_to_target(self, target:Vector2D) -> float:
         """
         gives the angle to turn to in order to go to the next waypoint
         """
-
-        if self.drone.target is None:
-            return 0
-
         drone_angle = normalize_angle(self.drone_angle)
-        waypoint_angle = Vector2D(1,0).get_angle(self.drone.target - self.drone_position)
+        waypoint_angle = Vector2D(1,0).get_angle(target - self.drone_position)
 
         return normalize_angle(waypoint_angle - drone_angle)
 
 
-    def get_power(self) -> float:
+    def get_power(self, target: Vector2D) -> float:
         curr_velocity = self.drone.odometer_values()[0]
-        dist_to_target = self.drone.drone_position.distance(self.drone.target)
+        dist_to_target = self.drone.drone_position.distance(target)
         target_velocity = 3 + (1-math.exp(-dist_to_target/50))*7
         return math.tanh(target_velocity-curr_velocity)
 
+    def get_control_from_target(self, target: Vector2D) -> Dict[str, float]:
+        command = {
+            "forward": 1.0,
+            "lateral": 0.0,
+            "rotation": 0.0,
+            "grasper": 0
+        }
+
+        angle_from_target = self.get_angle_to_target(target) + self.drone.drone_angle_offset
+        angle_from_target = normalize_angle(angle_from_target)
+        power = self.get_power(target)
+
+        if angle_from_target > 0.8:
+            command["rotation"] = 1.0
+
+        elif angle_from_target < -0.8:
+            command["rotation"] = -1.0
+        else:
+            command["rotation"] = angle_from_target
+
+        angle_from_target = normalize_angle(angle_from_target - self.drone.drone_angle_offset)
+        command["forward"] = power * math.cos(angle_from_target)
+        command["lateral"] = power * math.sin(angle_from_target)
+
+        return command
+
+
     def get_control_from_semantic(self):
 
-        angular_vel_controller_max = 1.0
+        command = {
+            "forward": 0.0,
+            "lateral": 0.0,
+            "rotation": 0.0,
+            "grasper": 0
+        }
 
-        command = {"forward": 1.0,
-                   "lateral": 0.0,
-                   "rotation": 0.0,
-                   "grasper": 0}
-
-        if self.drone.found_wounded:
-            best_angle = Vector2D(1, 0).get_angle(self.drone.wounded_target - self.drone.get_position())
-            best_angle = normalize_angle(best_angle - normalize_angle(self.drone.get_angle()))
-
-            kp = 2.0
-            a = kp * best_angle
-            a = min(a, 1.0)
-            a = max(a, -1.0)
-            command["rotation"] = a
-
-            # reduce speed if we need to turn a lot
-            if abs(a) == 1:
-                command["forward"] = 0.4
+        if self.drone.wounded_visible and self.drone.wounded_target is not None:
+            command = self.get_control_from_target(self.drone.wounded_target)
+            command["forward"] /= 2
+            command["lateral"] /= 2
 
         if self.drone.found_center and self.drone.center_angle is not None:
             # simple P controller
@@ -252,7 +266,8 @@ class Localizer:
             a = kp * self.drone.center_angle
             a = min(a, 1.0)
             a = max(a, -1.0)
-            command["rotation"] = a * angular_vel_controller_max
+            command["rotation"] = a
+            command["forward"] = 1
 
             # reduce speed if we need to turn a lot
             if abs(a) == 1:
@@ -289,21 +304,7 @@ class Localizer:
             self.drone.reset_path()
             return command
 
-        angle_from_target = self.get_angle_to_target() + self.drone.drone_angle_offset
-        angle_from_target = normalize_angle(angle_from_target)
-        power = self.get_power()
-
-        if angle_from_target > 0.8:
-            command["rotation"] =  1.0
-
-        elif angle_from_target < -0.8:
-            command["rotation"] =  -1.0
-        else:
-            command["rotation"] = angle_from_target
-
-        angle_from_target = normalize_angle(angle_from_target - self.drone.drone_angle_offset)
-        command["forward"] = power*math.cos(angle_from_target)
-        command["lateral"] = power*math.sin(angle_from_target)
+        command = self.get_control_from_target(self.drone.target)
 
         return command
 

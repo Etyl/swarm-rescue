@@ -73,7 +73,7 @@ class FrontierDrone(DroneAbstract):
         ## Debug controls
 
         self.debug_path = True # True if the path must be displayed
-        self.debug_wounded = False
+        self.debug_wounded = True
         self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
