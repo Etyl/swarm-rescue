@@ -49,6 +49,7 @@ class Localizer:
         self.drone = drone
         self.last_impact: int = 10000
         self.confidence_position = 0
+        self.time_approaching_center = 0
 
         self._drone_velocity: Vector2D = Vector2D()
         self._drone_velocity_angle: float = 0
@@ -373,9 +374,10 @@ class Localizer:
 
         if self.drone.near_center and self.drone.rescue_center_dist < 40:
             command["forward"] = 0
-            command["rotation"] = 0.5
-            command["lateral"] = 0.2
-
+            if self.time_approaching_center%40 < 20:
+                command["rotation"] = 0.5
+            else:
+                command["rotation"] = -0.5
         return command
 
     # TODO updates params

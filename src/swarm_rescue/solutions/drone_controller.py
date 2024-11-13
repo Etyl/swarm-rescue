@@ -143,10 +143,12 @@ class DroneController(StateMachine):
 
     def before_approaching_center(self) -> None:
         self.drone.reset_path()
+        self.drone.localizer.time_approaching_center = 0
     
     @approaching_center.enter
     def enter_approaching_center(self) -> None:
         self.command = self.drone.localizer.get_control_from_semantic()
         self.command["grasper"] = 1
+        self.drone.localizer.time_approaching_center += 1
 
 

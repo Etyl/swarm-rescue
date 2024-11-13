@@ -588,7 +588,7 @@ class FrontierDrone(DroneAbstract):
         if path is None:
             return
         self.path = path
-        self.waypoint_index = 0
+        self.waypoint_index = 1
 
     def compute_kill_zone(self):
         """
