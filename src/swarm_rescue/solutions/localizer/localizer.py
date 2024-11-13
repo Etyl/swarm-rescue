@@ -158,38 +158,13 @@ class Localizer:
         self._theoretical_angle_velocity = get_angular_velocity(previous_command)
         self._theoretical_angle = self._drone_angle + self._theoretical_angle_velocity
 
-    def estimate_confidence(self, drone_confidences:List[float]) -> float:
-        decay = 0.01
-
-        p = self.confidence_position
-        n = 1
-        for x in drone_confidences:
-            if x>self.confidence_position:
-                p += x
-                n += 1
-        p /= n
-
-        return max(0,p - decay)
-
-    def update_confidence(self) -> None:
-        if self.drone.measured_gps_position() is not None:
-            self.confidence_position = 1
-            return
-
-        drone_confidences:List[float] = []
-        data_list = self.drone.communicator.received_messages
-        for (drone_communicator, drone_data) in data_list:
-            if drone_data.confidence_position<0.8:
-                continue
-            drone_confidences.append(drone_data.confidence_position)
-
-        self.confidence_position = self.estimate_confidence(drone_confidences)
 
     def localize(self) -> None:
         if self.drone.has_collided:
             self.last_impact = 0
         else:
             self.last_impact += 1
+
         self.update_measured_values()
         self.update_theoretical_values()
         self.update_previous()
@@ -215,6 +190,7 @@ class Localizer:
         # Estimate drone position
         if self._measured_position is not None:
             last_pos: Vector2D = Vector2D()
+            self.confidence_position = 1
             for p in self._previous_position:
                 last_pos += p
             last_pos = last_pos / len(self._previous_position)
@@ -223,8 +199,6 @@ class Localizer:
             self._drone_position += self.drone_speed * Vector2D(math.cos(self.drone_angle+self.drone_speed_alpha), math.sin(self.drone_angle+self.drone_speed_alpha))
             self.optimise_from_scan_match()
             # self.optimize_from_communicator()
-
-        self.update_confidence()
 
         # path = os.path.dirname(os.path.abspath(__file__))
         # with open(path+"./data/measured_pos.txt", 'a') as f:
@@ -238,8 +212,19 @@ class Localizer:
         #             '\n')
 
 
+    # NOT USED
+    def estimate_confidence(self, drone_confidences:List[float]) -> float:
+        p = self.confidence_position
+        n = 1
+        for x in drone_confidences:
+            if x>self.confidence_position:
+                p += x
+                n += 1
+        p /= n
 
+        return p
 
+    # NOT USED
     def optimize_from_communicator(self) -> None:
         drone_positions: List[Tuple[float,Vector2D]] = []
         data_list = self.drone.communicator.received_messages
@@ -257,15 +242,16 @@ class Localizer:
 
 
         estimated_pos = self.confidence_position * self.drone_position
-        C = self.confidence_position
+        drones_confidences = [self.confidence_position]
         for (c,pos) in drone_positions:
-            if c<0.9:
+            if c<self.confidence_position:
                 continue
             estimated_pos += c * pos
-            C += c
+            drones_confidences.append(c)
 
-        estimated_pos /= C
+        estimated_pos /= sum(drones_confidences)
 
+        self.confidence_position = self.estimate_confidence(drones_confidences)
         self._drone_position = estimated_pos
 
 
@@ -284,7 +270,7 @@ class Localizer:
         for k in range(len(lidar_dists)):
             if lidar_dists[k] <= MAX_RANGE_LIDAR_SENSOR*0.7:
                 measures.append([lidar_dists[k], lidar_angles[k]])
-        def Q(x):
+        def confidence(x):
             [posX, posY, angle] = x
             value = 0
             for [lidar_dist,lidar_angle] in measures:
@@ -295,22 +281,24 @@ class Localizer:
                 if point.x < 0 or point.x >= self.drone.map.width or point.y < 0 or point.y >= self.drone.map.height:
                     continue
                 #value -= self.map.occupancy_grid.get_grid()[int(point[0]),int(point[1])]
-                value -= self.drone.map.get_confidence_wall_map(int(point.x),int(point.y))
-            return value
+                value += self.drone.map.get_confidence_wall_map(int(point.x),int(point.y))
+            return value / len(measures)
 
-        mindx, mindy, mindangle = 0,0,0
-
+        dx_best, dy_best, dangle_best = 0,0,0
+        max_confidence = confidence([dx_best,dy_best,dangle_best])
         for k in range(30):
             dx, dy, dangle = np.random.normal(0,1), np.random.normal(0,1), np.random.normal(0,0.1)
-            if Q([dx,dy,dangle]) < Q([mindx,mindy,mindangle]):
-                mindx, mindy, mindangle = dx, dy, dangle
+            new_confidence = confidence([dx,dy,dangle])
+            if new_confidence > max_confidence:
+                dx_best, dy_best, dangle_best = dx, dy, dangle
+                max_confidence = new_confidence
 
-        self._drone_position = starting_pos + Vector2D(mindx,mindy)
-        self._drone_angle = starting_angle + mindangle
+        self._drone_position = starting_pos + Vector2D(dx_best,dy_best)
+        self._drone_angle = starting_angle + dangle_best
+        self.confidence_position = max_confidence
 
 
-
-    ### PATH PLANNING ###
+    # ================== PATH PLANNING ==================
 
     def get_angle_to_target(self, target:Vector2D) -> float:
         """
