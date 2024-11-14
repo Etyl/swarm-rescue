@@ -7,6 +7,7 @@ from __future__ import annotations
 from solutions.mapper.mapper import Map  # type: ignore
 from solutions.mapper.mapper import Zone  # type: ignore
 from solutions.roamer.frontier_explorer import get_frontiers  # type: ignore
+from solutions.utils.constants import FRONTIER_COUNT
 from solutions.utils.types import Vector2D # type: ignore
 from solutions.utils.utils import normalize_angle # type: ignore
 
@@ -15,6 +16,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, List
 import numpy as np
 import os
 import cv2
+import sys
 # from multiprocessing.pool import ThreadPool as Pool
 
 if TYPE_CHECKING: # type: ignore
@@ -24,7 +26,7 @@ if TYPE_CHECKING: # type: ignore
 # import asyncio
 # import threading
 
-FRONTIER_SELECTION_SIZE : int = 10
+
 MAP_SCALE : int = 2
 
 class RoamerController(StateMachine):
@@ -71,7 +73,7 @@ class RoamerController(StateMachine):
         going_to_target.to(going_to_target)
     )
 
-    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False) -> None:
+    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False, policy=None, save_run=None) -> None:
         self.drone : FrontierDrone = drone
         self.map : Map = drone_map
         self.command = {"forward": 0.0,
@@ -79,7 +81,7 @@ class RoamerController(StateMachine):
                         "rotation": 0.0,
                         "grasper": 0}
         self.debug_mode: bool = debug_mode
-        self.roamer: Roamer = Roamer(drone, drone_map, debug_mode)
+        self.roamer: Roamer = Roamer(drone, drone_map, debug_mode, policy=policy, save_run=save_run)
 
         self.loop_count_going_to_target: int = 0
 
@@ -243,11 +245,17 @@ class Roamer:
     Roamer class
     defines the roaming behavior of the drone
     """
-    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False):
+    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False, policy=None, save_run=None):
         self.frontiers : List[List[Vector2D]] = []
         self.drone : FrontierDrone = drone
         self.map : Map = drone_map
         self.debug_mode : bool = debug_mode
+
+        self.policy = policy
+        self.save_run = save_run
+        self.previous_input = np.array([])
+        self.previous_score = np.array([])
+
     
     def print_num_map(self, drone_map : Map, output_file='output.txt'):
         """
@@ -298,7 +306,7 @@ class Roamer:
             
             distance = frontier_center.distance(drone_position_grid)
             
-            if len(selected_frontiers_id) < FRONTIER_SELECTION_SIZE :
+            if len(selected_frontiers_id) < FRONTIER_COUNT :
                 selected_frontiers_id.append(idx)
                 selected_frontiers_distance.append(distance)
                 continue
@@ -344,8 +352,25 @@ class Roamer:
         frontier_count = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
 
         # score (the higher the better)
-        # TODO : optimize
-        score = 2*(1-selected_frontiers_distance_array) + frontiers_size + frontier_count + 4*(1-selected_frontiers_repulsion_angle_array)
+        score = None
+        if self.policy is None:
+            score = (2 * (1 - selected_frontiers_distance_array) +
+                     frontiers_size +
+                     frontier_count +
+                     4 * (1 - selected_frontiers_repulsion_angle_array))
+        else:
+            policy_input = np.concatenate((1 - selected_frontiers_distance_array, frontiers_size, frontier_count, 1 - selected_frontiers_repulsion_angle_array), axis=0)
+
+            if self.save_run is not None and len(self.previous_input)>0:
+                combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.map.exploration_score])), axis=0)
+                with open(self.save_run,"a") as f:
+                    f.write(" ".join(map(str, combined))+"\n")
+
+            score = self.policy(policy_input)
+            self.previous_input = policy_input
+            self.previous_score = score
+            self.drone.map.exploration_score = 0
+
 
         #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)
         # select the best frontier
