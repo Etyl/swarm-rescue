@@ -79,7 +79,7 @@ def get_run(
     reward_idx = -1
     with open(save_file_run,"w") as f:
         for s in save_run:
-            s[reward_idx] = exp_score[reward_idx]
+            s[reward_idx] = exp_score[min(int(s[reward_idx])-1, len(exp_score)-1)]
             f.write(" ".join(map(str,s)) + "\n")
 
     if has_crashed:
