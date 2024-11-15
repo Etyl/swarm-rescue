@@ -388,11 +388,11 @@ class FrontierDrone(DroneAbstract):
             self.rescue_center_dist = None
 
 
-    def get_path(self, pos:Vector2D):
+    def get_path(self, pos:Vector2D) -> Optional[List[Vector2D]]:
         """
         returns the path to the destination
         """
-        return self.map.shortest_path(self.drone_position, pos)
+        return self.map.shortest_path(self.drone_position, pos)[0]
 
 
     # TODO improve using pure pursuit

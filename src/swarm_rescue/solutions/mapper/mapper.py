@@ -3,7 +3,7 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
-from typing import List, TYPE_CHECKING, Optional, Dict
+from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
 
 from solutions.utils.types import Vector2D  # type: ignore
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
@@ -305,7 +305,7 @@ class Map:
         """
         self.kill_zones = {}
     
-    def shortest_path(self, start: Vector2D, end: Vector2D, fast=False) -> Optional[List[Vector2D]]:
+    def shortest_path(self, start: Vector2D, end: Vector2D, fast=False) -> Tuple[Optional[List[Vector2D]],Optional[Vector2D]]:
         """
         returns the shortest path between start and end
         Params:
@@ -346,23 +346,21 @@ class Map:
         grid_end = zoom_factor * self.world_to_grid(end)
 
         grid_path: Optional[np.ndarray] = None
+        next_waypoint = None
         if fast:
-            grid_path  = pathfinder_fast(obstacle_grid, grid_start.array, grid_end.array)
+            grid_path, next_waypoint  = pathfinder_fast(obstacle_grid, grid_start.array, grid_end.array)
+            if next_waypoint is not None:
+                next_waypoint = Vector2D(next_waypoint[0], next_waypoint[1])
+                next_waypoint = self.grid_to_world(next_waypoint)
         else:
             grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, 7*zoom_factor)
 
 
         if grid_path is None:
-            # if not fast:
-            #     plt.figure()
-            #     plt.imshow(obstacle_grid)
-            #     plt.plot([grid_start.y, grid_end.y], [grid_start.x, grid_end.x], '.', color="red")
-            #     plt.savefig("obstacle_grid.png")
-            #     print("NO PATH")
-            return None
+            return None,None
         path = [self.grid_to_world(Vector2D(pos[0] / zoom_factor, pos[1] / zoom_factor)) for pos in grid_path]
 
-        return path
+        return path, next_waypoint
 
     def update_confidence_wall_map(self):
         """

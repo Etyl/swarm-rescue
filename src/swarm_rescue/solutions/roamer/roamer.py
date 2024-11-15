@@ -479,23 +479,25 @@ class Roamer:
             - target: the target
         """
         if target is None: return np.inf, 1
-        path : Optional[List[Vector2D]] = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target), fast=True)
+        path, next_waypoint = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target), fast=True)
 
         if path is None or len(path) <= 1:
-            return np.inf, 1
+            return np.inf, 0
         
         path_length = 0
         for k in range(len(path)-1):
             path_length += path[k].distance(path[k+1])
         
-        next_waypoint = path[-2]
         waypoint_direction : Vector2D = next_waypoint - self.drone.get_position()
         waypoint_direction.normalize()
 
-        angle_waypoint = waypoint_direction.get_angle(Vector2D(1,0))
-        angle_waypoint = normalize_angle(angle_waypoint+self.drone.get_angle())
+        if self.drone.repulsion.norm() == 0:
+            return path_length, 1
+        else:
+            repulsion = self.drone.repulsion
+            repulsion.normalize()
+            return path_length, abs(normalize_angle(waypoint_direction.get_angle(repulsion)))/np.pi
 
-        return path_length, abs(angle_waypoint)/np.pi
 
 
     def find_path(self, frontiers_threshold):
@@ -512,7 +514,7 @@ class Roamer:
         if self.drone.get_position().distance(self.drone.map.grid_to_world(target)) < 50:
             return [], 0
 
-        path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))
+        path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))[0]
         
         if self.debug_mode: 
             print("[Roamer] Path found : ", path)

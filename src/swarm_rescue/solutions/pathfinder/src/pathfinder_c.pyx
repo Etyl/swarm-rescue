@@ -1,7 +1,7 @@
 import numpy as np
 import pyastar2d
 import cython
-from typing import Optional
+from typing import Optional,Tuple
 cimport numpy as cnp
 from libc.math cimport sqrt
 import matplotlib.pyplot as plt
@@ -249,6 +249,13 @@ cdef findPointsAvailable(map_border : np.ndarray, robot_radius:int, start, end):
     return start, end
 
 
+cdef find_first_node(map_border, path:np.ndarray):
+    cdef int j = 1
+    while j<len(path) and is_path_free(map_border, np.array(path[0], dtype=DTYPE), np.array(path[j],dtype=DTYPE)):
+        j += 1
+    return path[j-1]
+
+
 def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius) -> Optional[np.ndarray]:
     """
     Params:
@@ -276,7 +283,7 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius) -
     return path_refined
 
 
-def pathfinder_fast(map:np.ndarray, start:np.ndarray, end:np.ndarray) -> Optional[np.ndarray]:
+def pathfinder_fast(map:np.ndarray, start:np.ndarray, end:np.ndarray) -> Tuple[Optional[np.ndarray],Optional[np.ndarray]]:
     """
     Returns the A* path between start and end without any trajectory optimization
     """
@@ -286,4 +293,9 @@ def pathfinder_fast(map:np.ndarray, start:np.ndarray, end:np.ndarray) -> Optiona
     start,end = findPointsAvailable(map_border, 1000, start, end)
     path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
 
-    return path
+    if path is None:
+        return None, None
+
+    first_node = find_first_node(map_border,path)
+
+    return path, first_node
