@@ -362,9 +362,8 @@ class Roamer:
             policy_input = np.concatenate((1 - selected_frontiers_distance_array, frontiers_size, frontier_count, 1 - selected_frontiers_repulsion_angle_array), axis=0)
 
             if self.save_run is not None and len(self.previous_input)>0:
-                combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.map.exploration_score])), axis=0)
-                with open(self.save_run,"a") as f:
-                    f.write(" ".join(map(str, combined))+"\n")
+                combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.elapsed_timestep])), axis=0)
+                self.save_run.append(combined)
 
             score = self.policy(policy_input)
             self.previous_input = policy_input

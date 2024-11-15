@@ -6,6 +6,8 @@ import arcade
 import cv2
 from functools import partial
 
+from spg.playground import Playground
+from spg.utils.definitions import PYMUNK_STEPS
 
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
 from solutions.frontier_drone import FrontierDrone
@@ -19,25 +21,43 @@ from spg_overlay.reporting.score_manager import ScoreManager
 from spg_overlay.reporting.team_info import TeamInfo
 
 
+
+class PlaygroundWrapperRL:
+    def __init__(self, playground, my_map, exploration_scores):
+        self._playground = playground
+        self._map = my_map
+        self.exploration_scores = exploration_scores
+
+    def step(self, *args, **kwargs):
+        self.exploration_scores.append(self._map.explored_map.score())
+        return self._playground.step(*args, **kwargs)
+
+    def __getattr__(self, name):
+        # Forward any other attribute calls to the wrapped playground
+        return getattr(self._playground, name)
+
+
 def get_run(
     policy,
     save_file_run,
     map_type = MyMapFinal_2023_24_01,
     zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)):
     """
-    Gets samples from a run
+    Gets samples from a run and saves them to a file, each row being:
+    state (FRONTER_COUNT*FRONTIER_FEATURES), action (FRONITER_COUNT), next_state (FRONTER_COUNT*FRONTIER_FEATURES), reward (1)
     Params:
         - policy: policy used for run, function(state)->action_distribution
-    Return:
-        - run: [(state0,actions0,state0',reward0),...]
     """
     eval_config = EvalConfig(map_type=map_type, zones_config=zones_config)
 
     my_map = eval_config.map_type(eval_config.zones_config)
 
-    my_playground = my_map.construct_playground(drone_type=partial(FrontierDrone, policy=policy, save_run=save_file_run))
+    exp_score = []
+    save_run = []
+    my_playground = my_map.construct_playground(drone_type=partial(FrontierDrone, policy=policy, save_run=save_run))
+    rl_playground = PlaygroundWrapperRL(my_playground, my_map, exp_score)
 
-    my_gui = GuiSR(playground=my_playground,
+    my_gui = GuiSR(playground=rl_playground,
                    the_map=my_map,
                    draw_interactive=False)
 
@@ -50,12 +70,17 @@ def get_run(
     error_msg = ""
 
     try:
-        # this function below is a blocking function until the round is finished
         my_gui.run()
     except Exception as error:
         error_msg = traceback.format_exc()
         my_gui.close()
         has_crashed = True
+
+    reward_idx = -1
+    with open(save_file_run,"w") as f:
+        for s in save_run:
+            s[reward_idx] = exp_score[reward_idx]
+            f.write(" ".join(map(str,s)) + "\n")
 
     if has_crashed:
         print(error_msg)
@@ -67,4 +92,4 @@ def dummy_policy(input:np.ndarray):
     return np.ones(FRONTIER_COUNT)/FRONTIER_COUNT
 
 if __name__ == "__main__":
-    get_run(dummy_policy, "run.txt")
+    get_run(dummy_policy, "run0.txt")

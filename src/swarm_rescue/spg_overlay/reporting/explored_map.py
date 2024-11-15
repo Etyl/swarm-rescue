@@ -340,7 +340,7 @@ class ExploredMap:
         # Extract area of the biggest component
         biggest_area = stats[biggest_area_index, cv2.CC_STAT_AREA]
         count_reachable = biggest_area
-        print("count_reachable v3 =", count_reachable)
+        # print("count_reachable v3 =", count_reachable)
         # for i, area in enumerate(stats[0:, cv2.CC_STAT_AREA]):
         #     print(f"Component {i} = {area} pixels")
         return count_reachable
