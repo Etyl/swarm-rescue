@@ -341,9 +341,10 @@ class Roamer:
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
         
         # normalize
-        frontier_distance_noInf = [x for x in selected_frontiers_distance_array if x != np.inf]
+        frontier_distance_noInf = [x for x in selected_frontiers_distance_array if x != -np.inf and x != np.inf]
         if len(frontier_distance_noInf) == 0: return None
         selected_frontiers_distance_array = selected_frontiers_distance_array / max(frontier_distance_noInf)
+        selected_frontiers_distance_array = np.minimum(selected_frontiers_distance_array,1)
 
         frontier_size_max = np.max(frontiers_size)
         frontiers_size = 0 if frontier_size_max == 0 else frontiers_size / frontier_size_max
@@ -359,7 +360,7 @@ class Roamer:
                      frontier_count +
                      4 * (1 - selected_frontiers_repulsion_angle_array))
         else:
-            policy_input = np.concatenate((1 - selected_frontiers_distance_array, frontiers_size, frontier_count, 1 - selected_frontiers_repulsion_angle_array), axis=0)
+            policy_input = np.concatenate((np.array([self.drone.map.exploration_score]),1 - selected_frontiers_distance_array, frontiers_size, frontier_count, 1 - selected_frontiers_repulsion_angle_array), axis=0)
 
             if self.save_run is not None and len(self.previous_input)>0:
                 combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.elapsed_timestep])), axis=0)
@@ -368,7 +369,6 @@ class Roamer:
             score = self.policy(policy_input)
             self.previous_input = policy_input
             self.previous_score = score
-            self.drone.map.exploration_score = 0
 
 
         #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)

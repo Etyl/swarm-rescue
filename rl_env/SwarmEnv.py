@@ -11,7 +11,7 @@ from spg.utils.definitions import PYMUNK_STEPS
 
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
 from solutions.frontier_drone import FrontierDrone
-from solutions.utils.constants import FRONTIER_COUNT, FRONTIER_FEATURES
+from solutions.utils.constants import OBSERVATION_SPACE, ACTION_SPACE
 from spg_overlay.entities.sensor_disablers import ZoneType
 from spg_overlay.gui_map.gui_sr import GuiSR
 from spg_overlay.reporting.data_saver import DataSaver
@@ -44,7 +44,7 @@ def get_run(
     zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)):
     """
     Gets samples from a run and saves them to a file, each row being:
-    state (FRONTER_COUNT*FRONTIER_FEATURES), action (FRONITER_COUNT), next_state (FRONTER_COUNT*FRONTIER_FEATURES), reward (1)
+    state (OBSERVATION_SPACE), action (ACTION_SPACE), next_state (OBSERVATION_SPACE), reward (1)
     Params:
         - policy: policy used for run, function(state)->action_distribution
     """
@@ -87,9 +87,9 @@ def get_run(
 
 
 def dummy_policy(input:np.ndarray):
-    if len(input) != FRONTIER_COUNT*FRONTIER_FEATURES:
+    if len(input) != OBSERVATION_SPACE:
         raise "Wrong input shape"
-    return np.ones(FRONTIER_COUNT)/FRONTIER_COUNT
+    return np.ones(ACTION_SPACE)/ACTION_SPACE
 
 if __name__ == "__main__":
     get_run(dummy_policy, "run0.txt")

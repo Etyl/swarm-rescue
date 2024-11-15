@@ -57,8 +57,11 @@ class Map:
         self.kill_zones : Dict[int, Vector2D] = {}
         self.no_gps_zones : List[Vector2D] = []
 
-        # TODO determine score
-        self.exploration_score = 0
+
+
+    @property
+    def exploration_score(self) -> float:
+        return np.count_nonzero(self.map-Zone.UNEXPLORED) / (self.height * self.width)
 
 
     def has_wall(self, start: Vector2D, end:Vector2D) -> bool:

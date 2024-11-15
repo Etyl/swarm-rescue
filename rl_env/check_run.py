@@ -1,5 +1,4 @@
 import numpy as np
-from solutions.utils.constants import FRONTIER_COUNT,FRONTIER_FEATURES
 
 run = []
 with open("run.txt", "r") as f:
