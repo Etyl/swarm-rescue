@@ -1,24 +1,14 @@
 import traceback
-from dataclasses import dataclass
 from typing import Optional, List, Tuple
 import numpy as np
-import arcade
-import cv2
 from functools import partial
 
-from spg.playground import Playground
-from spg.utils.definitions import PYMUNK_STEPS
-
-from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
+from rl_env.MapsRL import LargeMap02, LargeMap01
 from solutions.frontier_drone import FrontierDrone
 from solutions.utils.constants import OBSERVATION_SPACE, ACTION_SPACE
-from spg_overlay.entities.sensor_disablers import ZoneType
 from spg_overlay.gui_map.gui_sr import GuiSR
-from spg_overlay.reporting.data_saver import DataSaver
-from spg_overlay.reporting.evaluation import EvalPlan, ZonesConfig, EvalConfig
-from spg_overlay.reporting.result_path_creator import ResultPathCreator
-from spg_overlay.reporting.score_manager import ScoreManager
-from spg_overlay.reporting.team_info import TeamInfo
+from spg_overlay.gui_map.map_abstract import MapAbstract
+from spg_overlay.reporting.evaluation import ZonesConfig, EvalConfig
 
 
 
@@ -40,8 +30,8 @@ class PlaygroundWrapperRL:
 def get_run(
     policy,
     save_file_run,
-    map_type = MyMapFinal_2023_24_01,
-    zones_config: ZonesConfig = (ZoneType.NO_COM_ZONE, ZoneType.NO_GPS_ZONE, ZoneType.KILL_ZONE)):
+    map_type: MapAbstract = LargeMap01,
+    zones_config: ZonesConfig = ()) -> None:
     """
     Gets samples from a run and saves them to a file, each row being:
     state (OBSERVATION_SPACE), action (ACTION_SPACE), next_state (OBSERVATION_SPACE), reward (1)
@@ -86,10 +76,10 @@ def get_run(
         print(error_msg)
 
 
-def dummy_policy(input:np.ndarray):
-    if len(input) != OBSERVATION_SPACE:
+def dummy_policy(obs:np.ndarray):
+    if len(obs) != OBSERVATION_SPACE:
         raise "Wrong input shape"
     return np.ones(ACTION_SPACE)/ACTION_SPACE
 
 if __name__ == "__main__":
-    get_run(dummy_policy, "run0.txt")
+    get_run(dummy_policy, "run0.txt", map_type=LargeMap02)

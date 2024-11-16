@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 from typing import List, Type
 
+from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
+
 # Insert the parent directory of the current file's directory into sys.path.
 # This allows Python to locate modules that are one level above the current
 # script, in this case spg_overlay.
@@ -108,6 +110,7 @@ class MyMapFinal_2023_24_03(MapAbstract):
             playground.add(drone, self._drones_pos[i])
 
         return playground
+
 
 
 if __name__ == '__main__':
