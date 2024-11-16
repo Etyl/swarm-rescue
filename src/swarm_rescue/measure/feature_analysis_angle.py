@@ -18,8 +18,7 @@ command = {"forward": 0.0,
            "grasper": 0}
 
 def get_accel(velocity: Vector2D, control, drone_angle: float) -> Vector2D:
-    B = Vector2D(control["forward"], control["lateral"])
-    B.rotate(drone_angle)
+    B = Vector2D(control["forward"], control["lateral"]).rotate(drone_angle)
     if B.norm() > 1:
         B = B.normalize()
     B = A * B

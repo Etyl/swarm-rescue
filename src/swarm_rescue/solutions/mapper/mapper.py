@@ -79,8 +79,7 @@ class Map:
         target = position + d * (target-position).normalize()
         position = self.world_to_grid(position)
         target = self.world_to_grid(target)
-        normal = (target - position).normalize()
-        normal.rotate(np.pi / 2)
+        normal = (target - position).normalize().rotate(np.pi / 2)
         for i in range(-1,2):
             start = position +  i*(DRONE_SIZE_RADIUS/self.resolution)*normal
             end = target + i*(DRONE_SIZE_RADIUS/self.resolution)*normal

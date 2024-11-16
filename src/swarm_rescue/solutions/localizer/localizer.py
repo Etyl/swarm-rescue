@@ -18,10 +18,9 @@ if TYPE_CHECKING:
 INF: float = 100000
 
 def get_acceleration(velocity: Vector2D, command, drone_angle: float) -> Vector2D:
-    B = Vector2D(command["forward"], command["lateral"])
+    B = Vector2D(command["forward"], command["lateral"]).rotate(drone_angle)
     if B.norm()==0:
         return Vector2D(0,0)
-    B.rotate(drone_angle)
     if B.norm() > 1:
         B = B.normalize()
     B = Localizer.velocity_const * B

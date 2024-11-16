@@ -49,6 +49,7 @@ class FrontierDrone(DroneAbstract):
         self.last_positions : Deque[Vector2D] = deque()
         self.last_wounded_seen : int = 10000 # time (frames) since the wounded was last seen
         self.repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the other drones
+        self.drone_direction_group = Vector2D() # Normalised repulsion vector to group of drones
         self.wall_repulsion : Vector2D = Vector2D(0,0) # The repulsion vector from the walls
         self.center_angle : Optional[float] = None # angle from the visible rescue center
         self.rescue_center_dist : Optional[float] = None # distance from the visible rescue center
@@ -439,13 +440,25 @@ class FrontierDrone(DroneAbstract):
             if distance <= a: return 2
             return max(0,min(2,MAX_RANGE_SEMANTIC_SENSOR*(b/(distance-a) - c)))
 
-        repulsion = Vector2D(0,0)
+
+        found_pos = []
+        def add_pos(p:Vector2D):
+            for p2 in found_pos:
+                if p.distance(p2) < 20:
+                    return
+            found_pos.append(p)
+
+        repulsion = Vector2D()
         min_dist = np.inf
         for data in self.semantic_values():
             if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
                 angle = data.angle
                 dist = data.distance
                 min_dist = min(min_dist, dist)
+
+                pos = self.drone_position + dist * Vector2D(1,0).rotate(angle)
+                add_pos(pos)
+
                 drone = None
                 for d in self.drone_list:
                     if d.position.distance(Vector2D(dist*math.cos(angle+self.drone_angle), dist*math.sin(angle+self.drone_angle))+self.get_position()) < 30:
@@ -454,6 +467,13 @@ class FrontierDrone(DroneAbstract):
                     repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
                 else:
                     repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
+
+        centroid = self.drone_position
+        for p in found_pos:
+            centroid += p
+        centroid = centroid/(len(found_pos)+1)
+        self.drone_direction_group = (self.drone_position-centroid).normalize()
+
 
         if repulsion.norm() == 0:
             self.repulsion = Vector2D(0,0)
@@ -745,14 +765,12 @@ class FrontierDrone(DroneAbstract):
 
         if self.debug_repulsion:
             pos = self.get_position().array + np.array(self.size_area) / 2
-            repulsion = self.repulsion.copy()
-            repulsion.rotate(self.get_angle())
+            repulsion = self.repulsion.rotate(self.get_angle())
             arcade.draw_line(pos[0], pos[1], pos[0]+repulsion.x*20, pos[1]+repulsion.y*20, arcade.color.PURPLE)
 
         if self.debug_wall_repulsion:
             pos = self.get_position().array + np.array(self.size_area) / 2
-            wall_repulsion = self.wall_repulsion.copy()
-            wall_repulsion.rotate(self.get_angle())
+            wall_repulsion = self.wall_repulsion.rotate(self.get_angle())
             arcade.draw_line(pos[0], pos[1], pos[0]+wall_repulsion.x*0.25*MAX_RANGE_LIDAR_SENSOR, pos[1]+wall_repulsion.y*0.25*MAX_RANGE_LIDAR_SENSOR, arcade.color.RED)
 
         if self.debug_lidar:

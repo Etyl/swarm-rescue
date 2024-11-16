@@ -56,9 +56,9 @@ class Vector2D:
     def copy(self):
         return Vector2D(pointList=self.array)
 
-    def rotate(self, angle:float) -> None:
+    def rotate(self, angle:float) -> 'Vector2D':
         rot_matrix = np.array([[math.cos(angle), math.sin(angle)], [-math.sin(angle), math.cos(angle)]])
-        self.array = self.array @ rot_matrix
+        return Vector2D(pointList=self.array @ rot_matrix)
 
     def get_angle(self, other: 'Vector2D') -> float:
         if self.norm()==0 or other.norm()==0:

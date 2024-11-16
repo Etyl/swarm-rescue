@@ -453,8 +453,8 @@ class Roamer:
         plt.figure()
         plt.axis('off')
         plt.imshow(np.transpose(img, (1, 0, 2)))
-        p2 = self.drone.drone_position + self.drone.repulsion
-        print("repulsion:", self.drone.repulsion)
+        p2 = self.drone.drone_position + 80*self.drone.drone_direction_group
+        print("repulsion:", self.drone.drone_direction_group)
         p2 = self.map.world_to_grid(p2)
         plt.plot([p.x,p2.x],[p.y,p2.y], color='red', linewidth=0.5)
         for i,p in enumerate(frontier_centers):
@@ -492,12 +492,11 @@ class Roamer:
         waypoint_direction : Vector2D = next_waypoint - self.drone.get_position()
         waypoint_direction.normalize()
 
-        if self.drone.repulsion.norm() == 0:
-            return path_length, 1
+        direction = self.drone.drone_direction_group
+        if direction.norm()==0:
+            return path_length, 0
         else:
-            repulsion = self.drone.repulsion
-            repulsion.normalize()
-            return path_length, abs(normalize_angle(waypoint_direction.get_angle(repulsion)))/np.pi
+            return path_length, abs(normalize_angle(waypoint_direction.get_angle(direction)))/np.pi
 
 
 
