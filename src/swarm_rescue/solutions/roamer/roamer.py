@@ -4,6 +4,8 @@ implements roaming behavior of the drone
 """
 from __future__ import annotations
 
+from arcade.examples.happy_face import width
+
 from solutions.mapper.mapper import Map  # type: ignore
 from solutions.mapper.mapper import Zone  # type: ignore
 from solutions.roamer.frontier_explorer import get_frontiers  # type: ignore
@@ -16,6 +18,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, List
 import numpy as np
 import os
 import cv2
+import matplotlib.pyplot as plt
 import sys
 # from multiprocessing.pool import ThreadPool as Pool
 
@@ -148,13 +151,14 @@ class RoamerController(StateMachine):
         return f"Running {event} from {source.id} to {target.id}{message}"
     
     def before_going_to_target(self):
-        if self.debug_mode: print(f"Going to target {self.target}")
-
         self.loop_count_going_to_target = 0 # reset position counter
 
         self.none_target_count = 0 # reset none target counter
 
         self.drone.waypoint_index = 1
+
+    def before_searching_for_target(self):
+        pass
 
     def search_for_target(self):
         # OTHER IMPL - ASYNC        
@@ -182,7 +186,6 @@ class RoamerController(StateMachine):
 
         # if no target found
         if self.target is None:
-            if self.debug_mode: print("[Roamer] No path to target found")
             self.none_target_count += 1
 
             if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
@@ -191,7 +194,6 @@ class RoamerController(StateMachine):
         
         # if target is too close
         if self.target == 0:
-            if self.debug_mode: print("[Roamer] Target too close")
             self.command = {"forward": 0.0,
                             "lateral": 0.0,
                             "rotation": 0.0,
@@ -202,15 +204,6 @@ class RoamerController(StateMachine):
         self.count_close_previous_searching_start_point = 0
         
         self.force_going_to_target()
-
-    def before_searching_for_target(self):
-        if self.debug_mode: print("Searching for target")
-
-        # OTHER IMPL - ASYNC        
-        # search_thread = threading.Thread(target=self.search_for_target)
-        # search_thread.start()
-        # asyncio.run(self.search_for_target())
-        # END OTHER IMPL - ASYNC
 
 
     @going_to_target.enter
@@ -223,11 +216,10 @@ class RoamerController(StateMachine):
         self.command = self.drone.localizer.get_control_from_path()
 
     def on_enter_searching_for_target(self):
-        if self.debug_mode: print("Entering searching for target state")
         self.search_for_target()
 
     def on_enter_start_roaming(self):
-        if self.debug_mode: print("Entering start roaming state")
+        pass
 
     def test_position_close_start_point(self, threshold=20):
         """
@@ -278,8 +270,6 @@ class Roamer:
         """
 
         drone_position = self.drone.get_position()
-
-        if self.debug_mode: print("[Roamer] Drone position : ", drone_position, self.map.world_to_grid(drone_position.array))
 
         drone_position_grid = self.map.world_to_grid(drone_position)
         map_matrix = cv2.resize(self.map.get_map_matrix(), (0, 0), fx=1/MAP_SCALE, fy=1/MAP_SCALE, interpolation=cv2.INTER_NEAREST)
@@ -352,15 +342,22 @@ class Roamer:
         frontier_count_max = np.max(frontier_count)
         frontier_count = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
 
+        selected_frontiers_distance_array = 1 - selected_frontiers_distance_array
+        selected_frontiers_repulsion_angle_array = 1 - selected_frontiers_repulsion_angle_array
+
+        if self.debug_mode:
+            selected_frontiers = [self.frontiers[id] for id in selected_frontiers_id]
+            self.display_map_with_path(selected_frontiers, selected_frontiers_distance_array, frontiers_size, frontier_count, selected_frontiers_repulsion_angle_array)
+
         # score (the higher the better)
         score = None
         if self.policy is None:
-            score = (2 * (1 - selected_frontiers_distance_array) +
+            score = (2 * selected_frontiers_distance_array +
                      frontiers_size +
                      frontier_count +
-                     4 * (1 - selected_frontiers_repulsion_angle_array))
+                     4 * selected_frontiers_repulsion_angle_array)
         else:
-            policy_input = np.concatenate((np.array([self.drone.map.exploration_score]),1 - selected_frontiers_distance_array, frontiers_size, frontier_count, 1 - selected_frontiers_repulsion_angle_array), axis=0)
+            policy_input = np.concatenate((np.array([self.drone.map.exploration_score]),selected_frontiers_distance_array, frontiers_size, frontier_count, selected_frontiers_repulsion_angle_array), axis=0)
 
             if self.save_run is not None and len(self.previous_input)>0:
                 combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.elapsed_timestep])), axis=0)
@@ -386,10 +383,6 @@ class Roamer:
         if self.drone.debug_frontiers:
             self.drone.set_selected_frontier_id(best_frontier_idx)
             self.drone.frontiers = frontiers
-
-        # print(f"best_count: {best_count} - best_distance: {best_distance}")
-
-        if self.debug_mode: print("[Roamer] Found point : ", chosen_frontier_center)
 
         return chosen_frontier_center
 
@@ -418,11 +411,11 @@ class Roamer:
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
         return np.transpose(img, (1, 0, 2))
 
-    def display_map_with_path(self, grid_map, path, target, target_id):
+    def display_map_with_path(self,selected_frontiers, selected_frontiers_distance_array, frontiers_size, frontier_count, selected_frontiers_repulsion_angle_array):
         """
         Display the map with points 1 in white, points 1000 in brown, and the path in blue.
         """
-        x_max_grid, y_max_grid = self.map.get_map_matrix().shape
+        grid_map = cv2.resize(self.map.get_map_matrix(), (0, 0), fx=1/MAP_SCALE, fy=1/MAP_SCALE, interpolation=cv2.INTER_NEAREST)
 
         # Define color map
         color_map = {
@@ -430,45 +423,53 @@ class Roamer:
             Zone.EMPTY: (255, 255, 255),
             Zone.WOUNDED: (0, 0, 255),
             Zone.RESCUE_CENTER: (255, 255, 0),
-            Zone.UNEXPLORED: (0, 0, 0),
-            1: (255, 255, 255),  # Color for points with value 1 (white)
-            1000: (139, 69, 19)  # Color for points with value 1000 (brown)
+            Zone.UNEXPLORED: (50, 50, 50),
         }
 
+        x_max_grid, y_max_grid = grid_map.shape
         img = np.zeros((x_max_grid, y_max_grid, 3), np.uint8)
 
         # Assign colors to each point based on the color map
         for x in range(x_max_grid):
             for y in range(y_max_grid):
-                img[x][y] = color_map[grid_map[x, y]]
-                
-        for frontier in self.frontiers:
-            for x, y in frontier:
-                img[x][y] = (0, 255, 0)
+                img[x,y] = color_map[grid_map[x, y]]
 
-        if path is not None:
-            for pos in path:
-                x,y = self.map.world_to_grid(pos)
-                img[x][y] = (255, 0, 0)
-        
-        img[target[0]][target[1]] = (0 , 0, 255)
-        img[target[0]+1][target[1]] = (0 , 0, 255)
-        img[target[0]][target[1]+1] = (0 , 0, 255)
-        img[target[0]][target[1]-1] = (0 , 0, 255)
-        img[target[0]-1][target[1]] = (0 , 0, 255)
 
-        # Convert coordinates to integers and assign blue color to the path
-        # for coord in path:
-        #     x, y = map(int, coord)
-        #     img[x, y] = (0, 0, 255)
+        frontier_centers = []
+        for frontier in selected_frontiers:
+            for p in frontier:
+                img[p.x//MAP_SCALE][p.y//MAP_SCALE] = (0, 255, 0)
 
-        # Zoom image
-        img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
+            frontier_center = Vector2D(
+                sum(point.x for point in frontier) / len(frontier),
+                sum(point.y for point in frontier) / len(frontier)
+            )
+            frontier_centers.append(frontier_center)
+
+        p = self.map.world_to_grid(self.drone.drone_position)
+        img[p.x // MAP_SCALE, p.y // MAP_SCALE] = (255, 0, 255)
+
+        img = cv2.resize(img, (0, 0), fx=MAP_SCALE, fy=MAP_SCALE, interpolation=cv2.INTER_NEAREST)
+        plt.figure()
+        plt.axis('off')
+        plt.imshow(np.transpose(img, (1, 0, 2)))
+        p2 = self.drone.drone_position + self.drone.repulsion
+        print("repulsion:", self.drone.repulsion)
+        p2 = self.map.world_to_grid(p2)
+        plt.plot([p.x,p2.x],[p.y,p2.y], color='red', linewidth=0.5)
+        for i,p in enumerate(frontier_centers):
+            plt.text(p.x, p.y, str(i), horizontalalignment='center', verticalalignment='center', fontsize=8, color='red')
+
+        with open(f"info_frontier{self.drone.identifier}.txt", 'w') as f:
+            f.write(" ".join(map(str,selected_frontiers_distance_array))+'\n')
+            f.write(" ".join(map(str,frontiers_size))+'\n')
+            f.write(" ".join(map(str,frontier_count))+'\n')
+            f.write(" ".join(map(str,selected_frontiers_repulsion_angle_array))+'\n')
+            f.write(" ".join(map(str,frontier_centers)))
 
         # Display the image
-        cv2.imshow("map_debug" + str(target_id), np.transpose(img, (1, 0, 2)))
-        cv2.waitKey(1)
-
+        plt.savefig("map_debug"+str(self.drone.identifier)+".png")
+        plt.close()
 
 
     # TODO: fix angle (fast shortest_path gives A* path so no indication on direction)
@@ -515,10 +516,6 @@ class Roamer:
             return [], 0
 
         path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))[0]
-        
-        if self.debug_mode: 
-            print("[Roamer] Path found : ", path)
-            self.display_map_with_path(self.map.get_map_matrix(), path, target.array, 5)
 
         if path is None:
             return [], None

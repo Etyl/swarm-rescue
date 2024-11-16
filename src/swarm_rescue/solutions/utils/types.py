@@ -15,6 +15,9 @@ class Vector2D:
         else:
             self.array = np.array([x, y])
 
+    def __str__(self) -> str:
+        return f"{self.array[0]};{self.array[1]}"
+
     def __add__(self, other):
         return Vector2D(pointList=(self.array + other.array))
 
