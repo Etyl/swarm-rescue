@@ -14,7 +14,7 @@ from solutions.utils.types import Vector2D # type: ignore
 from solutions.utils.utils import normalize_angle # type: ignore
 
 from statemachine import StateMachine, State
-from typing import TYPE_CHECKING, Optional, Tuple, List
+from typing import TYPE_CHECKING, Optional, Tuple, List, Dict
 import numpy as np
 import os
 import cv2
@@ -322,6 +322,7 @@ class Roamer:
             selected_frontiers_distance[idx] = distance
             selected_frontiers_repulsion_angle.append(repulsion_angle)
 
+        obs: Dict[str,np.ndarray] = {}
 
         # parameters
         frontiers = [self.frontiers[idx] for idx in selected_frontiers_id]
@@ -329,7 +330,7 @@ class Roamer:
         selected_frontiers_distance_array = np.array(selected_frontiers_distance)
         selected_frontiers_repulsion_angle_array = np.array(selected_frontiers_repulsion_angle)
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
-        
+
         # normalize
         frontier_distance_noInf = [x for x in selected_frontiers_distance_array if x != -np.inf and x != np.inf]
         if len(frontier_distance_noInf) == 0: return None
@@ -345,6 +346,14 @@ class Roamer:
         selected_frontiers_distance_array = 1 - selected_frontiers_distance_array
         selected_frontiers_repulsion_angle_array = 1 - selected_frontiers_repulsion_angle_array
 
+        obs['size'] = frontiers_size
+        obs['count'] = frontier_count
+        obs['distance'] = selected_frontiers_distance_array
+        obs['angle'] = selected_frontiers_repulsion_angle_array
+        for key in obs:
+            if len(obs[key]) < FRONTIER_COUNT :
+                obs[key] = np.concatenate((obs[key], np.zeros(FRONTIER_COUNT - len(obs[key]))), axis=0)
+
         if self.debug_mode:
             selected_frontiers = [self.frontiers[id] for id in selected_frontiers_id]
             self.display_map_with_path(selected_frontiers, selected_frontiers_distance_array, frontiers_size, frontier_count, selected_frontiers_repulsion_angle_array)
@@ -352,13 +361,13 @@ class Roamer:
         # score (the higher the better)
         score = None
         if self.policy is None:
-            score = (2 * selected_frontiers_distance_array +
-                     frontiers_size +
-                     frontier_count +
-                     4 * selected_frontiers_repulsion_angle_array)
+            score = (2 * obs["distance"] +
+                     obs["size"] +
+                     obs["count"] +
+                     4 * obs["angle"])
         else:
-            policy_input = np.concatenate((np.array([self.drone.map.exploration_score]),selected_frontiers_distance_array, frontiers_size, frontier_count, selected_frontiers_repulsion_angle_array), axis=0)
-
+            total_obs = np.concatenate(list(obs.values()), axis=0)
+            policy_input = np.concatenate((np.array([self.drone.map.exploration_score]),total_obs), axis=0)
             if self.save_run is not None and len(self.previous_input)>0:
                 combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.elapsed_timestep])), axis=0)
                 self.save_run.append(combined)
@@ -370,7 +379,7 @@ class Roamer:
 
         #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)
         # select the best frontier
-        best_frontier_idx = int(np.argmax(score))
+        best_frontier_idx = int(np.argmax(score[:len(frontiers)]))
         #best_frontier_idx = np.random.choice(np.arange(len(frontiers)), p=softmax)
 
         # Return the center and the points of the chosen frontier
