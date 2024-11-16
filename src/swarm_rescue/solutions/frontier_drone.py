@@ -196,7 +196,8 @@ class FrontierDrone(DroneAbstract):
             next_waypoint= self.next_waypoint,
             killed_drones = self.killed_drones,
             confidence_position = self.localizer.confidence_position,
-            visible_drones = self.visible_drones
+            visible_drones = self.visible_drones,
+            rescue_center_position=self.rescue_center_position
         )
         return data
 
@@ -256,6 +257,9 @@ class FrontierDrone(DroneAbstract):
         """
         updates the data of the drones
         """
+        if self.rescue_center_position is None and drone_data.rescue_center_position is not None:
+            self.rescue_center_position = drone_data.rescue_center_position
+
         # update the wounded list
         if drone_data.wounded_target is not None:
             for k in range(len(self.wounded_found_list)):
