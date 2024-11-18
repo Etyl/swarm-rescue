@@ -463,7 +463,6 @@ class Roamer:
         plt.axis('off')
         plt.imshow(np.transpose(img, (1, 0, 2)))
         p2 = self.drone.drone_position + 80*self.drone.drone_direction_group
-        print("repulsion:", self.drone.drone_direction_group)
         p2 = self.map.world_to_grid(p2)
         plt.plot([p.x,p2.x],[p.y,p2.y], color='red', linewidth=0.5)
         for i,p in enumerate(frontier_centers):

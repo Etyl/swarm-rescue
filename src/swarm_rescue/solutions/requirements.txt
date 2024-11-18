@@ -1,2 +1,2 @@
-pyastar2d
-Cython
+pyastar2d==1.0.6
+Cython==3.0.11

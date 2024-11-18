@@ -2,13 +2,15 @@
 
 ## How to run
 
+The build was tested on Python 3.8 on Windows and MacOS.
+
 ### Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Building the pathfinder:
+### Building the drone modules:
 
 Execute the builder.py file.
 
@@ -23,12 +25,11 @@ The Frontier Drone is composed of different main modules responsible for differe
 - **Drone Controller**: responsible for controlling the drone and defining the commands to the drone.
 - **Mapper**: responsible for mapping the environment from the lidar data.
 - **Roamer**: responsible for exploring the environment.
+- **Localizer**: responsible for position,angle,velocity estimation and path planning
 
 ## Drone Controller
 
 The drone controller is a finite state machine that controls the drone. The states are:
-
-![Graph](doc/graph.png)
 
 When in "Roaming", the drone will follow the commands given by the Roamer.
 
