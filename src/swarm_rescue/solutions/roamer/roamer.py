@@ -4,8 +4,6 @@ implements roaming behavior of the drone
 """
 from __future__ import annotations
 
-from arcade.examples.happy_face import width
-
 from solutions.mapper.mapper import Map  # type: ignore
 from solutions.mapper.mapper import Zone  # type: ignore
 from solutions.roamer.frontier_explorer import get_frontiers  # type: ignore
