@@ -1,3 +1,4 @@
+import sys
 import threading
 import subprocess
 import time
@@ -14,7 +15,7 @@ def launch_parallel_task(
     with open(log_file_path, "w") as log_file:
         subprocess.run(
             [
-                "python",
+                sys.executable,
                 script_name,
                 "--map",
                 map_name,
