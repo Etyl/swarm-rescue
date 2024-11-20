@@ -29,7 +29,8 @@ class PlaygroundWrapperRL:
 
 def get_run(
     policy,
-    save_file_run,
+    save_file_run: str,
+    save_file_score: str,
     map_type: MapAbstract = LargeMap01,
     zones_config: ZonesConfig = ()) -> None:
     """
@@ -72,6 +73,9 @@ def get_run(
             s[reward_idx] = exp_score[min(int(s[reward_idx])-1, len(exp_score)-1)]
             f.write(" ".join(map(str,s)) + "\n")
 
+    with open(save_file_score,"w") as f:
+        f.write(" ".join(map(str,exp_score)) + "\n")
+
     if has_crashed:
         print(error_msg)
 
@@ -82,4 +86,4 @@ def dummy_policy(obs:np.ndarray):
     return np.ones(ACTION_SPACE)/ACTION_SPACE
 
 if __name__ == "__main__":
-    get_run(dummy_policy, "run0.txt", map_type=LargeMap02)
+    get_run(dummy_policy, "run0.txt", "score0.txt", map_type=LargeMap02)
