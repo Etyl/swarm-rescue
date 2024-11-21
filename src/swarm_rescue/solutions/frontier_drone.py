@@ -435,10 +435,7 @@ class FrontierDrone(DroneAbstract):
         """
         repulses the drone from other drones
         """
-        def repulsion_dist(distance):
-            a = 7
-            b = 0.8
-            c = 0.007
+        def repulsion_dist(distance, a=7, b=0.8, c=0.007):
             if distance <= a: return 2
             return max(0,min(2,MAX_RANGE_SEMANTIC_SENSOR*(b/(distance-a) - c)))
 
@@ -453,7 +450,7 @@ class FrontierDrone(DroneAbstract):
         repulsion = Vector2D()
         min_dist = np.inf
         for data in self.semantic_values():
-            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE and not (self.is_inside_return_area and self.is_searching_time_limit_reached()):
                 angle = data.angle
                 dist = data.distance
                 min_dist = min(min_dist, dist)
@@ -469,6 +466,23 @@ class FrontierDrone(DroneAbstract):
                     repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
                 else:
                     repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
+            
+            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE and (self.is_inside_return_area and self.is_searching_time_limit_reached()):
+                angle = data.angle
+                dist = data.distance
+                min_dist = min(min_dist, dist)
+
+                pos = self.drone_position + dist * Vector2D(1,0).rotate(angle)
+                add_pos(pos)
+
+                drone = None
+                for d in self.drone_list:
+                    if d.position.distance(Vector2D(dist*math.cos(angle+self.drone_angle), dist*math.sin(angle+self.drone_angle))+self.get_position()) < 30:
+                        drone = d
+                if drone is None or drone.id>self.identifier:
+                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist, a=2, b=0.2)
+                else:
+                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist, a=2, b=0.2)
 
         centroid = self.drone_position
         for p in found_pos:
@@ -847,6 +861,10 @@ class FrontierDrone(DroneAbstract):
         if self.return_zone_position is not None:
             pos = self.return_zone_position.array + np.array(self.size_area) / 2
             arcade.draw_circle_filled(pos[0], pos[1], 10, arcade.color.BLUE)
+
+        # draw drone health over the drone
+        pos = self.get_position().array + np.array(self.size_area) / 2
+        arcade.draw_text(f"{self.drone_health}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
     def draw_bottom_layer(self):
         # check if drone is dead
