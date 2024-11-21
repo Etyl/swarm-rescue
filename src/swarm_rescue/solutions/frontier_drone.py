@@ -679,12 +679,12 @@ class FrontierDrone(DroneAbstract):
             self.compute_kill_zone()
             self.check_if_no_com_zone_mode()
         self.update_last_other_drones_position()
-        if self.time > 50:
-            if self.roaming:
-                try:
-                    self.roamer_controller.cycle()
-                except exceptions.TransitionNotAllowed:
-                    pass
+
+        if self.roaming:
+            try:
+                self.roamer_controller.cycle()
+            except exceptions.TransitionNotAllowed:
+                pass
 
         self.controller.cycle()
 
@@ -692,7 +692,7 @@ class FrontierDrone(DroneAbstract):
 
         self.update_mapping()
 
-        if self.roaming and self.time > 50:
+        if self.roaming:
             self.command = self.roamer_controller.command.copy()
         else:
             self.command = self.controller.command.copy()

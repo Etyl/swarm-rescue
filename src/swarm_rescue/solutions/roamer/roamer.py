@@ -139,7 +139,7 @@ class RoamerController(StateMachine):
         return dist < 20 + (1+turning_angle)*20
 
     def drone_position_valid(self):
-        return self.drone.get_position() is not None and not np.isnan(self.drone.get_position().array).any()
+        return self.drone.elapsed_timestep > 15
 
     def target_discorvered(self):
         return self.map[self.target] != Zone.UNEXPLORED or self.drone.waypoint_index is None
