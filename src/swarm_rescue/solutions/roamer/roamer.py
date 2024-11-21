@@ -53,6 +53,9 @@ class RoamerController(StateMachine):
     # the number of points required in a frontier
     _FRONTIERS_THRESHOLD : int = 6
 
+    # the minimum number of points required in a frontier
+    _MIN_FRONTIERS_THRESHOLD : int = 6
+
     # the cooldown for computing the frontier
     # TODO rewrite/refactor
     _COMPUTE_FRONTIER_COOLDOWN : int = 1
@@ -67,7 +70,8 @@ class RoamerController(StateMachine):
     cycle = (
         start_roaming.to(searching_for_target, cond="drone_position_valid") |
 
-        searching_for_target.to(going_to_target) |
+        searching_for_target.to(going_to_target, cond="target_discorvered") |
+        searching_for_target.to(searching_for_target) |
 
         going_to_target.to(searching_for_target, cond="no_path_to_target") |
         going_to_target.to(searching_for_target, cond="check_target_reached") |
@@ -142,10 +146,12 @@ class RoamerController(StateMachine):
         return self.drone.elapsed_timestep > 15
 
     def target_discorvered(self):
-        return self.map[self.target] != Zone.UNEXPLORED or self.drone.waypoint_index is None
+        print(f"Target discovered: {self.target}")
+        return self.target is not None
 
     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
         message = ". " + message if message else ""
+        print(f"Running {event} from {source.id} to {target.id}{message}")
         return f"Running {event} from {source.id} to {target.id}{message}"
     
     def before_going_to_target(self):
@@ -162,7 +168,8 @@ class RoamerController(StateMachine):
         # OTHER IMPL - ASYNC        
         # await asyncio.sleep(1)
         # END OTHER IMPL - ASYNC
-
+        print(self.drone.searching_time)
+        self.drone.add_searching_time()
         if self.last_time_updates >= self._COMPUTE_FRONTIER_COOLDOWN:
             self.drone.path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
             if not self.first_time:
@@ -187,7 +194,7 @@ class RoamerController(StateMachine):
             self.none_target_count += 1
 
             if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
-                self.frontiers_threshold = max(1, self.frontiers_threshold - 1)
+                self.frontiers_threshold = max(self._MIN_FRONTIERS_THRESHOLD, self.frontiers_threshold - 1)
             return
         
         # if target is too close
@@ -204,10 +211,11 @@ class RoamerController(StateMachine):
         self.force_going_to_target()
 
 
+
     @going_to_target.enter
     def on_enter_going_to_target(self):
         self.loop_count_going_to_target += 1 # increment position counter
-
+        self.drone.reset_searching_time()
         if self.test_position_close_start_point():
             self.count_close_previous_searching_start_point += 1
 

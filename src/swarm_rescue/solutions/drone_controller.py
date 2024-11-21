@@ -16,6 +16,7 @@ class DroneController(StateMachine):
     approaching_wounded = State('Approaching wounded')
     going_to_center = State('Going to center')
     approaching_center = State('Approaching to center')
+    going_to_return_zone = State('Going to return zone')
 
     force_drone_stuck = approaching_wounded.to(roaming)
 
@@ -24,6 +25,8 @@ class DroneController(StateMachine):
         roaming.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
         roaming.to(going_to_wounded, cond="found_wounded", on="before_going_to_wounded") |
         roaming.to(going_to_center, cond="no_gps_time_limit") |
+        roaming.to(going_to_return_zone, cond="searching_time_limit") |
+        going_to_return_zone.to(going_to_return_zone) |
         going_to_wounded.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
 
         going_to_wounded.to(roaming, cond="lost_wounded_found") |
@@ -84,6 +87,9 @@ class DroneController(StateMachine):
     
     def lost_wounded(self) -> bool:
         return not self.drone.base.grasper.grasped_entities
+    
+    def searching_time_limit(self) -> bool:
+        return self.drone.is_searching_time_limit_reached()
     
     
     ## actions
@@ -150,5 +156,19 @@ class DroneController(StateMachine):
         self.command = self.drone.localizer.get_control_from_semantic()
         self.command["grasper"] = 1
         self.drone.localizer.time_approaching_center += 1
+
+    def before_going_to_return_zone(self) -> None:
+        self.drone.drone_angle_offset = np.pi
+        path = self.drone.get_path(self.drone.return_zone_position)
+        self.drone.set_path(path)
+
+    @going_to_return_zone.enter
+    def on_enter_going_to_return_zone(self) -> None:
+        self.drone.drone_angle_offset = np.pi
+        if self.drone.target is None:
+            path = self.drone.get_path(self.drone.return_zone_position)
+            self.drone.set_path(path)
+        self.command = self.drone.localizer.get_control_from_path()
+        self.command["grasper"] = 0
 
 

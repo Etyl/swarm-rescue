@@ -27,6 +27,7 @@ class FrontierDrone(DroneAbstract):
     POSITION_QUEUE_SIZE = 30 # number of positions to check if the drone is stuck
     REFRESH_PATH_LIMIT = 40 # frames before refreshing the path
     WOUNDED_DISTANCE = 50 # The distance between wounded person to be considered as the same
+    MAX_SEARCHING_TIME = 100 # The maximum time to search for a target before going to return zone
 
     def __init__(
         self,
@@ -63,6 +64,8 @@ class FrontierDrone(DroneAbstract):
             "grasper": 0
         }
         self.visible_drones: List[Tuple[int,Vector2D]] = [] # List of (id,drone_position)
+        self.searching_time : int = 0 # time spent searching for next target
+        self.return_zone_position : Optional[Vector2D] = None # The position of the return zone
 
         self.rescue_center_position: Optional[Vector2D] = None
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
@@ -73,7 +76,6 @@ class FrontierDrone(DroneAbstract):
 
         self.debug_path = False # True if the path must be displayed
         self.debug_wounded = False
-        self.debug_positions = False
         self.debug_positions = False
         self.debug_map = False
         self.debug_roamer = False
@@ -433,10 +435,7 @@ class FrontierDrone(DroneAbstract):
         """
         repulses the drone from other drones
         """
-        def repulsion_dist(distance):
-            a = 7
-            b = 0.8
-            c = 0.007
+        def repulsion_dist(distance, a=7, b=0.8, c=0.007):
             if distance <= a: return 2
             return max(0,min(2,MAX_RANGE_SEMANTIC_SENSOR*(b/(distance-a) - c)))
 
@@ -451,7 +450,7 @@ class FrontierDrone(DroneAbstract):
         repulsion = Vector2D()
         min_dist = np.inf
         for data in self.semantic_values():
-            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE:
+            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE and not (self.is_inside_return_area and self.is_searching_time_limit_reached()):
                 angle = data.angle
                 dist = data.distance
                 min_dist = min(min_dist, dist)
@@ -467,6 +466,23 @@ class FrontierDrone(DroneAbstract):
                     repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
                 else:
                     repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
+            
+            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE and (self.is_inside_return_area and self.is_searching_time_limit_reached()):
+                angle = data.angle
+                dist = data.distance
+                min_dist = min(min_dist, dist)
+
+                pos = self.drone_position + dist * Vector2D(1,0).rotate(angle)
+                add_pos(pos)
+
+                drone = None
+                for d in self.drone_list:
+                    if d.position.distance(Vector2D(dist*math.cos(angle+self.drone_angle), dist*math.sin(angle+self.drone_angle))+self.get_position()) < 30:
+                        drone = d
+                if drone is None or drone.id>self.identifier:
+                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist, a=2, b=0.2)
+                else:
+                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist, a=2, b=0.2)
 
         centroid = self.drone_position
         for p in found_pos:
@@ -655,6 +671,24 @@ class FrontierDrone(DroneAbstract):
         self.kill_zone_mode = False
         self.reset_path()
 
+    def add_searching_time(self):
+        """
+        adds the searching time
+        """
+        self.searching_time += 1
+    
+    def reset_searching_time(self):
+        """
+        resets the searching time
+        """
+        self.searching_time = 0
+
+    def is_searching_time_limit_reached(self):
+        """
+        checks if the searching time limit is reached
+        """
+        return self.searching_time >= FrontierDrone.MAX_SEARCHING_TIME
+
     def control(self):
 
         # check if drone is dead
@@ -665,12 +699,16 @@ class FrontierDrone(DroneAbstract):
         self.time += 1
         if self.gps_disabled:
             self.time_in_no_gps += 1
+        
 
         self.localizer.localize()
         self.process_semantic_sensor()
         self.process_communicator()
         self.check_wounded_available()
         self.test_stuck()
+
+        if self.return_zone_position is None:
+            self.return_zone_position = self.get_position().copy()
 
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
@@ -819,6 +857,14 @@ class FrontierDrone(DroneAbstract):
                         pos = np.array(self.map.grid_to_world(point)) + np.array(self.size_area)/2
                         arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
 
+        # draw return zone
+        if self.return_zone_position is not None:
+            pos = self.return_zone_position.array + np.array(self.size_area) / 2
+            arcade.draw_circle_filled(pos[0], pos[1], 10, arcade.color.BLUE)
+
+        # draw drone health over the drone
+        pos = self.get_position().array + np.array(self.size_area) / 2
+        arcade.draw_text(f"{self.drone_health}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
     def draw_bottom_layer(self):
         # check if drone is dead
