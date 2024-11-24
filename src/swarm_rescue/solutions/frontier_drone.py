@@ -735,7 +735,7 @@ class FrontierDrone(DroneAbstract):
         else:
             self.command = self.controller.command.copy()
 
-        if self.gps_disabled:
+        if self.gps_disabled and self.controller.current_state != self.controller.going_to_center:
             self.command["rotation"] /=2
             self.command["forward"] /=2
             self.command["lateral"] /=2
