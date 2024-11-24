@@ -688,7 +688,15 @@ class FrontierDrone(DroneAbstract):
         checks if the searching time limit is reached
         """
         return self.searching_time >= FrontierDrone.MAX_SEARCHING_TIME
+    
+    def is_simulation_time_limit_reached(self):
+        """
+        checks if the simulation time limit is reached
+        """
+        max_timestep = self._misc_data.max_timestep_limit * 0.9
+        max_wall_time = self._misc_data.max_walltime_limit * 0.9
 
+        return self.elapsed_timestep >= max(max_timestep, 200) or self.elapsed_walltime >= max_wall_time
     def control(self):
 
         # check if drone is dead

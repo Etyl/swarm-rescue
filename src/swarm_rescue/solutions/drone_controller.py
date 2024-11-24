@@ -17,6 +17,7 @@ class DroneController(StateMachine):
     going_to_center = State('Going to center')
     approaching_center = State('Approaching to center')
     going_to_return_zone = State('Going to return zone')
+    stay_in_return_zone = State('Stay in return zone')
 
     force_drone_stuck = approaching_wounded.to(roaming)
 
@@ -25,8 +26,12 @@ class DroneController(StateMachine):
         roaming.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
         roaming.to(going_to_wounded, cond="found_wounded", on="before_going_to_wounded") |
         roaming.to(going_to_center, cond="no_gps_time_limit") |
-        roaming.to(going_to_return_zone, cond="searching_time_limit") |
+        roaming.to(going_to_return_zone, cond="is_drone_finished") |
+        going_to_return_zone.to(stay_in_return_zone, cond="arrived_to_return_zone") |
+        stay_in_return_zone.to(going_to_return_zone, cond="out_of_return_zone") |
+        stay_in_return_zone.to(stay_in_return_zone) |
         going_to_return_zone.to(going_to_return_zone) |
+
         going_to_wounded.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
 
         going_to_wounded.to(roaming, cond="lost_wounded_found") |
@@ -88,8 +93,14 @@ class DroneController(StateMachine):
     def lost_wounded(self) -> bool:
         return not self.drone.base.grasper.grasped_entities
     
-    def searching_time_limit(self) -> bool:
-        return self.drone.is_searching_time_limit_reached()
+    def is_drone_finished(self) -> bool:
+        return self.drone.is_searching_time_limit_reached() or self.drone.is_simulation_time_limit_reached()
+    
+    def arrived_to_return_zone(self) -> bool:
+        return self.drone.is_inside_return_area
+    
+    def out_of_return_zone(self) -> bool:
+        return not self.drone.is_inside_return_area
     
     
     ## actions
@@ -170,5 +181,14 @@ class DroneController(StateMachine):
             self.drone.set_path(path)
         self.command = self.drone.localizer.get_control_from_path()
         self.command["grasper"] = 0
+
+    @stay_in_return_zone.enter
+    def on_enter_stay_in_return_zone(self) -> None:
+        self.drone.reset_path()
+        self.command["forward"] = 0
+        self.command["lateral"] = 0
+        self.command["rotation"] = 0
+        self.command["grasper"] = 0
+        self.drone.target = None
 
 
