@@ -372,14 +372,10 @@ class Localizer:
                 command["forward"] = 0.2
 
         if self.drone.near_center and self.drone.rescue_center_dist < 40:
-            command["forward"] = 0
-            command["rotation"] = 0
-            if self.time_approaching_center%160 < 20:
-                command["forward"] = 0.2
-            elif self.time_approaching_center%160 < 80:
+            command["forward"] = 0.1 * math.cos(self.drone.center_angle)
+            command["lateral"] = 0.1  * math.sin(self.drone.center_angle)
+            if self.time_approaching_center%160 < 80:
                 command["rotation"] = 0.5
-            elif self.time_approaching_center%160 < 100:
-                command["forward"] = 0.2
             else:
                 command["rotation"] = -0.5
         return command
