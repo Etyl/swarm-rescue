@@ -26,9 +26,9 @@ class DroneController(StateMachine):
         roaming.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
         roaming.to(going_to_wounded, cond="found_wounded", on="before_going_to_wounded") |
         roaming.to(going_to_center, cond="no_gps_time_limit") |
-        roaming.to(going_to_return_zone, cond="is_drone_finished") |
-        going_to_return_zone.to(stay_in_return_zone, cond="arrived_to_return_zone") |
-        stay_in_return_zone.to(going_to_return_zone, cond="out_of_return_zone") |
+        roaming.to(going_to_return_zone, cond="is_drone_finished", on="before_going_to_return_zone") |
+        going_to_return_zone.to(stay_in_return_zone, cond="arrived_to_return_zone", on="before_stay_in_return_zone") |
+        stay_in_return_zone.to(going_to_return_zone, cond="out_of_return_zone", on = "before_going_to_return_zone") |
         stay_in_return_zone.to(stay_in_return_zone) |
         going_to_return_zone.to(going_to_return_zone) |
 
@@ -182,13 +182,15 @@ class DroneController(StateMachine):
         self.command = self.drone.localizer.get_control_from_path()
         self.command["grasper"] = 0
 
-    @stay_in_return_zone.enter
-    def on_enter_stay_in_return_zone(self) -> None:
-        self.drone.reset_path()
+    def before_stay_in_return_zone(self) -> None:
         self.command["forward"] = 0
         self.command["lateral"] = 0
         self.command["rotation"] = 0
         self.command["grasper"] = 0
+
+    @stay_in_return_zone.enter
+    def on_enter_stay_in_return_zone(self) -> None:
+        self.drone.reset_path()
         self.drone.target = None
 
 
