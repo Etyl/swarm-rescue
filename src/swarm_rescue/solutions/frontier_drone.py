@@ -82,8 +82,8 @@ class FrontierDrone(DroneAbstract):
         self.debug_controller = False
         self.debug_mapper = False
         self.debug_lidar = False
-        self.debug_repulsion = True
-        self.debug_kill_zones = True
+        self.debug_repulsion = False
+        self.debug_kill_zones = False
         self.debug_wall_repulsion = False
         self.debug_frontiers = False
 
@@ -865,14 +865,16 @@ class FrontierDrone(DroneAbstract):
                         pos = np.array(self.map.grid_to_world(point)) + np.array(self.size_area)/2
                         arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
 
-        # draw return zone
-        if self.return_zone_position is not None:
-            pos = self.return_zone_position.array + np.array(self.size_area) / 2
-            arcade.draw_circle_filled(pos[0], pos[1], 10, arcade.color.BLUE)
+        debug = False
+        if debug:
+            # draw return zone
+            if self.return_zone_position is not None:
+                pos = self.return_zone_position.array + np.array(self.size_area) / 2
+                arcade.draw_circle_filled(pos[0], pos[1], 10, arcade.color.BLUE)
 
-        # draw drone health over the drone
-        pos = self.get_position().array + np.array(self.size_area) / 2
-        arcade.draw_text(f"{self.drone_health}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
+            # draw drone health over the drone
+            pos = self.get_position().array + np.array(self.size_area) / 2
+            arcade.draw_text(f"{self.drone_health}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
     def draw_bottom_layer(self):
         # check if drone is dead

@@ -146,12 +146,12 @@ class RoamerController(StateMachine):
         return self.drone.elapsed_timestep > 15
 
     def target_discorvered(self):
-        print(f"Target discovered: {self.target}")
+        if self.debug_mode: print(f"Target discovered: {self.target}")
         return self.target is not None
 
     def before_cycle(self, event: str, source: State, target: State, message: str = ""):
         message = ". " + message if message else ""
-        print(f"Running {event} from {source.id} to {target.id}{message}")
+        if self.debug_mode: print(f"Running {event} from {source.id} to {target.id}{message}")
         return f"Running {event} from {source.id} to {target.id}{message}"
     
     def before_going_to_target(self):
@@ -168,7 +168,6 @@ class RoamerController(StateMachine):
         # OTHER IMPL - ASYNC        
         # await asyncio.sleep(1)
         # END OTHER IMPL - ASYNC
-        print(self.drone.searching_time)
         self.drone.add_searching_time()
         if self.last_time_updates >= self._COMPUTE_FRONTIER_COOLDOWN:
             self.drone.path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
