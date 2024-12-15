@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     # Prepare task arguments
     tasks = []
-    for map_name, zone_type in map_names:
+    for map_name, zone_type in complete_map_names:
         result_path = (
             name
             + "/"
