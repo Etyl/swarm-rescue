@@ -1,0 +1,1405 @@
+[
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 80.91555555555556,
+                "percent_rescued": 100.0,
+                "score_timestep": 33.55555555555556,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 22.8,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4784,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 37.8,
+                "elapsed_walltime": 1302.6055130958557,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b881d3cc-45b6-4122-bd90-2f7c6ad7edf2_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b881d3cc-45b6-4122-bd90-2f7c6ad7edf2_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.37583333333333,
+                "percent_rescued": 100.0,
+                "score_timestep": 14.958333333333334,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 35.2,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 6123,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 54.400000000000006,
+                "elapsed_walltime": 1302.7948298454285,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/02c1f108-6954-4340-9a96-209b31cf7916_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/02c1f108-6954-4340-9a96-209b31cf7916_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 83.81444444444443,
+                "percent_rescued": 100.0,
+                "score_timestep": 32.94444444444444,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 33.4,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4828,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 52.6,
+                "elapsed_walltime": 1363.8995320796967,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b5a0eea5-f2b3-4cbf-98e7-7022faa5c26f_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b5a0eea5-f2b3-4cbf-98e7-7022faa5c26f_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 79.03999999999999,
+                "percent_rescued": 100.0,
+                "score_timestep": 38.0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 14.5,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4464,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 26.200000000000003,
+                "elapsed_walltime": 1370.0443568229675,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/68b2fc62-efb3-42d6-9493-98ec08bdf606_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/68b2fc62-efb3-42d6-9493-98ec08bdf606_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 80.03220433796324,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 33.2,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.26578359457808,
+                "rescued_number": 20.0,
+                "score_health_returned": 62.8,
+                "elapsed_walltime": 1415.8760342597961,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/7c6642fc-5067-481a-be32-dc4e97fec3a0_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/7c6642fc-5067-481a-be32-dc4e97fec3a0_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 79.44888888888889,
+                "percent_rescued": 100.0,
+                "score_timestep": 40.88888888888889,
+                "percent_drones_destroyed": 10.0,
+                "mean_drones_health": 18.6,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4256,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 26.8,
+                "elapsed_walltime": 1420.7226495742798,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/2c4c7a3a-652e-4e2f-8b1a-6377c0c1cdd5_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/2c4c7a3a-652e-4e2f-8b1a-6377c0c1cdd5_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 72.51926890849643,
+                "percent_rescued": 76.19047619047619,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 39.6,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 92.92015406629163,
+                "rescued_number": 16.0,
+                "score_health_returned": 79.2,
+                "elapsed_walltime": 1439.1040441989899,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/beff78bf-160d-4cb0-96ad-4e7f01eee651_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/beff78bf-160d-4cb0-96ad-4e7f01eee651_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.9675,
+                "percent_rescued": 100.0,
+                "score_timestep": 18.875,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 33.7,
+                "elapsed_timestep": 7177,
+                "full_rescue_timestep": 5841,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 55.39999999999999,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/2c1a0c33-af0e-4ef5-aa62-82236ad12dd2_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/2c1a0c33-af0e-4ef5-aa62-82236ad12dd2_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 86.55784776877914,
+                "percent_rescued": 100.0,
+                "score_timestep": 40.81944444444445,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 31.2,
+                "elapsed_timestep": 7088,
+                "full_rescue_timestep": 4261,
+                "score_exploration": 99.97951662167347,
+                "rescued_number": 21.0,
+                "score_health_returned": 62.4,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/542a264b-d396-40b8-af20-dc4578b08963_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/542a264b-d396-40b8-af20-dc4578b08963_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 80.95583333333335,
+                "percent_rescued": 100.0,
+                "score_timestep": 31.958333333333332,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 24.2,
+                "elapsed_timestep": 7139,
+                "full_rescue_timestep": 4899,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 38.8,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/89d86a45-4b98-4c73-8284-30be48b4830b_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/89d86a45-4b98-4c73-8284-30be48b4830b_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 83.24333333333334,
+                "percent_rescued": 100.0,
+                "score_timestep": 44.83333333333333,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 26.4,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 3972,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 43.8,
+                "elapsed_walltime": 1383.7036066055298,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/a55d80dd-d22d-48a9-b23d-89c9481ccdc4_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/a55d80dd-d22d-48a9-b23d-89c9481ccdc4_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.76516044714094,
+                "percent_rescued": 100.0,
+                "score_timestep": 42.861111111111114,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 23.7,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4114,
+                "score_exploration": 99.99524668014911,
+                "rescued_number": 21.0,
+                "score_health_returned": 42.4,
+                "elapsed_walltime": 1419.0302031040192,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/d6145133-a673-441a-b50a-68806cac634f_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/d6145133-a673-441a-b50a-68806cac634f_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 81.34775216851153,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 37.0,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 98.84352274731953,
+                "rescued_number": 20.0,
+                "score_health_returned": 69.8,
+                "elapsed_walltime": 1336.6751728057861,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/52ab3330-2884-41ee-8ba0-2de897756d7e_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/52ab3330-2884-41ee-8ba0-2de897756d7e_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 85.19729895688877,
+                "percent_rescued": 100.0,
+                "score_timestep": 42.81944444444444,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 33.6,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4117,
+                "score_exploration": 99.97677256222161,
+                "rescued_number": 21.0,
+                "score_health_returned": 54.6,
+                "elapsed_walltime": 1425.0286741256714,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/fc29fff9-1bbb-4b6b-a78b-9fe1e8d6c372_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/fc29fff9-1bbb-4b6b-a78b-9fe1e8d6c372_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.93194444444444,
+                "percent_rescued": 100.0,
+                "score_timestep": 33.31944444444444,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 27.4,
+                "elapsed_timestep": 6725,
+                "full_rescue_timestep": 4801,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 48.0,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/956cb1c9-6f79-44b1-88ce-4a36eb04300c_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/956cb1c9-6f79-44b1-88ce-4a36eb04300c_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 78.65231816621245,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 31.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.76635273582423,
+                "rescued_number": 20.0,
+                "score_health_returned": 55.39999999999999,
+                "elapsed_walltime": 1392.060719013214,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/153023df-7b9c-441a-a1ba-e6c0346874f7_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/153023df-7b9c-441a-a1ba-e6c0346874f7_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 83.69583333333334,
+                "percent_rescued": 100.0,
+                "score_timestep": 16.958333333333332,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 31.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 5979,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 60.0,
+                "elapsed_walltime": 1410.222063779831,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/7e9da3ff-e96e-4f83-9279-e66394bdd670_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/7e9da3ff-e96e-4f83-9279-e66394bdd670_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 80.99993984168528,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 38.7,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.7044611131883,
+                "rescued_number": 20.0,
+                "score_health_returned": 67.2,
+                "elapsed_walltime": 1414.4056675434113,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/f4e47818-e089-41db-a3f2-6bd2bdb6c450_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/f4e47818-e089-41db-a3f2-6bd2bdb6c450_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 79.44694444444445,
+                "percent_rescued": 100.0,
+                "score_timestep": 36.06944444444444,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 15.3,
+                "elapsed_timestep": 7130,
+                "full_rescue_timestep": 4603,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 29.2,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/4a2219c6-19ac-4e57-9920-cd66dc5b826f_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/4a2219c6-19ac-4e57-9920-cd66dc5b826f_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.05,
+                "percent_rescued": 100.0,
+                "score_timestep": 28.499999999999996,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 30.9,
+                "elapsed_timestep": 6671,
+                "full_rescue_timestep": 5148,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 46.0,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/8b1f42b9-2f0b-4e57-9bca-fb5bf1de0c5b_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/8b1f42b9-2f0b-4e57-9bca-fb5bf1de0c5b_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 74.34854114173342,
+                "percent_rescued": 85.71428571428571,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 37.1,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 97.25699142295285,
+                "rescued_number": 18.0,
+                "score_health_returned": 60.199999999999996,
+                "elapsed_walltime": 1358.8678784370422,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/20f917d5-2bde-4d7d-8fbf-8799de602e31_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/20f917d5-2bde-4d7d-8fbf-8799de602e31_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 76.29904761904763,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 20.0,
+                "mean_drones_health": 27.6,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 100.0,
+                "rescued_number": 20.0,
+                "score_health_returned": 43.4,
+                "elapsed_walltime": 1400.7518692016602,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/0ff7e264-472d-4ec6-af75-4283ce46539c_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/0ff7e264-472d-4ec6-af75-4283ce46539c_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 79.73622502911554,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 39.6,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.98588705033961,
+                "rescued_number": 20.0,
+                "score_health_returned": 60.6,
+                "elapsed_walltime": 1374.7029304504395,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/e85b6a03-c667-4404-af3c-1ab941f60899_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/e85b6a03-c667-4404-af3c-1ab941f60899_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.4888888888889,
+                "percent_rescued": 100.0,
+                "score_timestep": 34.88888888888889,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 23.4,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4688,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 45.0,
+                "elapsed_walltime": 1344.510820865631,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/4aa3d6fb-d759-459c-b658-acb6b321a67d_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/4aa3d6fb-d759-459c-b658-acb6b321a67d_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 78.72909184448021,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 34.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 98.75022112716294,
+                "rescued_number": 20.0,
+                "score_health_returned": 56.8,
+                "elapsed_walltime": 1361.6379175186157,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/88b15e4a-7aba-461e-80d2-a0f8337da8a9_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/88b15e4a-7aba-461e-80d2-a0f8337da8a9_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 85.11416666666666,
+                "percent_rescued": 100.0,
+                "score_timestep": 39.54166666666667,
+                "percent_drones_destroyed": 10.0,
+                "mean_drones_health": 27.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4353,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 55.8,
+                "elapsed_walltime": 1368.1968014240265,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/6eb1587d-c6fc-4f0a-a230-74c61059c20e_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/6eb1587d-c6fc-4f0a-a230-74c61059c20e_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 79.87057907074067,
+                "percent_rescued": 100.0,
+                "score_timestep": 13.125,
+                "percent_drones_destroyed": 10.0,
+                "mean_drones_health": 21.4,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 6255,
+                "score_exploration": 99.99039535370335,
+                "rescued_number": 21.0,
+                "score_health_returned": 42.8,
+                "elapsed_walltime": 1396.825118303299,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/53044a7f-2354-4666-88fb-287463db8fb2_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/53044a7f-2354-4666-88fb-287463db8fb2_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 85.55690526033635,
+                "percent_rescued": 100.0,
+                "score_timestep": 29.86111111111111,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 34.1,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 5050,
+                "score_exploration": 99.85397074612618,
+                "rescued_number": 21.0,
+                "score_health_returned": 63.0,
+                "elapsed_walltime": 1376.5757126808167,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/681c39b0-88fe-42a1-bee5-83a014311624_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/681c39b0-88fe-42a1-bee5-83a014311624_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 85.82944444444445,
+                "percent_rescued": 100.0,
+                "score_timestep": 44.69444444444444,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 28.4,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 3982,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 56.8,
+                "elapsed_walltime": 1407.6609740257263,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/9ac35980-f2fe-487f-8341-8d6f7a346ea1_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/9ac35980-f2fe-487f-8341-8d6f7a346ea1_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 78.33531722642473,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 32.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.78134803688563,
+                "rescued_number": 20.0,
+                "score_health_returned": 53.79999999999999,
+                "elapsed_walltime": 1394.0305364131927,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/76dc9715-3cfd-4d35-8ed9-66aec3b7ae5c_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/76dc9715-3cfd-4d35-8ed9-66aec3b7ae5c_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 73.51754498267151,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 30.0,
+                "mean_drones_health": 19.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.89248681811945,
+                "rescued_number": 20.0,
+                "score_health_returned": 29.600000000000005,
+                "elapsed_walltime": 1340.3590347766876,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/39f36ac9-e747-4728-aec5-bfdda00b8604_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/39f36ac9-e747-4728-aec5-bfdda00b8604_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 75.49904761904762,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 10.0,
+                "mean_drones_health": 22.1,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 100.0,
+                "rescued_number": 20.0,
+                "score_health_returned": 39.4,
+                "elapsed_walltime": 1391.9290413856506,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/8fad1baf-7124-4ec2-b704-ef1acadc8a05_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/8fad1baf-7124-4ec2-b704-ef1acadc8a05_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 80.92472222222223,
+                "percent_rescued": 100.0,
+                "score_timestep": 40.84722222222222,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 19.0,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4259,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 34.2,
+                "elapsed_walltime": 1366.629726409912,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/f660a4c3-9350-49ab-8b30-bda616bd89e3_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/f660a4c3-9350-49ab-8b30-bda616bd89e3_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 80.62305555555555,
+                "percent_rescued": 100.0,
+                "score_timestep": 37.43055555555556,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 19.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4505,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 34.4,
+                "elapsed_walltime": 1383.3826644420624,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/c6059596-d448-46ec-8ee2-5166f848e501_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/c6059596-d448-46ec-8ee2-5166f848e501_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 75.89172990889125,
+                "percent_rescued": 90.47619047619048,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 36.5,
+                "elapsed_timestep": 6697,
+                "full_rescue_timestep": 0,
+                "score_exploration": 96.06817335398004,
+                "rescued_number": 19.0,
+                "score_health_returned": 57.2,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b6d47d55-358d-4326-a3a8-c5a5aed7f7c9_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b6d47d55-358d-4326-a3a8-c5a5aed7f7c9_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 85.01194444444445,
+                "percent_rescued": 100.0,
+                "score_timestep": 45.31944444444444,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 28.5,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 3937,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 52.400000000000006,
+                "elapsed_walltime": 1367.2451026439667,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/44568915-83ff-4ae3-86c2-15d7498ac0af_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/44568915-83ff-4ae3-86c2-15d7498ac0af_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 76.93610844937777,
+                "percent_rescued": 90.47619047619048,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 34.1,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 97.89006605641258,
+                "rescued_number": 19.0,
+                "score_health_returned": 60.6,
+                "elapsed_walltime": 1371.5496633052826,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/dd323e6a-3f85-40ec-aba0-6d6d544df2f6_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/dd323e6a-3f85-40ec-aba0-6d6d544df2f6_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 70.65904761904763,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 30.0,
+                "mean_drones_health": 11.7,
+                "elapsed_timestep": 6337,
+                "full_rescue_timestep": 0,
+                "score_exploration": 100.0,
+                "rescued_number": 20.0,
+                "score_health_returned": 15.2,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b7cb458b-8fb2-45d1-bc44-82da15de6d75_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b7cb458b-8fb2-45d1-bc44-82da15de6d75_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 68.2138728708388,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 40.0,
+                "mean_drones_health": 6.8,
+                "elapsed_timestep": 6379,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.97412625895596,
+                "rescued_number": 20.0,
+                "score_health_returned": 3.0,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/eee130bd-78a9-4b5b-b8f9-00052656d0c9_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/eee130bd-78a9-4b5b-b8f9-00052656d0c9_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 73.4884076114815,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 17.9,
+                "elapsed_timestep": 7015,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.74679996216945,
+                "rescued_number": 20.0,
+                "score_health_returned": 29.600000000000005,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/eb703152-8f63-4a2c-ba32-4b391b6a671e_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/eb703152-8f63-4a2c-ba32-4b391b6a671e_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 80.84305555555557,
+                "percent_rescued": 100.0,
+                "score_timestep": 36.43055555555556,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 21.1,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4577,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 36.0,
+                "elapsed_walltime": 1330.4170455932617,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/4507416a-961b-4d36-a1df-f0bfbd4b77fb_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/4507416a-961b-4d36-a1df-f0bfbd4b77fb_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 81.97805555555556,
+                "percent_rescued": 100.0,
+                "score_timestep": 44.18055555555556,
+                "percent_drones_destroyed": 10.0,
+                "mean_drones_health": 20.8,
+                "elapsed_timestep": 6950,
+                "full_rescue_timestep": 4019,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 37.8,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/afe7a7ae-6b2b-474b-bb1f-3f925276c318_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/afe7a7ae-6b2b-474b-bb1f-3f925276c318_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 74.1420085246011,
+                "percent_rescued": 85.71428571428571,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 39.0,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 94.82432833729116,
+                "rescued_number": 18.0,
+                "score_health_returned": 61.6,
+                "elapsed_walltime": 1323.7547190189362,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/24501b5e-1a2a-49f6-b8bb-c1e103354719_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/24501b5e-1a2a-49f6-b8bb-c1e103354719_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.39477316645859,
+                "percent_rescued": 100.0,
+                "score_timestep": 44.80555555555556,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 23.9,
+                "elapsed_timestep": 7107,
+                "full_rescue_timestep": 3974,
+                "score_exploration": 99.97108805451519,
+                "rescued_number": 21.0,
+                "score_health_returned": 39.6,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/d2135f03-9a69-486a-8fc8-d7ed7d787bfc_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/d2135f03-9a69-486a-8fc8-d7ed7d787bfc_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.65833333333333,
+                "percent_rescued": 100.0,
+                "score_timestep": 0.5833333333333334,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 35.1,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 7158,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 63.0,
+                "elapsed_walltime": 1292.5434229373932,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/5d6c2329-b0b7-453d-bf98-ecc0a28dee34_map_MyMapFinal2022_23_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/5d6c2329-b0b7-453d-bf98-ecc0a28dee34_map_MyMapFinal2022_23_zone_NONE/videos/team01_MyMapFinal2022_23_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 82.04251090976746,
+                "percent_rescued": 100.0,
+                "score_timestep": 36.45833333333333,
+                "percent_drones_destroyed": 10.0,
+                "mean_drones_health": 27.6,
+                "elapsed_timestep": 7189,
+                "full_rescue_timestep": 4575,
+                "score_exploration": 99.98338788217059,
+                "rescued_number": 21.0,
+                "score_health_returned": 42.0,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/c53db7ce-92f7-40be-a6e7-f6133c68ede7_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/c53db7ce-92f7-40be-a6e7-f6133c68ede7_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 77.93938858399115,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 31.7,
+                "elapsed_timestep": 7024,
+                "full_rescue_timestep": 0,
+                "score_exploration": 99.00170482471765,
+                "rescued_number": 20.0,
+                "score_health_returned": 52.6,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/eef8a388-bf88-4ade-8192-8778e7203a64_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/eef8a388-bf88-4ade-8192-8778e7203a64_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 57.12101100523054,
+                "percent_rescued": 71.42857142857143,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 10.0,
+                "mean_drones_health": 28.6,
+                "elapsed_timestep": 5994,
+                "full_rescue_timestep": 0,
+                "score_exploration": 84.83362645472414,
+                "rescued_number": 15.0,
+                "score_health_returned": 22.2,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/27497863-a99e-4567-bbd4-bdd1e6661b7d_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/27497863-a99e-4567-bbd4-bdd1e6661b7d_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 70.96467249496457,
+                "percent_rescued": 80.95238095238095,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 34.3,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 91.64241009387048,
+                "rescued_number": 17.0,
+                "score_health_returned": 60.8,
+                "elapsed_walltime": 1440,
+                "is_max_walltime_limit_reached": true,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/cf3a6919-665d-48d8-b4cc-80f408cfacf8_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/cf3a6919-665d-48d8-b4cc-80f408cfacf8_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 80.7306678633225,
+                "percent_rescued": 100.0,
+                "score_timestep": 18.833333333333332,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 31.6,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 5844,
+                "score_exploration": 99.83667264994583,
+                "rescued_number": 21.0,
+                "score_health_returned": 44.4,
+                "elapsed_walltime": 1434.0090026855469,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/81c8a5c8-27b9-4568-84fc-e800d284ca2f_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/81c8a5c8-27b9-4568-84fc-e800d284ca2f_map_MyMapFinal2022_23_zone_NO_GPS_ZONE/videos/team01_MyMapFinal2022_23_no_gps_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 72.95810721450114,
+                "percent_rescued": 90.47619047619048,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 29.2,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 98.20005988202946,
+                "rescued_number": 19.0,
+                "score_health_returned": 40.4,
+                "elapsed_walltime": 1213.0442028045654,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/7c71a337-3cc3-4f0d-b776-6d6f36624d44_map_MyMapFinal2022_23_zone_KILL_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/7c71a337-3cc3-4f0d-b776-6d6f36624d44_map_MyMapFinal2022_23_zone_KILL_ZONE/videos/team01_MyMapFinal2022_23_kill_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 72.41490481961199,
+                "percent_rescued": 90.47619047619048,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 27.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 98.8840479075837,
+                "rescued_number": 19.0,
+                "score_health_returned": 37.0,
+                "elapsed_walltime": 1208.6134886741638,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/8258f8f1-23d7-4e33-a6aa-4db1efe2d75c_map_MyMapFinal2022_23_zone_KILL_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/8258f8f1-23d7-4e33-a6aa-4db1efe2d75c_map_MyMapFinal2022_23_zone_KILL_ZONE/videos/team01_MyMapFinal2022_23_kill_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 77.76944444444445,
+                "percent_rescued": 100.0,
+                "score_timestep": 33.69444444444444,
+                "percent_drones_destroyed": 10.0,
+                "mean_drones_health": 12.7,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4774,
+                "score_exploration": 100.0,
+                "rescued_number": 21.0,
+                "score_health_returned": 22.0,
+                "elapsed_walltime": 1305.7135763168335,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b9c73da6-c1c8-4d54-919e-ca1bef61e0f3_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b9c73da6-c1c8-4d54-919e-ca1bef61e0f3_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal_2023_24_01",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 85.49194444444444,
+                "percent_rescued": 100.0,
+                "score_timestep": 63.31944444444444,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 29.1,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 2641,
+                "score_exploration": 100.0,
+                "rescued_number": 16.0,
+                "score_health_returned": 45.8,
+                "elapsed_walltime": 1148.1011176109314,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b57cf2d3-6b5d-423f-a12e-ec7de6a87c7d_map_MyMapFinal_2023_24_01_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/b57cf2d3-6b5d-423f-a12e-ec7de6a87c7d_map_MyMapFinal_2023_24_01_zone_NONE/videos/team01_MyMapFinal_2023_24_01_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal_2023_24_01",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 86.69277777777779,
+                "percent_rescued": 100.0,
+                "score_timestep": 54.52777777777777,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 32.4,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 3274,
+                "score_exploration": 100.0,
+                "rescued_number": 16.0,
+                "score_health_returned": 56.2,
+                "elapsed_walltime": 1119.01802277565,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/11ce7324-7394-4342-a956-50f7af472b11_map_MyMapFinal_2023_24_01_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/11ce7324-7394-4342-a956-50f7af472b11_map_MyMapFinal_2023_24_01_zone_NONE/videos/team01_MyMapFinal_2023_24_01_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 72.72115090935284,
+                "percent_rescued": 85.71428571428571,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 37.0,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 98.12004026104998,
+                "rescued_number": 18.0,
+                "score_health_returned": 51.2,
+                "elapsed_walltime": 1398.7132949829102,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/9c254cb9-774b-44f2-9e6c-558d85c2477b_map_MyMapFinal2022_23_zone_NO_COM_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/9c254cb9-774b-44f2-9e6c-558d85c2477b_map_MyMapFinal2022_23_zone_NO_COM_ZONE/videos/team01_MyMapFinal2022_23_no_com_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal_2023_24_01",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 88.67138888888888,
+                "percent_rescued": 100.0,
+                "score_timestep": 41.513888888888886,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 39.6,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 4211,
+                "score_exploration": 100.0,
+                "rescued_number": 16.0,
+                "score_health_returned": 72.6,
+                "elapsed_walltime": 1129.7284135818481,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/96e62c25-d443-4ab2-93a1-493f02e82335_map_MyMapFinal_2023_24_01_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/96e62c25-d443-4ab2-93a1-493f02e82335_map_MyMapFinal_2023_24_01_zone_NONE/videos/team01_MyMapFinal_2023_24_01_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 71.60499967552849,
+                "percent_rescued": 85.71428571428571,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 32.9,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 97.73928409192814,
+                "rescued_number": 18.0,
+                "score_health_returned": 46.0,
+                "elapsed_walltime": 1263.4613225460052,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/e226b21d-00ad-4c8f-9538-eb3c6ffa0713_map_MyMapFinal2022_23_zone_KILL_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/e226b21d-00ad-4c8f-9538-eb3c6ffa0713_map_MyMapFinal2022_23_zone_KILL_ZONE/videos/team01_MyMapFinal2022_23_kill_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 69.65904761904763,
+                "percent_rescued": 95.23809523809523,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 17.4,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 100.0,
+                "rescued_number": 20.0,
+                "score_health_returned": 10.2,
+                "elapsed_walltime": 1418.244413614273,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/7667d254-e2b0-420d-852d-4f20d0923776_map_MyMapFinal2022_23_zone_KILL_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/7667d254-e2b0-420d-852d-4f20d0923776_map_MyMapFinal2022_23_zone_KILL_ZONE/videos/team01_MyMapFinal2022_23_kill_zone_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal_2023_24_01",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 86.06305555555556,
+                "percent_rescued": 100.0,
+                "score_timestep": 61.43055555555556,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 24.8,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 2777,
+                "score_exploration": 100.0,
+                "rescued_number": 16.0,
+                "score_health_returned": 49.6,
+                "elapsed_walltime": 1273.1770503520966,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/0460cb53-6e45-459d-818f-b4410a291672_map_MyMapFinal_2023_24_01_zone_NONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/0460cb53-6e45-459d-818f-b4410a291672_map_MyMapFinal_2023_24_01_zone_NONE/videos/team01_MyMapFinal_2023_24_01_none_rd1.avi"
+            }
+        ]
+    },
+    {
+        "map_name": "MyMapFinal2022_23",
+        "rounds": [
+            {
+                "round": 1,
+                "score": 70.71298517674313,
+                "percent_rescued": 90.47619047619048,
+                "score_timestep": 0,
+                "percent_drones_destroyed": 0.0,
+                "mean_drones_health": 29.6,
+                "elapsed_timestep": 7200,
+                "full_rescue_timestep": 0,
+                "score_exploration": 97.9744496932395,
+                "rescued_number": 19.0,
+                "score_health_returned": 29.4,
+                "elapsed_walltime": 1137.842627286911,
+                "is_max_walltime_limit_reached": false,
+                "has_crashed": false,
+                "stdout_file": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/d033c3a7-e812-4cd0-90b4-071cf180148e_map_MyMapFinal2022_23_zone_KILL_ZONE/log.txt",
+                "filename_video_capture": "/home/infres/hverninas-22/results_swarm_rescue/team01_241215_10h24min56s/d033c3a7-e812-4cd0-90b4-071cf180148e_map_MyMapFinal2022_23_zone_KILL_ZONE/videos/team01_MyMapFinal2022_23_kill_zone_rd1.avi"
+            }
+        ]
+    }
+]

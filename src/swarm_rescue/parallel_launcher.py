@@ -161,7 +161,7 @@ class Launcher:
             print(f"////////////////////////////////////////////////////////////////////////////////////////////")
             print(f"*** Map: {eval_config.map_name}, special zones: {eval_config.zones_name_casual}")
             
-            map_results = {"map_name": eval_config.map_name, "rounds": []}
+            map_results = {"map_name": eval_config.map_name +"_"+eval_config.zones_name_for_filename, "rounds": []}
 
             for num_round in range(eval_config.nb_rounds):
                 gc.collect()
