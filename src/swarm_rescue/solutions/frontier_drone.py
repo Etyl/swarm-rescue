@@ -27,7 +27,6 @@ class FrontierDrone(DroneAbstract):
     POSITION_QUEUE_SIZE = 30 # number of positions to check if the drone is stuck
     REFRESH_PATH_LIMIT = 40 # frames before refreshing the path
     WOUNDED_DISTANCE = 50 # The distance between wounded person to be considered as the same
-    MAX_SEARCHING_TIME = 100 # The maximum time to search for a target before going to return zone
 
     def __init__(
         self,
@@ -682,12 +681,6 @@ class FrontierDrone(DroneAbstract):
         resets the searching time
         """
         self.searching_time = 0
-
-    def is_searching_time_limit_reached(self):
-        """
-        checks if the searching time limit is reached
-        """
-        return self.searching_time >= FrontierDrone.MAX_SEARCHING_TIME
     
     def is_simulation_time_limit_reached(self):
         """
@@ -695,8 +688,8 @@ class FrontierDrone(DroneAbstract):
         """
         max_timestep = self._misc_data.max_timestep_limit * 0.9
         max_wall_time = self._misc_data.max_walltime_limit * 0.9
+        return self.elapsed_timestep >= max_timestep or self.elapsed_walltime >= max_wall_time
 
-        return self.elapsed_timestep >= max(max_timestep, 200) or self.elapsed_walltime >= max_wall_time
     def control(self):
 
         # check if drone is dead

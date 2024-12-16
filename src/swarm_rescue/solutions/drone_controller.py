@@ -94,7 +94,7 @@ class DroneController(StateMachine):
         return not self.drone.base.grasper.grasped_entities
     
     def is_drone_finished(self) -> bool:
-        return self.drone.is_searching_time_limit_reached() or self.drone.is_simulation_time_limit_reached()
+        return self.drone.is_simulation_time_limit_reached()
     
     def arrived_to_return_zone(self) -> bool:
         return self.drone.is_inside_return_area
