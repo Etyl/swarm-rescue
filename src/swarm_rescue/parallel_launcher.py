@@ -4,6 +4,8 @@ import os
 import sys
 import json
 import traceback
+from filelock import FileLock
+
 
 from spg_overlay.entities.sensor_disablers import ZoneType
 from spg_overlay.reporting.evaluation import EvalConfig, EvalPlan, ZonesConfig
@@ -166,19 +168,21 @@ class Launcher:
 
 
         result_filename = f"{self.run_name}/results.json"
+        lock_filename = f"{result_filename}.lock"
 
-        try:
-            with open(result_filename, "r") as result_file:
-                results = json.load(result_file)
-        except FileNotFoundError:
-            results = []
+        with FileLock(lock_filename):
+            try:
+                with open(result_filename, "r") as result_file:
+                    results = json.load(result_file)
+            except FileNotFoundError:
+                results = []
 
-        results.append(map_results)
+            results.append(map_results)
 
-        with open(result_filename, "w") as result_file:
-            json.dump(results, result_file, indent=4)
+            with open(result_filename, "w") as result_file:
+                json.dump(results, result_file, indent=4)
 
-        self.data_saver.generate_pdf_report()
+            self.data_saver.generate_pdf_report()
 
         return True
 
