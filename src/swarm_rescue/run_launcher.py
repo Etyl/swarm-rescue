@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     name = rpc.path
 
-    round_count = 1
+    round_count = 20
     map_names = [
         ("MyMapFinal2022_23", "NONE"),
         ("MyMapFinal2022_23", "NO_GPS_ZONE"),
