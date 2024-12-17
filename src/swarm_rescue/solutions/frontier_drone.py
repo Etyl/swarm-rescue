@@ -517,14 +517,11 @@ class FrontierDrone(DroneAbstract):
 
         drone_angles = []
         for data in detection_semantic:
-            if (data.entity_type == DroneSemanticSensor.TypeEntity.DRONE or
-                data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON or
-                data.entity_type == DroneSemanticSensor.TypeEntity.GRASPED_WOUNDED_PERSON):
-                drone_angles.append(data.angle)
+            drone_angles.append(data.angle)
         drone_angles = np.array(drone_angles)
 
         def angle_distance(angle, arr) -> float:
-            if len(arr)==0: return 0
+            if len(arr)==0: return np.pi
             angle = normalize_angle(angle)
             arr = normalize_angle(arr)
             r = np.min(np.abs(angle - arr))
@@ -536,9 +533,8 @@ class FrontierDrone(DroneAbstract):
 
         if self.controller.current_state == self.controller.going_to_center:
             for i in range(len(lidar_dist)):
-                if (angle_distance(lidar_angles[i], drone_angles) < np.pi/35 and
-                    lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR and
-                    abs(lidar_angles[i])>np.pi/3):
+                if (angle_distance(lidar_angles[i], drone_angles) > 2*np.pi/35 and
+                    lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
                         d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
                         repulsion_vectors.append(Vector2D(d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])))
         else:
@@ -599,8 +595,7 @@ class FrontierDrone(DroneAbstract):
 
         if self.controller.current_state == self.controller.going_to_center:
             command += 0.9*self.repulsion_wall
-        elif (self.controller.current_state != self.controller.approaching_wounded and
-              self.controller.current_state != self.controller.approaching_center) :
+        else:
             command += self.repulsion_wall
 
         command = command.normalize()
@@ -830,7 +825,7 @@ class FrontierDrone(DroneAbstract):
             repulsion = self.repulsion_wall.rotate(self.get_angle())
             arcade.draw_line(pos[0], pos[1], pos[0] + repulsion.x * 20, pos[1] + repulsion.y * 20, arcade.color.GREEN)
 
-            repulsion = self.closest_wall.rotate(self.get_angle())
+            repulsion = 2*self.closest_wall.rotate(self.get_angle())
             arcade.draw_line(pos[0], pos[1], pos[0] + repulsion.x * 20, pos[1] + repulsion.y * 20, arcade.color.BLUE)
 
         if self.debug_wall_repulsion:
