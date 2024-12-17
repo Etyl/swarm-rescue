@@ -22,19 +22,16 @@ class MyDrone(MyDroneEval):
 
 
 class Launcher:
-    def __init__(self, map_type: MapAbstract, team_info: TeamInfo, run_name: str, result_path: str, video_capture_enabled: bool = False, zone_type: ZoneType = None, nb_rounds: int = 1):
+    def __init__(self, map_type: MapAbstract, team_info: TeamInfo, run_name: str, result_path: str, video_capture_enabled: bool = False, zone_type: ZoneType = None):
 
         self.team_info = team_info
-        self.eval_plan = EvalPlan()
         self.run_name = run_name
 
         if zone_type is None:
-            eval_config = EvalConfig(map_type=map_type, nb_rounds=nb_rounds)
+            self.eval_config = EvalConfig(map_type=map_type)
         else:
             zones_config: ZonesConfig = (zone_type,)
-            eval_config = EvalConfig(map_type=map_type, zones_config=zones_config, nb_rounds=nb_rounds)
-
-        self.eval_plan.add(eval_config=eval_config)
+            self.eval_config = EvalConfig(map_type=map_type, zones_config=zones_config)
 
         self.number_drones = None
         self.max_timestep_limit = None
@@ -51,7 +48,7 @@ class Launcher:
                                     result_path=self.result_path,
                                     enabled=stat_saving_enabled)
 
-    def one_round(self, eval_config: EvalConfig, num_round: int, hide_solution_output: bool = False):
+    def one_round(self, eval_config: EvalConfig, hide_solution_output: bool = False):
 
         my_map = eval_config.map_type(eval_config.zones_config)
         self.number_drones = my_map.number_drones
@@ -67,7 +64,6 @@ class Launcher:
 
         my_playground = my_map.construct_playground(drone_type=MyDrone)
 
-        num_round_str = str(num_round)
         if self.video_capture_enabled:
             try:
                 os.makedirs(self.result_path + "/videos/", exist_ok=True)
@@ -76,8 +72,7 @@ class Launcher:
             filename_video_capture = (f"{self.result_path}videos/"
                                       f"team{self.team_info.team_number_str}_"
                                       f"{eval_config.map_name}_"
-                                      f"{eval_config.zones_name_for_filename}_"
-                                      f"rd{num_round_str}"
+                                      f"{eval_config.zones_name_for_filename}"
                                       f".avi")
         else:
             filename_video_capture = None
@@ -88,8 +83,7 @@ class Launcher:
                        filename_video_capture=filename_video_capture)
 
         window_title = (f"Team: {self.team_info.team_number_str}   -   "
-                        f"Map: {type(my_map).__name__}   -   "
-                        f"Round: {num_round_str}")
+                        f"Map: {type(my_map).__name__}")
         my_gui.set_caption(window_title)
 
         my_map.explored_map.reset()
@@ -125,7 +119,7 @@ class Launcher:
                                     last_image_explo_zones,
                                     eval_config.map_name,
                                     eval_config.zones_name_for_filename,
-                                    num_round)
+                                    1)
         
         result_score = self.score_manager.compute_score(my_gui.rescued_number,
                                                         score_exploration,
@@ -134,7 +128,6 @@ class Launcher:
         (round_score, percent_rescued, score_timestep) = result_score        
 
         return {
-            "round": num_round,
             "score": round_score,
             "percent_rescued": percent_rescued,
             "score_timestep": score_timestep,
@@ -152,31 +145,25 @@ class Launcher:
             "filename_video_capture": filename_video_capture,
         }
 
-    def go(self, stop_at_first_crash: bool = False, hide_solution_output: bool = False):
-        ok = True
-        all_results = []
+    def go(self, stop_at_first_crash: bool = False, hide_solution_output: bool = False) -> bool:
+        gc.collect()
+        print(f"////////////////////////////////////////////////////////////////////////////////////////////")
+        print(f"*** Map: {self.eval_config.map_name}, special zones: {self.eval_config.zones_name_casual}")
 
-        for eval_config in self.eval_plan.list_eval_config:
+        map_results = {"map_name": self.eval_config.map_name, "zones": self.eval_config.zones_name_for_filename}
+
+        for num_round in range(self.eval_config.nb_rounds):
             gc.collect()
-            print(f"////////////////////////////////////////////////////////////////////////////////////////////")
-            print(f"*** Map: {eval_config.map_name}, special zones: {eval_config.zones_name_casual}")
-            
-            map_results = {"map_name": eval_config.map_name +"_"+eval_config.zones_name_for_filename, "rounds": []}
+            result = self.one_round(self.eval_config, hide_solution_output)
+            for key in result:
+                map_results[key] = result[key]
 
-            for num_round in range(eval_config.nb_rounds):
-                gc.collect()
-                result = self.one_round(eval_config, num_round + 1, hide_solution_output)
-                map_results["rounds"].append(result)
+            if result["has_crashed"]:
+                print(f"\t* WARNING, this program has crashed!")
+                if stop_at_first_crash:
+                    self.data_saver.generate_pdf_report()
+                    return False
 
-                if result["has_crashed"]:
-                    print(f"\t* WARNING, this program has crashed!")
-                    ok = False
-                    if stop_at_first_crash:
-                        self.data_saver.generate_pdf_report()
-                        all_results.append(map_results)
-                        return ok
-
-            all_results.append(map_results)
 
         result_filename = f"{self.run_name}/results.json"
 
@@ -186,13 +173,14 @@ class Launcher:
         except FileNotFoundError:
             results = []
 
-        results += all_results
+        results.append(map_results)
 
         with open(result_filename, "w") as result_file:
             json.dump(results, result_file, indent=4)
 
         self.data_saver.generate_pdf_report()
-        return ok
+
+        return True
 
 
 if __name__ == "__main__":
@@ -203,17 +191,15 @@ if __name__ == "__main__":
     parser.add_argument("--result_path", "-rp", required=True, help="Path to save the results")
     parser.add_argument("--video", "-v", required=True, help="Enable video capture")
     parser.add_argument("--zone", "-z", required=True, help="Zone type to run")
-    parser.add_argument("--rounds", "-r", required=True, help="Number of rounds to run")
     args = parser.parse_args()
 
     map_class = globals()[args.map]
     team_info = TeamInfo()
     video_capture_enabled = bool(args.video)
     zone_type = getattr(ZoneType, args.zone, None)
-    nb_rounds = int(args.rounds)
     result_path = args.result_path
 
-    launcher = Launcher(map_type=map_class, team_info=team_info, run_name=args.name, result_path=result_path, video_capture_enabled=video_capture_enabled, zone_type=zone_type, nb_rounds=nb_rounds)
+    launcher = Launcher(map_type=map_class, team_info=team_info, run_name=args.name, result_path=result_path, video_capture_enabled=video_capture_enabled, zone_type=zone_type)
     ok = launcher.go()
     if not ok:
         exit(1)
