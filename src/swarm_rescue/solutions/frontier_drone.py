@@ -51,6 +51,7 @@ class FrontierDrone(DroneAbstract):
         self.repulsion_drone : Vector2D = Vector2D() # The repulsion vector from the other drones
         self.drone_direction_group = Vector2D() # Normalised repulsion vector to group of drones
         self.repulsion_wall : Vector2D = Vector2D() # The repulsion vector from the walls
+        self.closest_wall : Vector2D = Vector2D()
         self.center_angle : Optional[float] = None # angle from the visible rescue center
         self.rescue_center_dist : Optional[float] = None # distance from the visible rescue center
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
@@ -535,14 +536,14 @@ class FrontierDrone(DroneAbstract):
 
         if self.controller.current_state == self.controller.going_to_center:
             for i in range(len(lidar_dist)):
-                if (angle_distance(lidar_angles[i], drone_angles) < 2*np.pi/35 and
+                if (angle_distance(lidar_angles[i], drone_angles) < np.pi/35 and
                     lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR and
                     abs(lidar_angles[i])>np.pi/3):
                         d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
                         repulsion_vectors.append(Vector2D(d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])))
         else:
             for i in range(len(lidar_dist)):
-                if (angle_distance(lidar_angles[i], drone_angles) < np.pi/35 and
+                if (angle_distance(lidar_angles[i], drone_angles) > 2*np.pi/35 and
                     lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
                         d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
                         repulsion_vectors.append(Vector2D(d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])))
@@ -550,11 +551,14 @@ class FrontierDrone(DroneAbstract):
         # check if drone is too close to a wall
         kmin = np.argmax([v.norm() for v in repulsion_vectors])
         self.repulsion_wall = Vector2D()
-        if repulsion_vectors[kmin].norm() >= 0.8:
+        self.closest_wall = repulsion_vectors[kmin]
+        if repulsion_vectors[kmin].norm() >= 0.9:
+            self.repulsion_wall = -repulsion_vectors[kmin].normalize()
+        elif repulsion_vectors[kmin].norm() >= 0.8:
             v =  self.localizer.drone_velocity.rotate(-self.localizer.drone_angle) @ repulsion_vectors[kmin].normalize()
             c = -max(0,2*np.tanh(v/3))
             self.repulsion_wall = repulsion_vectors[kmin].normalize() * c
-            return
+        return
 
         # repulsion_vector = Vector2D(0,0)
         # for v in repulsion_vectors:
@@ -586,23 +590,22 @@ class FrontierDrone(DroneAbstract):
         self.update_drone_repulsion()
         self.update_wall_repulsion()
 
+        command: Vector2D = Vector2D(self.command["forward"], self.command["lateral"])
+
         if self.ignore_repulsion <= 0:
-            self.command["forward"] += self.repulsion_drone.x
-            self.command["lateral"] += self.repulsion_drone.y
+            command += self.repulsion_drone
         else:
             self.ignore_repulsion -= 1
 
         if self.controller.current_state == self.controller.going_to_center:
-            self.command["forward"] += 0.9*self.repulsion_wall.x
-            self.command["lateral"] += 0.9*self.repulsion_wall.y
-        elif (self.controller.current_state != self.controller.approaching_wounded
-            and self.controller.current_state != self.controller.approaching_center) :
-            self.command["forward"] += self.repulsion_wall.x
-            self.command["lateral"] += self.repulsion_wall.y
+            command += 0.9*self.repulsion_wall
+        elif (self.controller.current_state != self.controller.approaching_wounded and
+              self.controller.current_state != self.controller.approaching_center) :
+            command += self.repulsion_wall
 
-        self.command["forward"] = min(1,max(-1,self.command["forward"]))
-        self.command["lateral"] = min(1,max(-1,self.command["lateral"]))
-
+        command = command.normalize()
+        self.command["forward"] = command.x
+        self.command["lateral"] = command.y
 
     # TODO: rewrite
     def test_stuck(self):
@@ -826,6 +829,9 @@ class FrontierDrone(DroneAbstract):
 
             repulsion = self.repulsion_wall.rotate(self.get_angle())
             arcade.draw_line(pos[0], pos[1], pos[0] + repulsion.x * 20, pos[1] + repulsion.y * 20, arcade.color.GREEN)
+
+            repulsion = self.closest_wall.rotate(self.get_angle())
+            arcade.draw_line(pos[0], pos[1], pos[0] + repulsion.x * 20, pos[1] + repulsion.y * 20, arcade.color.BLUE)
 
         if self.debug_wall_repulsion:
             pos = self.get_position().array + np.array(self.size_area) / 2
