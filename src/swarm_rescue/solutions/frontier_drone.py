@@ -27,6 +27,7 @@ class FrontierDrone(DroneAbstract):
     POSITION_QUEUE_SIZE = 30 # number of positions to check if the drone is stuck
     REFRESH_PATH_LIMIT = 40 # frames before refreshing the path
     WOUNDED_DISTANCE = 50 # The distance between wounded person to be considered as the same
+    START_IDLE_TIME = 40 # Time before the drone starts moving
 
     def __init__(
         self,
@@ -41,6 +42,8 @@ class FrontierDrone(DroneAbstract):
             misc_data=misc_data,
             display_lidar_graph=False,
             **kwargs)
+
+        self.START_IDLE_TIME = FrontierDrone.START_IDLE_TIME
 
         self.path : List[Vector2D] = []
         self.waypoint_index : Optional[int] = None # The index to the next waypoint to go to
@@ -116,7 +119,6 @@ class FrontierDrone(DroneAbstract):
         self.selected_frontier_id : int = 0
 
         self.stuck_iteration : int = 0
-        self.time : int = 0
         self.time_in_no_gps : int = 0
         self.previous_drone_health: int = self.drone_health
 
@@ -678,7 +680,6 @@ class FrontierDrone(DroneAbstract):
             return
         
         self.stuck_iteration += 1
-        self.time += 1
         if self.gps_disabled:
             self.time_in_no_gps += 1
         
@@ -712,8 +713,7 @@ class FrontierDrone(DroneAbstract):
 
         self.update_mapping()
 
-        IDLE_TIME = 60
-        if self.time < IDLE_TIME:
+        if self.elapsed_timestep < FrontierDrone.START_IDLE_TIME:
             self.command = {
                 "rotation":0,
                 "forward":0,
