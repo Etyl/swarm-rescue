@@ -442,46 +442,24 @@ class FrontierDrone(DroneAbstract):
         found_pos = []
         def add_pos(p:Vector2D):
             for p2 in found_pos:
-                if p.distance(p2) < 20:
-                    return
+                if p.distance(p2) < 30:
+                    return False
             found_pos.append(p)
+            return True
 
         repulsion = Vector2D()
         min_dist = np.inf
         for data in self.semantic_values():
-            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE and not self.is_inside_return_area:
+            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE: #and not self.is_inside_return_area:
                 angle = data.angle
                 dist = data.distance
                 min_dist = min(min_dist, dist)
 
                 pos = self.drone_position + dist * Vector2D(1,0).rotate(angle)
-                add_pos(pos)
+                if not add_pos(pos):
+                    continue
 
-                drone = None
-                for d in self.drone_list:
-                    if d.position.distance(Vector2D(dist*math.cos(angle+self.drone_angle), dist*math.sin(angle+self.drone_angle))+self.get_position()) < 30:
-                        drone = d
-                if drone is None or drone.id>self.identifier:
-                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_coef(dist)
-                else:
-                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_coef(dist)
-            
-            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE and self.is_inside_return_area:
-                angle = data.angle
-                dist = data.distance
-                min_dist = min(min_dist, dist)
-
-                pos = self.drone_position + dist * Vector2D(1,0).rotate(angle)
-                add_pos(pos)
-
-                drone = None
-                for d in self.drone_list:
-                    if d.position.distance(Vector2D(dist*math.cos(angle+self.drone_angle), dist*math.sin(angle+self.drone_angle))+self.get_position()) < 30:
-                        drone = d
-                if drone is None or drone.id>self.identifier:
-                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_coef(dist)
-                else:
-                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_coef(dist)
+                repulsion += -repulsion_coef(dist) * Vector2D(math.cos(angle), math.sin(angle))
 
         centroid = self.drone_position
         for p in found_pos:
@@ -489,12 +467,11 @@ class FrontierDrone(DroneAbstract):
         centroid = centroid/(len(found_pos)+1)
         self.drone_direction_group = (self.drone_position-centroid).normalize()
 
-
         if repulsion.norm() == 0:
             self.repulsion_drone = Vector2D(0, 0)
             return
 
-        repulsion = -repulsion.normalize()
+        repulsion = repulsion.normalize()
         repulsion *= min(2,2*repulsion_coef(min_dist)+0.3)
 
         if (self.controller.current_state == self.controller.going_to_center or
@@ -522,7 +499,7 @@ class FrontierDrone(DroneAbstract):
             drone_angles.append(data.angle)
         drone_angles = np.array(drone_angles)
 
-        def angle_distance(angle, arr) -> float:
+        def angle_distance(angle, arr) -> float: # TODO optimize
             if len(arr)==0: return np.pi
             angle = normalize_angle(angle)
             arr = normalize_angle(arr)
