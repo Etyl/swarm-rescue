@@ -94,13 +94,13 @@ class FrontierDrone(DroneAbstract):
         # self.controller._graph().write_png("./graph.png")
 
         self.roaming = False
-        self.command: Dict[str, float] = {
+        self._command: Dict[str, float] = {
             "forward": 0.0,
             "lateral": 0.0,
             "rotation": 0.0,
             "grasper": 0
         }
-        self.prev_command: Dict[str, float] = self.command
+        self.prev_command: Dict[str, float] = self._command
 
         self.map : Map = Map(area_world=self.size_area, resolution=4, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
@@ -185,6 +185,9 @@ class FrontierDrone(DroneAbstract):
         next_waypoint: Vector2D = self.next_waypoint
         if next_waypoint is None:
             return False
+
+        if (len(self.path)==0):
+            return self.drone_position.distance(next_waypoint) < 80
 
         return self.drone_position.distance(next_waypoint) < 40
 
@@ -438,11 +441,11 @@ class FrontierDrone(DroneAbstract):
         repulses the drone from other drones
         """
 
-        def repulsion_coef(dist:float):
-            return ((MAX_RANGE_SEMANTIC_SENSOR-dist)/MAX_RANGE_LIDAR_SENSOR)**2
+        def repulsion_coef(dist:float) -> float:
+            return max(0,min(1,((MAX_RANGE_SEMANTIC_SENSOR-dist+20)/MAX_RANGE_SEMANTIC_SENSOR)))**2
 
         found_pos = []
-        def add_pos(p:Vector2D):
+        def add_pos(p:Vector2D) -> bool:
             for p2 in found_pos:
                 if p.distance(p2) < 30:
                     return False
@@ -474,7 +477,7 @@ class FrontierDrone(DroneAbstract):
             return
 
         repulsion = repulsion.normalize()
-        repulsion *= min(2,2*repulsion_coef(min_dist)+0.3)
+        repulsion *= min(2,1.5*repulsion_coef(min_dist-20)+0.2)
 
         if (self.controller.current_state == self.controller.going_to_center or
             self.controller.current_state == self.controller.approaching_wounded or
@@ -536,7 +539,10 @@ class FrontierDrone(DroneAbstract):
         self.update_drone_repulsion()
         self.update_wall_repulsion()
 
-        command: Vector2D = Vector2D(self.command["forward"], self.command["lateral"])
+        command: Vector2D = Vector2D(self._command["forward"], self._command["lateral"])
+
+        if self.repulsion_drone.norm() > 1.3:
+            pass
 
         if self.ignore_repulsion <= 0:
             command += self.repulsion_drone
@@ -549,8 +555,8 @@ class FrontierDrone(DroneAbstract):
             command += self.repulsion_wall
 
         command = command.normalize()
-        self.command["forward"] = command.x
-        self.command["lateral"] = command.y
+        self._command["forward"] = command.x
+        self._command["lateral"] = command.y
 
     # TODO: rewrite
     def test_stuck(self):
@@ -714,28 +720,28 @@ class FrontierDrone(DroneAbstract):
         self.update_mapping()
 
         if self.elapsed_timestep < FrontierDrone.START_IDLE_TIME:
-            self.command = {
+            self._command = {
                 "rotation":0,
                 "forward":0,
                 "lateral":0
             }
         elif self.roaming:
-            self.command = self.roamer_controller.command.copy()
+            self._command = self.roamer_controller.command.copy()
         else:
-            self.command = self.controller.command.copy()
-
-        if self.gps_disabled and self.controller.current_state != self.controller.going_to_center:
-            self.command["rotation"] /=2
-            self.command["forward"] /=2
-            self.command["lateral"] /=2
+            self._command = self.controller.command.copy()
 
         self.update_repulsion()
 
+        if self.gps_disabled and self.controller.current_state != self.controller.going_to_center:
+            self._command["rotation"] /=2
+            self._command["forward"] /=2
+            self._command["lateral"] /=2
+
         self.point_of_interest = self.compute_point_of_interest()
-        self.prev_command = self.command
+        self.prev_command = self._command
         self.previous_drone_health = self.drone_health
 
-        return self.command
+        return self._command
 
 
     # TODO : update confidence map using the velocity
@@ -809,7 +815,7 @@ class FrontierDrone(DroneAbstract):
 
         if self.debug_positions:
             pos = self.get_position().array + np.array(self.size_area) / 2
-            if self.command["grasper"] == 1:
+            if self._command["grasper"] == 1:
                 arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
             else:
                 arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
