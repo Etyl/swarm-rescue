@@ -510,18 +510,11 @@ class FrontierDrone(DroneAbstract):
 
         repulsion_vectors : List[Vector2D] = [Vector2D(0,0)]
 
-        if self.controller.current_state == self.controller.going_to_center:
-            for i in range(len(lidar_dist)):
-                if (angle_distance(lidar_angles[i], drone_angles) > 2*np.pi/35 and
-                    lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
-                        d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
-                        repulsion_vectors.append(Vector2D(d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])))
-        else:
-            for i in range(len(lidar_dist)):
-                if (angle_distance(lidar_angles[i], drone_angles) > 2*np.pi/35 and
-                    lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
-                        d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
-                        repulsion_vectors.append(Vector2D(d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])))
+        for i in range(len(lidar_dist)):
+            if (angle_distance(lidar_angles[i], drone_angles) > 2*np.pi/35 and
+                lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
+                    d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
+                    repulsion_vectors.append(Vector2D(d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])))
 
         # check if drone is too close to a wall
         kmin = np.argmax([v.norm() for v in repulsion_vectors])
@@ -533,30 +526,6 @@ class FrontierDrone(DroneAbstract):
             v =  self.localizer.drone_velocity.rotate(-self.localizer.drone_angle) @ repulsion_vectors[kmin].normalize()
             c = -max(0,1.3*np.tanh(v/3))
             self.repulsion_wall = repulsion_vectors[kmin].normalize() * c
-        return
-
-        # repulsion_vector = Vector2D(0,0)
-        # for v in repulsion_vectors:
-        #     repulsion_vector -= v
-        #
-        # if repulsion_vector.norm() == 0:
-        #     self.repulsion_wall = Vector2D(0, 0)
-        #     return
-        #
-        # # check if the repulsion vector is needed (the repulsion vector repulses from an open space)
-        # repulsion_angle = Vector2D(1,0).get_angle(-repulsion_vector)
-        # kmin = np.argmin(np.abs(lidar_angles - repulsion_angle))
-        #
-        # if lidar_dist[kmin] >= 0.25*MAX_RANGE_LIDAR_SENSOR:
-        #     self.repulsion_wall = Vector2D(0, 0)
-        #     return
-        #
-        # coef = 0
-        # if lidar_dist[kmin] < 40:
-        #     coef = min(2, max(0, 2 * (1 - 3 * (min(lidar_dist)-13) / MAX_RANGE_LIDAR_SENSOR)))
-        #
-        # repulsion_vector = repulsion_vector.normalize()
-        # self.repulsion_wall = repulsion_vector * coef
 
         # TODO : change repulsion according to drone direction (change forward and sideways command)
 
