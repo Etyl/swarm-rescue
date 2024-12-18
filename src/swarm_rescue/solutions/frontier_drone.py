@@ -435,10 +435,9 @@ class FrontierDrone(DroneAbstract):
         """
         repulses the drone from other drones
         """
-        def repulsion_dist(distance, a=7, b=0.8, c=0.007):
-            if distance <= a: return 2
-            return max(0,min(2,MAX_RANGE_SEMANTIC_SENSOR*(b/(distance-a) - c)))
 
+        def repulsion_coef(dist:float):
+            return ((MAX_RANGE_SEMANTIC_SENSOR-dist)/MAX_RANGE_LIDAR_SENSOR)**2
 
         found_pos = []
         def add_pos(p:Vector2D):
@@ -463,9 +462,9 @@ class FrontierDrone(DroneAbstract):
                     if d.position.distance(Vector2D(dist*math.cos(angle+self.drone_angle), dist*math.sin(angle+self.drone_angle))+self.get_position()) < 30:
                         drone = d
                 if drone is None or drone.id>self.identifier:
-                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
+                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_coef(dist)
                 else:
-                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist)
+                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_coef(dist)
             
             if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE and self.is_inside_return_area:
                 angle = data.angle
@@ -480,9 +479,9 @@ class FrontierDrone(DroneAbstract):
                     if d.position.distance(Vector2D(dist*math.cos(angle+self.drone_angle), dist*math.sin(angle+self.drone_angle))+self.get_position()) < 30:
                         drone = d
                 if drone is None or drone.id>self.identifier:
-                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist, a=2, b=0.2)
+                    repulsion += Vector2D(math.cos(angle), math.sin(angle)) * repulsion_coef(dist)
                 else:
-                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_dist(dist, a=2, b=0.2)
+                    repulsion += 0.2*Vector2D(math.cos(angle), math.sin(angle)) * repulsion_coef(dist)
 
         centroid = self.drone_position
         for p in found_pos:
@@ -496,7 +495,7 @@ class FrontierDrone(DroneAbstract):
             return
 
         repulsion = -repulsion.normalize()
-        repulsion *= repulsion_dist(min_dist)
+        repulsion *= min(2,2*repulsion_coef(min_dist)+0.3)
 
         if (self.controller.current_state == self.controller.going_to_center or
             self.controller.current_state == self.controller.approaching_wounded or
@@ -517,6 +516,9 @@ class FrontierDrone(DroneAbstract):
 
         drone_angles = []
         for data in detection_semantic:
+            if (data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER and
+                self.controller.current_state != self.controller.approaching_center):
+                continue
             drone_angles.append(data.angle)
         drone_angles = np.array(drone_angles)
 
@@ -552,7 +554,7 @@ class FrontierDrone(DroneAbstract):
             self.repulsion_wall = -repulsion_vectors[kmin].normalize()
         elif repulsion_vectors[kmin].norm() >= 0.8:
             v =  self.localizer.drone_velocity.rotate(-self.localizer.drone_angle) @ repulsion_vectors[kmin].normalize()
-            c = -max(0,2*np.tanh(v/3))
+            c = -max(0,1.3*np.tanh(v/3))
             self.repulsion_wall = repulsion_vectors[kmin].normalize() * c
         return
 
@@ -764,7 +766,14 @@ class FrontierDrone(DroneAbstract):
 
         self.update_mapping()
 
-        if self.roaming:
+        IDLE_TIME = 60
+        if self.time < IDLE_TIME:
+            self.command = {
+                "rotation":0,
+                "forward":0,
+                "lateral":0
+            }
+        elif self.roaming:
             self.command = self.roamer_controller.command.copy()
         else:
             self.command = self.controller.command.copy()
@@ -819,10 +828,10 @@ class FrontierDrone(DroneAbstract):
 
         if self.debug_repulsion:
             pos = self.get_position().array + np.array(self.size_area) / 2
-            repulsion = self.repulsion_drone.rotate(self.get_angle())
-            arcade.draw_line(pos[0], pos[1], pos[0]+repulsion.x*20, pos[1]+repulsion.y*20, arcade.color.PURPLE)
+            repulsion = 2*self.repulsion_drone.rotate(self.get_angle())
+            arcade.draw_line(pos[0], pos[1], pos[0]+repulsion.x*20, pos[1]+repulsion.y*20, arcade.color.RED)
 
-            repulsion = self.repulsion_wall.rotate(self.get_angle())
+            repulsion = 2*self.repulsion_wall.rotate(self.get_angle())
             arcade.draw_line(pos[0], pos[1], pos[0] + repulsion.x * 20, pos[1] + repulsion.y * 20, arcade.color.GREEN)
 
             repulsion = 2*self.closest_wall.rotate(self.get_angle())
