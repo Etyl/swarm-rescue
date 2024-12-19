@@ -496,27 +496,19 @@ class FrontierDrone(DroneAbstract):
         lidar_angles = self.lidar().ray_angles
         detection_semantic = self.semantic_values()
 
-        drone_angles = []
+        angles_available_arr = [True]*181 # angles from -pi to +pi
         for data in detection_semantic:
             if (data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER and
                 self.controller.current_state != self.controller.approaching_center):
                 continue
-            drone_angles.append(data.angle)
-        drone_angles = np.array(drone_angles)
-
-        def angle_distance(angle, arr) -> float: # TODO optimize
-            if len(arr)==0: return np.pi
-            angle = normalize_angle(angle)
-            arr = normalize_angle(arr)
-            r = np.min(np.abs(angle - arr))
-            r = min(r, np.min(np.abs(angle - arr + 2 * np.pi)))
-            r = min(r, np.min(np.abs(angle - arr - 2 * np.pi)))
-            return r
+            i = int(round(180*((np.pi+data.angle)/(2*np.pi))))
+            for k in range((i-3)%181,(i+4)%181):
+                angles_available_arr[k]=False
 
         repulsion_vectors : List[Vector2D] = [Vector2D(0,0)]
 
         for i in range(len(lidar_dist)):
-            if (angle_distance(lidar_angles[i], drone_angles) > 2*np.pi/35 and
+            if (angles_available_arr[i] and
                 lidar_dist[i] < 0.3 * MAX_RANGE_LIDAR_SENSOR):
                     d = 1 - lidar_dist[i]/MAX_RANGE_LIDAR_SENSOR
                     repulsion_vectors.append(Vector2D(d*math.cos(lidar_angles[i]), d*math.sin(lidar_angles[i])))
