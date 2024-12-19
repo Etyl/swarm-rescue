@@ -84,6 +84,6 @@ if __name__ == "__main__":
     num_workers = min(len(tasks), 10)
 
     with multiprocessing.Pool(processes=num_workers) as pool:
-        pool.occupancy(launch_parallel_task, tasks)
+        pool.map(launch_parallel_task, tasks)
 
     print("All run information saved in: ", name)
