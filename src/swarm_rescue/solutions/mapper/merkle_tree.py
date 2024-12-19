@@ -1,7 +1,7 @@
 import numpy as np
 from typing import List, Tuple
 
-from solutions.mapper.grid import Grid # type: ignore
+from solutions.mapper.utils import Grid # type: ignore
 
 
 class MerkleTree:

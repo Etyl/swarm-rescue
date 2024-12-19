@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
 
-from solutions.mapper.merkle_tree import MerkleTree
 from solutions.utils.types import Vector2D  # type: ignore
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
-from solutions.mapper.grid import Grid # type: ignore
 from solutions.pathfinder.pathfinder import pathfinder, pathfinder_fast # type: ignore
 
 from solutions.pathfinder.pathfinder import * # type: ignore
-from solutions.mapper.utils import display_grid # type: ignore
+from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
 
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
@@ -51,7 +48,7 @@ class Map:
         self.confidence_grid : Grid = Grid(area_world, resolution)
         self.confidence_grid_downsampled : Grid = Grid(area_world, resolution * 2)
         self.confidence_wall_map : np.ndarray = np.zeros((self.width, self.height)).astype(np.float64)
-        self.merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.resolution)
+        self.merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.occupancy_grid)
 
         self.map : np.ndarray = np.full((self.width, self.height), Zone.UNEXPLORED)
 
@@ -279,11 +276,15 @@ class Map:
         """
         self.update_confidence_grid(pose, lidar, drone)
         self.update_occupancy_grid(pose, lidar, drone)
-        self.update_merkle()
+        self.update_merkle(drone)
         self.update_map(drone)
 
-    def update_merkle(self):
-        self.merkle_tree = MerkleTree(self.confidence_grid, self.occupancy_grid)
+    def update_merkle(self, drone: FrontierDrone):
+        p1 = drone.drone_position - Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
+        p2 = drone.drone_position + Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
+        p1 = self.world_to_grid(p1)
+        p2 = self.world_to_grid(p2)
+        self.merkle_tree.update(p1.x, p1.y, p2.x, p2.y)
 
 
     def merge(self, other_map : "Map", drone: FrontierDrone):
