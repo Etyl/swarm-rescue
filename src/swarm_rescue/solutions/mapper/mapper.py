@@ -5,6 +5,7 @@ import numpy as np
 import cv2
 from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
 
+from solutions.mapper.merkle_tree import MerkleTree
 from solutions.utils.types import Vector2D  # type: ignore
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
 from solutions.mapper.grid import Grid # type: ignore
@@ -50,7 +51,8 @@ class Map:
         self.confidence_grid : Grid = Grid(area_world, resolution)
         self.confidence_grid_downsampled : Grid = Grid(area_world, resolution * 2)
         self.confidence_wall_map : np.ndarray = np.zeros((self.width, self.height)).astype(np.float64)
-        
+        self.merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.resolution)
+
         self.map : np.ndarray = np.full((self.width, self.height), Zone.UNEXPLORED)
 
         self.rescue_center : Optional[Vector2D] = None
@@ -277,15 +279,18 @@ class Map:
         """
         self.update_confidence_grid(pose, lidar, drone)
         self.update_occupancy_grid(pose, lidar, drone)
+        self.update_merkle()
         self.update_map(drone)
+
+    def update_merkle(self):
+        self.merkle_tree = MerkleTree(self.confidence_grid, self.occupancy_grid)
+
 
     def merge(self, other_map : "Map", drone: FrontierDrone):
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
-        self.occupancy_grid.set_grid(np.where(other_map.confidence_grid.get_grid() > self.confidence_grid.get_grid(), other_map.occupancy_grid.get_grid(), self.occupancy_grid.get_grid()))
-
-        self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
+        self.merkle_tree.merge(other_map.merkle_tree)
 
         reset = False
         for other_id in other_map.kill_zones:

@@ -64,8 +64,8 @@ class MerkleTree:
         if all_different:
             i1 = i0 + self.block_size * (1 << (height - 1))
             j1 = j0 + self.block_size * (1 << (height - 1))
-            i1 = int(min(i1, self.confidence.shape[0]))
-            j1 = int(min(j1, self.confidence.shape[1]))
+            i1 = int(min(i1, self.arr_shape[0]))
+            j1 = int(min(j1, self.arr_shape[1]))
             self.differences.append((i0,j0,i1,j1))
             return
 
@@ -120,15 +120,15 @@ class MerkleTree:
 
 
 if __name__ == "__main__":
-    confidence1 = Grid((2,2), 1)
-    occupancy1 = Grid((2,2), 1)
+    confidence1 = Grid((5,5), 1)
+    occupancy1 = Grid((5,5), 1)
     tree1 = MerkleTree(confidence1, occupancy1, 1)
     print(tree1.occupancy.get_grid())
 
-    confidence2 = Grid((2, 2), 1)
-    occupancy2 = Grid((2, 2), 1)
-    confidence2.get_grid()[0,0] = 1
-    occupancy2.get_grid()[0, 0] = 1
+    confidence2 = Grid((5, 5), 1)
+    occupancy2 = Grid((5, 5), 1)
+    confidence2.get_grid()[4,4] = 1
+    occupancy2.get_grid()[4, 4] = 1
     tree2 = MerkleTree(confidence2, occupancy2, 1)
     tree1.merge(tree2)
     print("After update:")
