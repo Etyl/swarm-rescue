@@ -1,2 +1,17 @@
 pyastar2d==1.0.6
 Cython==3.0.11
+
+spg~=0.1.9
+numpy~=1.24.4
+matplotlib~=3.7.5
+pytest~=8.3.3
+pathlib2~=2.3.7.post1
+arcade~=2.6.17
+scipy~=1.10.1
+setuptools~=68.2.0
+xxhash~=3.5.0
+pymunk~=6.4.0
+Pillow~=9.3.0
+PyYAML~=6.0.2
+pandas~=2.0.3
+fpdf~=1.7.2
