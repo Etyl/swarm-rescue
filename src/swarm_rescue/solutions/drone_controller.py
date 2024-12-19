@@ -27,31 +27,29 @@ class DroneController(StateMachine):
         roaming.to(going_to_wounded, cond="found_wounded", on="before_going_to_wounded") |
         roaming.to(going_to_center, cond="no_gps_time_limit") |
         roaming.to(going_to_return_zone, cond="is_drone_finished", on="before_going_to_return_zone") |
-        going_to_return_zone.to(stay_in_return_zone, cond="arrived_to_return_zone", on="before_stay_in_return_zone") |
-        stay_in_return_zone.to(going_to_return_zone, cond="out_of_return_zone", on = "before_going_to_return_zone") |
-        stay_in_return_zone.to(stay_in_return_zone) |
-        going_to_return_zone.to(going_to_return_zone) |
+        roaming.to(roaming) |
 
         going_to_wounded.to(approaching_wounded, cond="wounded_visible", on="before_approaching_wounded") |
-
         going_to_wounded.to(roaming, cond="lost_wounded_found") |
+        going_to_wounded.to(going_to_wounded) |
 
-        # if wounded captured by someone else
         approaching_wounded.to(roaming, cond="no_wounded") |
-
         approaching_wounded.to(going_to_center, cond="grasped_wounded", on="before_going_to_center") |
+        approaching_wounded.to(approaching_wounded) |
 
         going_to_center.to(approaching_center, cond="found_center", on='before_approaching_center') |
+        going_to_center.to(roaming, cond="lost_wounded", ) |
+        going_to_center.to(going_to_center) |
 
         approaching_center.to(going_to_center, cond="lost_center") |
         approaching_center.to(roaming, cond="lost_wounded") |
-        going_to_center.to(roaming, cond="lost_wounded",) |
+        approaching_center.to(approaching_center) |
 
-        roaming.to(roaming) |
-        going_to_wounded.to(going_to_wounded) |
-        approaching_wounded.to(approaching_wounded) |
-        going_to_center.to(going_to_center) |
-        approaching_center.to(approaching_center)
+        going_to_return_zone.to(stay_in_return_zone, cond="arrived_to_return_zone", on="before_stay_in_return_zone") |
+        going_to_return_zone.to(going_to_return_zone) |
+
+        stay_in_return_zone.to(going_to_return_zone, cond="out_of_return_zone", on="before_going_to_return_zone") |
+        stay_in_return_zone.to(stay_in_return_zone)
     )
  
     def __init__(self, drone : FrontierDrone, debug_mode: bool = False):
@@ -94,7 +92,7 @@ class DroneController(StateMachine):
         return not self.drone.base.grasper.grasped_entities
     
     def is_drone_finished(self) -> bool:
-        return self.drone.is_searching_time_limit_reached() or self.drone.is_simulation_time_limit_reached()
+        return self.drone.is_simulation_time_limit_reached()
     
     def arrived_to_return_zone(self) -> bool:
         return self.drone.is_inside_return_area

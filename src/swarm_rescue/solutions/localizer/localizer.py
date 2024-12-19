@@ -306,7 +306,6 @@ class Localizer:
         """
         drone_angle = normalize_angle(self.drone_angle)
         waypoint_angle = Vector2D(1,0).get_angle(target - self.drone_position)
-
         return normalize_angle(waypoint_angle - drone_angle)
 
 

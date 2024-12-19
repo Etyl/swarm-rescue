@@ -143,7 +143,7 @@ class RoamerController(StateMachine):
         return dist < 20 + (1+turning_angle)*20
 
     def drone_position_valid(self):
-        return self.drone.elapsed_timestep > 15
+        return self.drone.elapsed_timestep > self.drone.START_IDLE_TIME
 
     def target_discorvered(self):
         if self.debug_mode: print(f"Target discovered: {self.target}")
@@ -208,7 +208,6 @@ class RoamerController(StateMachine):
         self.count_close_previous_searching_start_point = 0
         
         self.force_going_to_target()
-
 
 
     @going_to_target.enter
