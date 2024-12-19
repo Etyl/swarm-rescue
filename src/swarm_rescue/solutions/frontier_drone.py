@@ -66,6 +66,7 @@ class FrontierDrone(DroneAbstract):
             "rotation": 0.0,
             "grasper": 0
         }
+        self.command_pos: Vector2D = Vector2D()
         self.visible_drones: List[Tuple[int,Vector2D]] = [] # List of (id,drone_position)
         self.searching_time : int = 0 # time spent searching for next target
         self.return_zone_position : Optional[Vector2D] = None # The position of the return zone
@@ -486,6 +487,14 @@ class FrontierDrone(DroneAbstract):
         else:
             self.repulsion_drone = repulsion
 
+        if self.repulsion_drone.norm() > 1.3:
+            pass
+
+        if self.ignore_repulsion <= 0:
+            self.command_pos += self.repulsion_drone
+        else:
+            self.ignore_repulsion -= 1
+
 
     def update_wall_repulsion(self) -> None:
         """
@@ -517,38 +526,29 @@ class FrontierDrone(DroneAbstract):
         kmin = np.argmax([v.norm() for v in repulsion_vectors])
         self.repulsion_wall = Vector2D()
         self.closest_wall = repulsion_vectors[kmin]
-        if repulsion_vectors[kmin].norm() >= 0.9:
-            self.repulsion_wall = -repulsion_vectors[kmin].normalize()
+
+        if repulsion_vectors[kmin].norm() >= 0.91:
+            rep:Vector2D = repulsion_vectors[kmin].normalize()
+            self.repulsion_wall = -(self.command_pos @ rep) * rep
+            self.repulsion_wall += -repulsion_vectors[kmin].normalize()
         elif repulsion_vectors[kmin].norm() >= 0.8:
             v =  self.localizer.drone_velocity.rotate(-self.localizer.drone_angle) @ repulsion_vectors[kmin].normalize()
             c = -max(0,1.3*np.tanh(v/3))
             self.repulsion_wall = repulsion_vectors[kmin].normalize() * c
 
+        self.command_pos += self.repulsion_wall
         # TODO : change repulsion according to drone direction (change forward and sideways command)
 
 
     def update_repulsion(self) -> None:
+        self.command_pos = Vector2D(self._command["forward"], self._command["lateral"])
+
         self.update_drone_repulsion()
         self.update_wall_repulsion()
 
-        command: Vector2D = Vector2D(self._command["forward"], self._command["lateral"])
-
-        if self.repulsion_drone.norm() > 1.3:
-            pass
-
-        if self.ignore_repulsion <= 0:
-            command += self.repulsion_drone
-        else:
-            self.ignore_repulsion -= 1
-
-        if self.controller.current_state == self.controller.going_to_center:
-            command += 0.9*self.repulsion_wall
-        else:
-            command += self.repulsion_wall
-
-        command = command.normalize()
-        self._command["forward"] = command.x
-        self._command["lateral"] = command.y
+        self.command_pos = self.command_pos.normalize()
+        self._command["forward"] = self.command_pos.x
+        self._command["lateral"] = self.command_pos.y
 
     # TODO: rewrite
     def test_stuck(self):
