@@ -35,9 +35,10 @@ class Zone:
     UNEXPLORED = -1
 
 class Map:
-    def __init__(self, area_world: List[int], resolution: int, debug_mode: bool=False) -> None:
+    def __init__(self, area_world: List[int], resolution: int, identifier:int, debug_mode: bool=False) -> None:
         self.resolution: int = resolution
         self.debug_mode: bool = debug_mode
+        self.identifier: int = identifier
 
         self.width : int = int(area_world[0] / self.resolution + 0.5)
         self.height : int = int(area_world[1] / self.resolution + 0.5)
@@ -54,7 +55,6 @@ class Map:
         self.rescue_center : Optional[Vector2D] = None
         self.kill_zones : Dict[int, Vector2D] = {}
         self.no_gps_zones : List[Vector2D] = []
-
 
 
     @property
@@ -278,21 +278,29 @@ class Map:
         self.update_merkle(drone)
         self.update_map(drone)
 
-        plt.imsave(f"occupancy{drone.identifier}.png",self.occupancy_grid.get_grid())
-        plt.imsave(f"confidence{drone.identifier}.png",self.confidence_grid.get_grid())
+        #plt.imsave(f"confidence{self.identifier}.png", self.confidence_grid.get_grid())
+        #plt.imsave(f"occupancy{self.identifier}.png", self.occupancy_grid.get_grid())
+
+
 
     def update_merkle(self, drone: FrontierDrone):
         p1 = drone.drone_position - Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
         p2 = drone.drone_position + Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
         p1 = self.world_to_grid(p1)
         p2 = self.world_to_grid(p2)
-        self.merkle_tree.update(p1.x, p1.y, p2.x, p2.y)
+        # self.merkle_tree.update(p1.x, p1.y, p2.x, p2.y)
+        self.merkle_tree.update(0,0,self.height-1, self.width-1) # TODO fix
 
 
     def merge(self, other_map : "Map", drone: FrontierDrone):
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
+        # confidence = np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()).astype(np.float32)
+        # occupancy = np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(),
+        #                     self.occupancy_grid.get_grid(),
+        #                     other_map.occupancy_grid.get_grid()
+        #             ).astype(np.float32)
         self.merkle_tree.merge(other_map.merkle_tree)
 
         reset = False
@@ -302,8 +310,10 @@ class Map:
                 reset = True
         if reset:
             drone.reset_path()
-        #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
-        #self.update_map()
+
+        # print("confidence:", (confidence == self.confidence_grid.get_grid()).all())
+        # print("occupancy:", (occupancy == self.occupancy_grid.get_grid()).all())
+
 
     def reset_kill_zones(self):
         """

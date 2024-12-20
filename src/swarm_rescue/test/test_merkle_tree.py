@@ -69,22 +69,24 @@ def test_update3() -> None:
 def test_merge() -> None:
     for n in [4, 7, 8, 9, 10, 15, 16, 17, 20, 22, 31, 32, 60, 64, 100, 110, 128,255,256]:
         for size in range(1, 32):
-            confidence1 = Grid((n, n), 1)
-            occupancy1 = Grid((n, n), 1)
+            m = n
+
+            confidence1 = Grid((n, m), 1)
+            occupancy1 = Grid((n, m), 1)
             confidence1.set_grid(np.random.rand(n, n).astype(np.float32))
             occupancy1.set_grid(np.random.rand(n, n).astype(np.float32))
             tree1 = MerkleTree(confidence1, occupancy1, size)
 
-            confidence2 = Grid((n, n), 1)
-            occupancy2 = Grid((n, n), 1)
+            confidence2 = Grid((n, m), 1)
+            occupancy2 = Grid((n, m), 1)
             confidence2.set_grid(np.random.rand(n, n).astype(np.float32))
             occupancy2.set_grid(np.random.rand(n, n).astype(np.float32))
             tree2 = MerkleTree(confidence2, occupancy2, size)
 
-            tree1.merge(tree2)
-
             confidence = np.maximum(confidence1.get_grid(), confidence2.get_grid())
-            occupancy = np.where(confidence1.get_grid()>confidence2.get_grid(), occupancy1.get_grid(), occupancy2.get_grid())
+            occupancy = np.where(confidence1.get_grid() > confidence2.get_grid(), occupancy1.get_grid(),occupancy2.get_grid())
+
+            tree1.merge(tree2)
 
             assert (confidence1.get_grid() == confidence).all()
             assert (occupancy1.get_grid() == occupancy).all()

@@ -1,4 +1,5 @@
 import numpy as np
+import xxhash
 cimport numpy as cnp
 from typing import List, Tuple
 from libc.math cimport sqrt, isnan
@@ -21,7 +22,7 @@ cdef class Grid:
         self.resolution = resolution
         self.x_max_grid = int(self.size_area_world[0] / self.resolution + 0.5)
         self.y_max_grid = int(self.size_area_world[1] / self.resolution + 0.5)
-        self.grid = np.zeros((self.x_max_grid, self.y_max_grid), dtype=DTYPE)
+        self.grid = (100000*np.zeros((self.x_max_grid, self.y_max_grid))).astype(DTYPE)
 
     cdef tuple conv_world_to_grid(self, float x_world, float y_world):
         cdef int x_grid, y_grid
@@ -260,6 +261,10 @@ cdef class MerkleTree:
         self.differences = []
 
 
+    cdef hash_subarray(self, arr):
+        return xxhash.xxh64(np.ascontiguousarray(arr)).intdigest() % (1<<63)
+
+
     cdef get_end_block_indices(self, i0,j0,height):
         i1 = i0 + self.block_size * (1 << (height - 1))
         j1 = j0 + self.block_size * (1 << (height - 1))
@@ -275,7 +280,8 @@ cdef class MerkleTree:
                 self.tree[node] = 0
             else:
                 i1,j1 = self.get_end_block_indices(i0,j0,height)
-                self.tree[node] = hash(self.confidence.get_grid()[i0:i1, j0:j1].tobytes()) % (1 << 63)
+                # self.tree[node] = hash(self.confidence.get_grid()[i0:i1, j0:j1].tobytes()) % (1 << 63)
+                self.tree[node] = self.hash_subarray(self.confidence.get_grid()[i0:i1, j0:j1])
 
         else:
             for k in range(1,5):
@@ -284,7 +290,8 @@ cdef class MerkleTree:
                 if k >= 3: i += self.block_size * (1 << (height - 2))
                 if k % 2 == 0: j += self.block_size * (1 << (height - 2))
                 self.build(4 * node + k, height - 1, i, j)
-            self.tree[node] = hash(tuple(self.tree[4*node+i] for i in range(1, 5))) % (1 << 63)
+            #self.tree[node] = hash(tuple(self.tree[4*node+i] for i in range(1, 5))) % (1 << 63)
+            self.tree[node] = xxhash.xxh64("".join(str(self.tree[4*node+i]) for i in range(1, 5))).intdigest() % (1<<63)
 
 
     cdef compare_aux(self, other, node, height, i0, j0):
@@ -336,7 +343,8 @@ cdef class MerkleTree:
     cdef update_aux(self, node, height, curr_rect, rect):
         if height == 1:
             i, j = self.get_end_block_indices(curr_rect[0], curr_rect[1], height)
-            self.tree[node] = hash(self.confidence.get_grid()[curr_rect[0]:i, curr_rect[1]:j].tobytes()) % (1 << 63)
+            # self.tree[node] = hash(self.confidence.get_grid()[curr_rect[0]:i, curr_rect[1]:j].tobytes()) % (1 << 63)
+            self.tree[node] = self.hash_subarray(self.confidence.get_grid()[curr_rect[0]:i, curr_rect[1]:j])
             return
 
         for k in range(1, 5):
@@ -354,7 +362,8 @@ cdef class MerkleTree:
             if (max(x0, rect[0]) <= min(x1, rect[2])) and (max(y0, rect[1]) <= min(y1, rect[3])):
                 self.update_aux(4 * node + k, height - 1, (x0,y0,x1,y1), rect)
 
-        self.tree[node] = hash(tuple(self.tree[4 * node + i] for i in range(1, 5))) % (1 << 63)
+        # self.tree[node] = hash(tuple(self.tree[4 * node + i] for i in range(1, 5))) % (1 << 63)
+        self.tree[node] = xxhash.xxh64("".join(str(self.tree[4*node+i]) for i in range(1, 5))).intdigest() % (1<<63)
 
 
     def update(self, i0, j0, i1, j1):

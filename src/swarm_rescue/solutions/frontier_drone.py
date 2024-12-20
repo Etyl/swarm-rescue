@@ -103,7 +103,7 @@ class FrontierDrone(DroneAbstract):
         }
         self.prev_command: Dict[str, float] = self._command
 
-        self.map : Map = Map(area_world=self.size_area, resolution=4, debug_mode=self.debug_mapper)
+        self.map : Map = Map(area_world=self.size_area, resolution=4, identifier=self.identifier, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
 
         self.localizer : Localizer = Localizer(self)
