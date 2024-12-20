@@ -5,25 +5,26 @@ from solutions.mapper.utils import Grid # type: ignore
 
 
 class MerkleTree:
+
     def __init__(self, confidence:Grid, occupancy:Grid,  block_size:int = 32) -> None:
 
-        self.arr_shape: Tuple[int, int] = confidence.get_grid().shape
+        self.arr_shape = confidence.get_grid().shape
         if len(self.arr_shape) != 2:
             raise ValueError("Merkle Tree array must be 2d")
 
-        self.confidence:Grid = confidence
-        self.occupancy:Grid = occupancy
-        self.block_size:int = block_size
+        self.confidence = confidence
+        self.occupancy = occupancy
+        self.block_size = block_size
 
         self.shape = np.ceil(np.array(confidence.get_grid().shape) / block_size).astype(int)
         self.height = int(np.max(np.ceil(np.log2(self.shape)))+1)
-        self.size:int = int(4**(self.height-1))
-        self.tree: np.ndarray = np.zeros(int((4**(self.height)-1)//3), dtype=np.int64)
+        self.size = int(4**(self.height-1))
+        self.tree = np.zeros(int((4**(self.height)-1)//3), dtype=np.int64)
 
         self.build(0,self.height, 0, 0)
-        self.differences: List[Tuple[int,int,int,int]] = []
+        self.differences = []
 
-    def build(self, node:int, height:int, i0:int, j0:int) -> None:
+    def build(self, node, height, i0, j0):
         self.tree[node] = 0
 
         if height == 1:
@@ -43,7 +44,7 @@ class MerkleTree:
                 self.build(4 * node + k, height - 1, i, j)
             self.tree[node] = hash(tuple(self.tree[4*node+i] for i in range(1, 5))) % (1 << 63)
 
-    def compare_aux(self, other: 'MerkleTree', node:int, height:int, i0:int, j0:int) -> None:
+    def compare_aux(self, other, node, height, i0, j0):
         if self.tree[node] == other.tree[node]:
             return
 
@@ -77,7 +78,7 @@ class MerkleTree:
                 if k % 2 == 0: j += self.block_size * (1 << (height - 2))
                 self.compare_aux(other, 4*node+k, height-1, int(i), int(j))
 
-    def compare(self, other: 'MerkleTree') -> List[Tuple[int,int,int,int]]:
+    def compare(self, other):
         """
         Returns the rectangles (i0,j0,i1,j1) which differ between the 2 trees
         """
@@ -86,16 +87,16 @@ class MerkleTree:
         return self.differences
 
 
-    def update(self, node:int, height:int, i0, j0, i1, j1) -> None:
+    def update_aux(self, node, height, curr_rect, rect):
         if height == 1:
-            i = min(i0 + self.block_size, self.arr_shape[0])
-            j = min(j0 + self.block_size, self.arr_shape[1])
-            self.tree[node] = hash(self.confidence.get_grid()[i0:i, j0:j].tobytes()) % (1 << 63)
+            i = min(curr_rect[0] + self.block_size, self.arr_shape[0])
+            j = min(curr_rect[1] + self.block_size, self.arr_shape[1])
+            self.tree[node] = hash(self.confidence.get_grid()[curr_rect[0]:i, curr_rect[1]:j].tobytes()) % (1 << 63)
             return
 
         for k in range(1, 5):
-            x0,x1 = i0,i1
-            y0,y1 = j0,j1
+            x0,x1 = curr_rect[0],curr_rect[2]
+            y0,y1 = curr_rect[1],curr_rect[3]
             if k >= 3:
                 x0 += self.block_size * (1 << (height - 2))
             else:
@@ -105,10 +106,20 @@ class MerkleTree:
             else:
                 y1 -= self.block_size * (1 << (height - 2))
 
-            if (i0<=x0<=i1 or i0<=x1<=i1) and (j0<=y0<=j1 or j0<=y1<=j1):
-                self.update(4 * node + k, height - 1, x0, y0, x1, y1)
+            if (max(x0, rect[0]) <= min(x1, rect[2])) and (max(y0, rect[1]) <= min(y1, rect[3])):
+                self.update_aux(4 * node + k, height - 1, (x0,y0,x1,y1), rect)
 
         self.tree[node] = hash(tuple(self.tree[4 * node + i] for i in range(1, 5))) % (1 << 63)
+
+
+    def update(self, i0, j0, i1, j1):
+        """
+        updates the merkle tree in the rect (inclusive) specified
+        """
+        self.update_aux(0,
+                        self.height,
+                        (0, 0, self.block_size*(1<<(self.height-1))-1, self.block_size*(1<<(self.height-1))-1),
+                        (i0, j0, i1, j1))
 
 
     def merge(self, other: 'MerkleTree') -> None:
@@ -116,7 +127,7 @@ class MerkleTree:
         for i0,j0,i1,j1 in differences:
             self.occupancy.get_grid()[i0:i1, j0:j1] = np.where(self.confidence.get_grid()[i0:i1, j0:j1] > other.confidence.get_grid()[i0:i1, j0:j1], self.occupancy.get_grid()[i0:i1, j0:j1], other.occupancy.get_grid()[i0:i1, j0:j1])
             self.confidence.get_grid()[i0:i1,j0:j1] = np.maximum(self.confidence.get_grid()[i0:i1,j0:j1], other.confidence.get_grid()[i0:i1,j0:j1])
-            self.update(0, self.height, i0, j0, i1, j1)
+            self.update(i0, j0, i1, j1)
 
 
 if __name__ == "__main__":

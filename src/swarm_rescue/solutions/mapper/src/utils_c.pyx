@@ -6,8 +6,8 @@ from libc.stdlib cimport malloc, free
 
 cnp.import_array()  # Necessary to call when using NumPy with Cython
 
-DTYPE = np.float64
-ctypedef cnp.float64_t DTYPE_t
+DTYPE = np.float32
+ctypedef cnp.float32_t DTYPE_t
 cimport cython
 
 cdef class Grid:
@@ -344,8 +344,8 @@ cdef class MerkleTree:
             else:
                 y1 -= self.block_size * (1 << (height - 2))
 
-            if (rect[0]<=x0<=rect[2] or rect[0]<=x1<=rect[2]) and (rect[1]<=y0<=rect[3] or rect[1]<=y1<=rect[3]):
-                self.update_aux(4 * node + k, height - 1, (x0,y1,x1,y1), rect)
+            if (max(x0, rect[0]) <= min(x1, rect[2])) and (max(y0, rect[1]) <= min(y1, rect[3])):
+                self.update_aux(4 * node + k, height - 1, (x0,y0,x1,y1), rect)
 
         self.tree[node] = hash(tuple(self.tree[4 * node + i] for i in range(1, 5))) % (1 << 63)
 
@@ -354,7 +354,10 @@ cdef class MerkleTree:
         """
         updates the merkle tree in the rect (inclusive) specified
         """
-        self.update_aux(0, self.height, (0, 0, self.arr_shape[0]-1, self.arr_shape[1]-1), (i0, j0, i1, j1))
+        self.update_aux(0,
+                        self.height,
+                        (0, 0, self.block_size*(1<<(self.height-1))-1, self.block_size*(1<<(self.height-1))-1),
+                        (i0, j0, i1, j1))
 
 
     def merge(self, other: 'MerkleTree') -> None:
