@@ -106,9 +106,9 @@ class Map:
         world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
         if not drone.gps_disabled:
-            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE)
+            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0].astype(np.float32), world_points[:,1].astype(np.float32), CONFIDENCE_VALUE)
         else:
-            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE/2)
+            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0].astype(np.float32), world_points[:,1].astype(np.float32), CONFIDENCE_VALUE/2)
         # for x, y in world_points:
         #     self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 
@@ -155,7 +155,7 @@ class Map:
 
         world_points_free = np.column_stack((pose.position[0] + np.multiply(lidar_dist_clip, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_clip, np.sin(downsampled_lidar_angles + pose.orientation))))
 
-        self.occupancy_grid.add_value_along_lines(pose.position[0], pose.position[1], world_points_free[:,0], world_points_free[:,1], EMPTY_ZONE_VALUE)
+        self.occupancy_grid.add_value_along_lines(pose.position[0], pose.position[1], world_points_free[:,0].astype(np.float32), world_points_free[:,1].astype(np.float32), EMPTY_ZONE_VALUE)
 
         lidar_dist_hit = downsampled_lidar_dist[downsampled_lidar_dist < max_range]
         lidar_angles_hit = downsampled_lidar_angles[downsampled_lidar_dist < max_range]
@@ -163,7 +163,7 @@ class Map:
         world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
 
         self.occupancy_grid.set_grid(np.where(boundary_mask, buffer, self.occupancy_grid.get_grid()))
-        self.occupancy_grid.add_points(world_points_hit[:,0], world_points_hit[:,1], OBSTACLE_ZONE_VALUE)
+        self.occupancy_grid.add_points(world_points_hit[:,0].astype(np.float32), world_points_hit[:,1].astype(np.float32), OBSTACLE_ZONE_VALUE)
         # Mark the current position of the drone as free
         self.occupancy_grid.add_point(int(pose.position[0]), int(pose.position[1]), FREE_ZONE_VALUE)
 
