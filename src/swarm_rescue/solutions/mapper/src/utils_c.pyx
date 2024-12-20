@@ -5,6 +5,7 @@ from typing import List, Tuple
 from libc.math cimport sqrt, isnan
 from libc.stdlib cimport malloc, free
 
+
 cnp.import_array()  # Necessary to call when using NumPy with Cython
 
 DTYPE = np.float32
@@ -216,6 +217,7 @@ cdef class Grid:
             if error < 0:
                 y += y_step
                 error += dx
+
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
@@ -260,19 +262,24 @@ cdef class MerkleTree:
         self.build(0,self.height, 0, 0)
         self.differences = []
 
-
     cdef hash_subarray(self, arr):
         return xxhash.xxh64(np.ascontiguousarray(arr)).intdigest() % (1<<63)
 
+    cdef hash_node(self, int node):
+        return xxhash.xxh64("".join(str(self.tree[4 * node + i]) for i in range(1, 5))).intdigest() % (1 << 63)
 
-    cdef get_end_block_indices(self, i0,j0,height):
-        i1 = i0 + self.block_size * (1 << (height - 1))
-        j1 = j0 + self.block_size * (1 << (height - 1))
-        i1 = int(min(i1, self.arr_shape[0]))
-        j1 = int(min(j1, self.arr_shape[1]))
-        return i1,j1
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef get_end_block_indices(self, i0, j0, height):
+        cdef int i1 = i0 + self.block_size * (1 << (height - 1))
+        cdef int j1 = j0 + self.block_size * (1 << (height - 1))
+        i1 = min(i1, self.arr_shape[0])
+        j1 = min(j1, self.arr_shape[1])
+        return i1, j1
 
-    cdef build(self, node, height, i0, j0):
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef void build(self, int node, int height, int i0, int j0):
         self.tree[node] = 0
 
         if height == 1:
@@ -291,10 +298,12 @@ cdef class MerkleTree:
                 if k % 2 == 0: j += self.block_size * (1 << (height - 2))
                 self.build(4 * node + k, height - 1, i, j)
             #self.tree[node] = hash(tuple(self.tree[4*node+i] for i in range(1, 5))) % (1 << 63)
-            self.tree[node] = xxhash.xxh64("".join(str(self.tree[4*node+i]) for i in range(1, 5))).intdigest() % (1<<63)
+            self.tree[node] = self.hash_node(node)
 
 
-    cdef compare_aux(self, other, node, height, i0, j0):
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef void compare_aux(self, MerkleTree other, int node, int height, int i0, int j0):
         """
         Params:
             other: other MerkleTree
@@ -302,7 +311,6 @@ cdef class MerkleTree:
             current: current height of the node
             i0,j0: starting corresponding indices in array of node
         """
-
         if self.tree[node] == other.tree[node]:
             return
 
@@ -330,26 +338,27 @@ cdef class MerkleTree:
                 if k % 2 == 0: j += self.block_size * (1 << (height - 2))
                 self.compare_aux(other, 4*node+k, height-1, int(i), int(j))
 
-
-    cdef compare(self, other):
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef compare(self, MerkleTree other):
         """
         Returns the rectangles (i0,j0,i1,j1) which differ between the 2 trees
         """
         self.differences = []
-        self.compare_aux(other, 0, self.height, 0 ,0)
+        self.compare_aux(other, 0, self.height, 0, 0)
         return self.differences
 
-
-    cdef update_aux(self, node, height, curr_rect, rect):
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    cdef void update_aux(self, int node, int height, curr_rect, rect):
         if height == 1:
             i, j = self.get_end_block_indices(curr_rect[0], curr_rect[1], height)
-            # self.tree[node] = hash(self.confidence.get_grid()[curr_rect[0]:i, curr_rect[1]:j].tobytes()) % (1 << 63)
             self.tree[node] = self.hash_subarray(self.confidence.get_grid()[curr_rect[0]:i, curr_rect[1]:j])
             return
 
         for k in range(1, 5):
-            x0,x1 = curr_rect[0],curr_rect[2]
-            y0,y1 = curr_rect[1],curr_rect[3]
+            x0, x1 = curr_rect[0], curr_rect[2]
+            y0, y1 = curr_rect[1], curr_rect[3]
             if k >= 3:
                 x0 += self.block_size * (1 << (height - 2))
             else:
@@ -360,16 +369,11 @@ cdef class MerkleTree:
                 y1 -= self.block_size * (1 << (height - 2))
 
             if (max(x0, rect[0]) <= min(x1, rect[2])) and (max(y0, rect[1]) <= min(y1, rect[3])):
-                self.update_aux(4 * node + k, height - 1, (x0,y0,x1,y1), rect)
+                self.update_aux(4 * node + k, height - 1, (x0, y0, x1, y1), rect)
 
-        # self.tree[node] = hash(tuple(self.tree[4 * node + i] for i in range(1, 5))) % (1 << 63)
-        self.tree[node] = xxhash.xxh64("".join(str(self.tree[4*node+i]) for i in range(1, 5))).intdigest() % (1<<63)
+        self.tree[node] = self.hash_node(node)
 
-
-    def update(self, i0, j0, i1, j1):
-        """
-        updates the merkle tree in the rect (inclusive) specified
-        """
+    def update(self, int i0, int j0, int i1, int j1):
         self.update_aux(0,
                         self.height,
                         (0, 0, self.block_size*(1<<(self.height-1))-1, self.block_size*(1<<(self.height-1))-1),

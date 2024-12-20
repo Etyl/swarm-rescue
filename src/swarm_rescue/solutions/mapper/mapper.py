@@ -282,7 +282,6 @@ class Map:
         #plt.imsave(f"occupancy{self.identifier}.png", self.occupancy_grid.get_grid())
 
 
-
     def update_merkle(self, drone: FrontierDrone):
         p1 = drone.drone_position - Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
         p2 = drone.drone_position + Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
