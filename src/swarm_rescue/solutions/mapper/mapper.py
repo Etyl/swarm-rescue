@@ -3,12 +3,11 @@ from __future__ import annotations
 import numpy as np
 import cv2
 from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
+import matplotlib.pyplot as plt
 
 from solutions.utils.types import Vector2D  # type: ignore
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
 from solutions.pathfinder.pathfinder import pathfinder, pathfinder_fast # type: ignore
-
-from solutions.pathfinder.pathfinder import * # type: ignore
 from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
 
 if TYPE_CHECKING: # type: ignore
@@ -278,6 +277,9 @@ class Map:
         self.update_occupancy_grid(pose, lidar, drone)
         self.update_merkle(drone)
         self.update_map(drone)
+
+        plt.imsave(f"occupancy{drone.identifier}.png",self.occupancy_grid.get_grid())
+        plt.imsave(f"confidence{drone.identifier}.png",self.confidence_grid.get_grid())
 
     def update_merkle(self, drone: FrontierDrone):
         p1 = drone.drone_position - Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)

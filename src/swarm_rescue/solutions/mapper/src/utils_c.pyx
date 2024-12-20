@@ -247,9 +247,6 @@ cdef class MerkleTree:
     def __cinit__(self, confidence:Grid, occupancy:Grid,  block_size:int = 32) -> None:
 
         self.arr_shape = confidence.get_grid().shape
-        if len(self.arr_shape) != 2:
-            raise ValueError("Merkle Tree array must be 2d")
-
         self.confidence = confidence
         self.occupancy = occupancy
         self.block_size = block_size
@@ -262,6 +259,14 @@ cdef class MerkleTree:
         self.build(0,self.height, 0, 0)
         self.differences = []
 
+
+    cdef get_end_block_indices(self, i0,j0,height):
+        i1 = i0 + self.block_size * (1 << (height - 1))
+        j1 = j0 + self.block_size * (1 << (height - 1))
+        i1 = int(min(i1, self.arr_shape[0]))
+        j1 = int(min(j1, self.arr_shape[1]))
+        return i1,j1
+
     cdef build(self, node, height, i0, j0):
         self.tree[node] = 0
 
@@ -269,8 +274,7 @@ cdef class MerkleTree:
             if i0>=self.arr_shape[0] or j0>=self.arr_shape[1]:
                 self.tree[node] = 0
             else:
-                i1 = min(i0 + self.block_size, self.arr_shape[0])
-                j1 = min(j0 + self.block_size, self.arr_shape[1])
+                i1,j1 = self.get_end_block_indices(i0,j0,height)
                 self.tree[node] = hash(self.confidence.get_grid()[i0:i1, j0:j1].tobytes()) % (1 << 63)
 
         else:
@@ -282,15 +286,21 @@ cdef class MerkleTree:
                 self.build(4 * node + k, height - 1, i, j)
             self.tree[node] = hash(tuple(self.tree[4*node+i] for i in range(1, 5))) % (1 << 63)
 
+
     cdef compare_aux(self, other, node, height, i0, j0):
+        """
+        Params:
+            other: other MerkleTree
+            node: current node being evaluated
+            current: current height of the node
+            i0,j0: starting corresponding indices in array of node
+        """
+
         if self.tree[node] == other.tree[node]:
             return
 
         if height == 1:
-            i1 = i0 + self.block_size
-            j1 = j0 + self.block_size
-            i1 = int(min(i1, self.arr_shape[0]))
-            j1 = int(min(j1, self.arr_shape[1]))
+            i1,j1 = self.get_end_block_indices(i0,j0,height)
             self.differences.append((i0, j0, i1, j1))
             return
 
@@ -301,10 +311,7 @@ cdef class MerkleTree:
                 break
 
         if all_different:
-            i1 = i0 + self.block_size * (1 << (height - 1))
-            j1 = j0 + self.block_size * (1 << (height - 1))
-            i1 = int(min(i1, self.arr_shape[0]))
-            j1 = int(min(j1, self.arr_shape[1]))
+            i1,j1 = self.get_end_block_indices(i0,j0,height)
             self.differences.append((i0,j0,i1,j1))
             return
 
@@ -315,6 +322,7 @@ cdef class MerkleTree:
                 if k >= 3: i += self.block_size * (1 << (height - 2))
                 if k % 2 == 0: j += self.block_size * (1 << (height - 2))
                 self.compare_aux(other, 4*node+k, height-1, int(i), int(j))
+
 
     cdef compare(self, other):
         """
@@ -327,8 +335,7 @@ cdef class MerkleTree:
 
     cdef update_aux(self, node, height, curr_rect, rect):
         if height == 1:
-            i = min(curr_rect[0] + self.block_size, self.arr_shape[0])
-            j = min(curr_rect[1] + self.block_size, self.arr_shape[1])
+            i, j = self.get_end_block_indices(curr_rect[0], curr_rect[1], height)
             self.tree[node] = hash(self.confidence.get_grid()[curr_rect[0]:i, curr_rect[1]:j].tobytes()) % (1 << 63)
             return
 
