@@ -103,7 +103,7 @@ class FrontierDrone(DroneAbstract):
         }
         self.prev_command: Dict[str, float] = self._command
 
-        self.map : Map = Map(area_world=self.size_area, resolution=4, debug_mode=self.debug_mapper)
+        self.map : Map = Map(area_world=self.size_area, resolution=4, identifier=self.identifier, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
 
         self.localizer : Localizer = Localizer(self)
@@ -737,13 +737,12 @@ class FrontierDrone(DroneAbstract):
 
 
     # TODO : update confidence map using the velocity
-    def update_mapping(self):
+    def update_mapping(self) -> None:
         """
         updates the map
         """
         estimated_pose = Pose(self.get_position().array, self.get_angle())
-        # max_vel_angle = 0.08
-        # if abs(self.measured_angular_velocity()) < max_vel_angle:
+
         if not self.gps_disabled:
             self.map.update(estimated_pose, self.lidar(), self)
         else:
@@ -751,13 +750,13 @@ class FrontierDrone(DroneAbstract):
             if abs(self.measured_angular_velocity()) < max_vel_angle:
                 self.map.update_confidence_wall_map()
                 self.map.update(estimated_pose, self.lidar(), self)
-        # self.newmap.update_confidence_grid(self.estimated_pose, self.lidar())
-        # self.newmap.update_occupancy_grid(self.estimated_pose, self.lidar())
-        # self.newmap.update_map()
-        # self.newmap.display_map()
+
+        merging_maps:List[Map] = []
         for other_drone in self.drone_list:
             if other_drone.id == self.identifier: continue
-            self.map.merge(other_drone.map, self)
+            merging_maps.append(other_drone.map)
+
+        self.map.merge(merging_maps, self)
 
 
     def set_selected_frontier_id(self, frontier_id : int):

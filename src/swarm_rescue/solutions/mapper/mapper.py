@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
+import matplotlib.pyplot as plt
 
 from solutions.utils.types import Vector2D  # type: ignore
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
-from solutions.mapper.grid import Grid # type: ignore
 from solutions.pathfinder.pathfinder import pathfinder, pathfinder_fast # type: ignore
-
-from solutions.pathfinder.pathfinder import * # type: ignore
-from solutions.mapper.utils import display_grid # type: ignore
+from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
 
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
@@ -38,9 +35,10 @@ class Zone:
     UNEXPLORED = -1
 
 class Map:
-    def __init__(self, area_world: List[int], resolution: int, debug_mode: bool=False) -> None:
+    def __init__(self, area_world: List[int], resolution: int, identifier:int, debug_mode: bool=False) -> None:
         self.resolution: int = resolution
         self.debug_mode: bool = debug_mode
+        self.identifier: int = identifier
 
         self.width : int = int(area_world[0] / self.resolution + 0.5)
         self.height : int = int(area_world[1] / self.resolution + 0.5)
@@ -50,13 +48,13 @@ class Map:
         self.confidence_grid : Grid = Grid(area_world, resolution)
         self.confidence_grid_downsampled : Grid = Grid(area_world, resolution * 2)
         self.confidence_wall_map : np.ndarray = np.zeros((self.width, self.height)).astype(np.float64)
-        
+        self.merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.occupancy_grid)
+
         self.map : np.ndarray = np.full((self.width, self.height), Zone.UNEXPLORED)
 
         self.rescue_center : Optional[Vector2D] = None
         self.kill_zones : Dict[int, Vector2D] = {}
         self.no_gps_zones : List[Vector2D] = []
-
 
 
     @property
@@ -107,9 +105,9 @@ class Map:
         world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
         if not drone.gps_disabled:
-            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE)
+            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0].astype(np.float32), world_points[:,1].astype(np.float32), CONFIDENCE_VALUE)
         else:
-            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0], world_points[:,1], CONFIDENCE_VALUE/2)
+            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0].astype(np.float32), world_points[:,1].astype(np.float32), CONFIDENCE_VALUE/2)
         # for x, y in world_points:
         #     self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 
@@ -156,7 +154,7 @@ class Map:
 
         world_points_free = np.column_stack((pose.position[0] + np.multiply(lidar_dist_clip, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_clip, np.sin(downsampled_lidar_angles + pose.orientation))))
 
-        self.occupancy_grid.add_value_along_lines(pose.position[0], pose.position[1], world_points_free[:,0], world_points_free[:,1], EMPTY_ZONE_VALUE)
+        self.occupancy_grid.add_value_along_lines(pose.position[0], pose.position[1], world_points_free[:,0].astype(np.float32), world_points_free[:,1].astype(np.float32), EMPTY_ZONE_VALUE)
 
         lidar_dist_hit = downsampled_lidar_dist[downsampled_lidar_dist < max_range]
         lidar_angles_hit = downsampled_lidar_angles[downsampled_lidar_dist < max_range]
@@ -164,7 +162,7 @@ class Map:
         world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
 
         self.occupancy_grid.set_grid(np.where(boundary_mask, buffer, self.occupancy_grid.get_grid()))
-        self.occupancy_grid.add_points(world_points_hit[:,0], world_points_hit[:,1], OBSTACLE_ZONE_VALUE)
+        self.occupancy_grid.add_points(world_points_hit[:,0].astype(np.float32), world_points_hit[:,1].astype(np.float32), OBSTACLE_ZONE_VALUE)
         # Mark the current position of the drone as free
         self.occupancy_grid.add_point(int(pose.position[0]), int(pose.position[1]), FREE_ZONE_VALUE)
 
@@ -277,25 +275,54 @@ class Map:
         """
         self.update_confidence_grid(pose, lidar, drone)
         self.update_occupancy_grid(pose, lidar, drone)
+        self.update_merkle(drone)
         self.update_map(drone)
 
-    def merge(self, other_map : "Map", drone: FrontierDrone):
+        #plt.imsave(f"confidence{self.identifier}.png", self.confidence_grid.get_grid())
+        #plt.imsave(f"occupancy{self.identifier}.png", self.occupancy_grid.get_grid())
+
+
+    def update_merkle(self, drone: FrontierDrone):
+        p1 = drone.drone_position - Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
+        p2 = drone.drone_position + Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
+        p1 = self.world_to_grid(p1)
+        p2 = self.world_to_grid(p2)
+        # self.merkle_tree.update(p1.x, p1.y, p2.x, p2.y)
+        self.merkle_tree.update(0,0,self.height-1, self.width-1) # TODO fix
+
+
+    def merge(self, other_maps : List['Map'], drone: FrontierDrone):
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
-        self.occupancy_grid.set_grid(np.where(other_map.confidence_grid.get_grid() > self.confidence_grid.get_grid(), other_map.occupancy_grid.get_grid(), self.occupancy_grid.get_grid()))
-
-        self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
+        # confidence = np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()).astype(np.float32)
+        # occupancy = np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(),
+        #                     self.occupancy_grid.get_grid(),
+        #                     other_map.occupancy_grid.get_grid()
+        #             ).astype(np.float32)
 
         reset = False
-        for other_id in other_map.kill_zones:
-            if other_id not in self.kill_zones:
-                self.kill_zones[other_id] = other_map.kill_zones[other_id]
-                reset = True
+        for other_map in other_maps:
+            for other_id in other_map.kill_zones:
+                if other_id not in self.kill_zones:
+                    self.kill_zones[other_id] = other_map.kill_zones[other_id]
+                    reset = True
         if reset:
             drone.reset_path()
-        #self.confidence_grid.set_grid(np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()))
-        #self.update_map()
+
+        maps = [self] + other_maps
+        new_maps = []
+        while len(maps) > 1:
+            for i in range(0,len(maps),2):
+                if i+1<len(maps):
+                    maps[i].merkle_tree.merge(maps[i+1].merkle_tree)
+                new_maps.append(maps[i])
+            maps = new_maps
+            new_maps = []
+
+        # print("confidence:", (confidence == self.confidence_grid.get_grid()).all())
+        # print("occupancy:", (occupancy == self.occupancy_grid.get_grid()).all())
+
 
     def reset_kill_zones(self):
         """

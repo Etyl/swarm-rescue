@@ -4,7 +4,6 @@ import cython
 from typing import Optional,Tuple
 cimport numpy as cnp
 from libc.math cimport sqrt
-import matplotlib.pyplot as plt
 
 cnp.import_array()
 DTYPE = np.int64

@@ -1,5 +1,6 @@
 pyastar2d==1.0.6
 Cython==3.0.11
+xxhash==3.5.0
 numpy==1.24.4
 
 -e git+https://github.com/emmanuel-battesti/simple-playgrounds.git@swarm-rescue-v3#egg=spg
