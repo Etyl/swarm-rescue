@@ -4,6 +4,7 @@ import cython
 from typing import Optional,Tuple
 cimport numpy as cnp
 from libc.math cimport sqrt
+import matplotlib.pyplot as plt
 
 cnp.import_array()
 DTYPE = np.int64
@@ -26,7 +27,7 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
     roll_map = np.zeros_like(map).astype(np.float32)
     roll_map[map > 1.5] = 1
 
-    for _ in range(robot_radius):
+    for _ in range(1):
         roll_map = (np.roll(roll_map,(1, 0), axis=(1, 0))+
                     np.roll(roll_map,(0, 1), axis=(1, 0))+
                     np.roll(roll_map,(-1, 0), axis=(1, 0))+
@@ -37,7 +38,21 @@ cdef border_from_map_np(map : np.ndarray, robot_radius : int):
                     np.roll(roll_map,(-1, 1), axis=(1, 0)))
         roll_map[roll_map>0.5] = 1
         new_map += roll_map
-    new_map[map > 1.5] = np.inf
+    hard_borders = np.zeros(roll_map.shape)
+    hard_borders[roll_map >= 1] = np.inf
+
+    for _ in range(robot_radius-1):
+        roll_map = (np.roll(roll_map,(1, 0), axis=(1, 0))+
+                    np.roll(roll_map,(0, 1), axis=(1, 0))+
+                    np.roll(roll_map,(-1, 0), axis=(1, 0))+
+                    np.roll(roll_map,(0, -1), axis=(1, 0))+
+                    np.roll(roll_map,(1, 1), axis=(1, 0))+
+                    np.roll(roll_map,(-1, -1), axis=(1, 0))+
+                    np.roll(roll_map,(1, -1), axis=(1, 0))+
+                    np.roll(roll_map,(-1, 1), axis=(1, 0)))
+        roll_map[roll_map>0.5] = 1
+        new_map += roll_map
+    new_map += hard_borders
     
     bump_map = (len(map)+len(map[0]))*np.ones(map.shape).astype(np.float32)
     bump_map[new_map < 0.5] = 0
@@ -263,6 +278,13 @@ def pathfinder(map:np.ndarray, start:np.ndarray, end:np.ndarray, robot_radius) -
         end: tuple of end coordinates
     """
     map_border = border_from_map_np(map, robot_radius)
+
+    # img_border = map_border.copy()
+    # img_border[img_border==np.inf] = -1
+    # img_border[img_border==-1] = 2*np.max(img_border)
+    #
+    # plt.imsave(f"border.png",img_border)
+    # plt.imsave(f"map.png", map)
 
     start,end = findPointsAvailable(map_border, robot_radius, start, end)
 

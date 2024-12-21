@@ -378,7 +378,7 @@ class Map:
                 next_waypoint = Vector2D(next_waypoint[0], next_waypoint[1])
                 next_waypoint = self.grid_to_world(next_waypoint)
         else:
-            grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, 7*zoom_factor)
+            grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, 6*zoom_factor)
 
 
         if grid_path is None:

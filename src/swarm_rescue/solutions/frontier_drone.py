@@ -78,7 +78,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
@@ -89,7 +89,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_repulsion = True
         self.debug_kill_zones = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = False
+        self.debug_frontiers = True
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -552,6 +552,11 @@ class FrontierDrone(DroneAbstract):
 
     # TODO: rewrite
     def test_stuck(self):
+
+        if self.target is not None and self.controller.current_state in [self.controller.going_to_center, self.controller.going_to_wounded, self.controller.roaming]:
+            if not self.map.is_reachable(self.drone_position, self.target):
+                self.reset_path()
+
         self.last_positions.append(self.get_position())
         if len(self.last_positions) >= FrontierDrone.POSITION_QUEUE_SIZE:
             self.last_positions.popleft()
@@ -563,10 +568,6 @@ class FrontierDrone(DroneAbstract):
         if self.stuck_iteration < FrontierDrone.REFRESH_PATH_LIMIT:
             return
         self.stuck_iteration = 0
-
-        if self.target is not None and self.controller.current_state in [self.controller.going_to_center, self.controller.going_to_wounded, self.controller.roaming]:
-            if not self.map.is_reachable(self.drone_position, self.target):
-                self.reset_path()
 
         closest_drone = None
         dist = np.inf
@@ -817,20 +818,6 @@ class FrontierDrone(DroneAbstract):
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
             arcade.draw_text(f"{self.localizer.confidence_position:.3f}", pos[0]+10, pos[1]+10, arcade.color.BLACK, font_size=15)
 
-
-        # draw frontiers
-        if self.debug_frontiers:
-            pos = np.array(self.get_position()) + np.array(self.size_area)/2
-            arcade.draw_text(str(self.identifier), pos[0], pos[1], map_id_to_color[self.identifier], 20)
-            for frontierId, frontier in enumerate(self.frontiers):
-                for point in frontier:
-                    if frontierId == self.selected_frontier_id:
-                        pos = np.array(self.map.grid_to_world(point)) + np.array(self.size_area)/2
-                        arcade.draw_rectangle_filled(pos[0], pos[1], 8, 8, map_id_to_color[self.identifier])
-                    else:
-                        pos = np.array(self.map.grid_to_world(point)) + np.array(self.size_area)/2
-                        arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
-
         debug = False
         if debug:
             # draw return zone
@@ -842,9 +829,25 @@ class FrontierDrone(DroneAbstract):
             pos = self.get_position().array + np.array(self.size_area) / 2
             arcade.draw_text(f"{self.drone_health}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
+        if self.debug_frontiers:
+            pos = self.get_position().array + np.array(self.size_area) / 2
+            arcade.draw_text(str(self.identifier), pos[0], pos[1], map_id_to_color[self.identifier], 20)
+
     def draw_bottom_layer(self):
         # check if drone is dead
         if self.odometer_values() is None: return
+
+        # draw frontiers
+        if self.debug_frontiers:
+            pos = self.get_position().array + np.array(self.size_area) / 2
+            for frontierId, frontier in enumerate(self.frontiers):
+                for point in frontier:
+                    if frontierId == self.selected_frontier_id:
+                        pos = self.map.grid_to_world(point).array + np.array(self.size_area) / 2
+                        arcade.draw_rectangle_filled(pos[0], pos[1], 8, 8, map_id_to_color[self.identifier])
+                    else:
+                        pos = self.map.grid_to_world(point).array + np.array(self.size_area) / 2
+                        arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
 
         if self.debug_path:
             for k in range(len(self.path)-1):

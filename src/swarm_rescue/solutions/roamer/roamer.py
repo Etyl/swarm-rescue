@@ -368,7 +368,8 @@ class Roamer:
             score = (2 * obs["distance"] +
                      obs["size"] +
                      obs["count"] +
-                     4 * obs["angle"])
+                     2 * obs["angle"])
+
         else:
             total_obs = np.concatenate(list(obs.values()), axis=0)
             policy_input = np.concatenate((np.array([self.drone.map.exploration_score]),total_obs), axis=0)
