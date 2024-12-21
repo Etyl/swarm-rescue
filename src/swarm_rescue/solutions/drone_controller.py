@@ -81,12 +81,12 @@ class DroneController(StateMachine):
     
     def lost_wounded_found(self) -> bool:
         if not self.drone.found_wounded:
-            return False
+            return True
 
         path = self.drone.get_path(self.drone.wounded_target)
         if path is None:
-            return False
-        return True
+            return True
+        return False
 
     def no_wounded(self) -> bool:
         return not self.drone.wounded_visible and not self.drone.base.grasper.grasped_entities

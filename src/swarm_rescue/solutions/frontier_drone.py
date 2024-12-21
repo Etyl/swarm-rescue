@@ -86,7 +86,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_controller = False
         self.debug_mapper = False
         self.debug_lidar = False
-        self.debug_repulsion = True
+        self.debug_repulsion = False
         self.debug_kill_zones = False
         self.debug_wall_repulsion = False
         self.debug_frontiers = True

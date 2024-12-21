@@ -309,7 +309,23 @@ def pathfinder_fast(map:np.ndarray, start:np.ndarray, end:np.ndarray) -> Tuple[O
     Returns the A* path between start and end without any trajectory optimization
     """
     map_border = np.ones(map.shape).astype(np.float32)
-    map_border[map>1.5] = np.inf
+
+    roll_map = np.zeros_like(map).astype(np.float32)
+    roll_map[map > 1.5] = 1
+
+    for _ in range(1):
+        roll_map = (np.roll(roll_map, (1, 0), axis=(1, 0)) +
+                    np.roll(roll_map, (0, 1), axis=(1, 0)) +
+                    np.roll(roll_map, (-1, 0), axis=(1, 0)) +
+                    np.roll(roll_map, (0, -1), axis=(1, 0)) +
+                    np.roll(roll_map, (1, 1), axis=(1, 0)) +
+                    np.roll(roll_map, (-1, -1), axis=(1, 0)) +
+                    np.roll(roll_map, (1, -1), axis=(1, 0)) +
+                    np.roll(roll_map, (-1, 1), axis=(1, 0)))
+        roll_map[roll_map > 0.5] = 1
+    map_border[roll_map >= 1] = np.inf
+
+
 
     start,end = findPointsAvailable(map_border, 1000, start, end)
     path = pyastar2d.astar_path(map_border, start, end, allow_diagonal=False)
