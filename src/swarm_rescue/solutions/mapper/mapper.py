@@ -291,7 +291,7 @@ class Map:
         self.merkle_tree.update(0,0,self.height-1, self.width-1) # TODO fix
 
 
-    def merge(self, other_map : "Map", drone: FrontierDrone):
+    def merge(self, other_maps : List['Map'], drone: FrontierDrone):
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
@@ -300,15 +300,25 @@ class Map:
         #                     self.occupancy_grid.get_grid(),
         #                     other_map.occupancy_grid.get_grid()
         #             ).astype(np.float32)
-        self.merkle_tree.merge(other_map.merkle_tree)
 
         reset = False
-        for other_id in other_map.kill_zones:
-            if other_id not in self.kill_zones:
-                self.kill_zones[other_id] = other_map.kill_zones[other_id]
-                reset = True
+        for other_map in other_maps:
+            for other_id in other_map.kill_zones:
+                if other_id not in self.kill_zones:
+                    self.kill_zones[other_id] = other_map.kill_zones[other_id]
+                    reset = True
         if reset:
             drone.reset_path()
+
+        maps = [self] + other_maps
+        new_maps = []
+        while len(maps) > 1:
+            for i in range(0,len(maps),2):
+                if i+1<len(maps):
+                    maps[i].merkle_tree.merge(maps[i+1].merkle_tree)
+                new_maps.append(maps[i])
+            maps = new_maps
+            new_maps = []
 
         # print("confidence:", (confidence == self.confidence_grid.get_grid()).all())
         # print("occupancy:", (occupancy == self.occupancy_grid.get_grid()).all())
