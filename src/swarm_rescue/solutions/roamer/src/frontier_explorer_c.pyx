@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.ndimage import label # type: ignore
+import matplotlib.pyplot as plt
 
 #from libcpp.set cimport set
 #from libcpp.pair cimport pair
@@ -16,8 +17,7 @@ ctypedef enum Zone:
     WOUNDED = 2
     RESCUE_CENTER = 3
     INEXPLORED = -1
-
-
+    NEG_OBSTACLE = -2
 
 
 cdef find_frontier(wavefront_map, int start_row,int start_col, visited):
@@ -125,6 +125,7 @@ def get_frontiers(map, drone_position, frontiers_threshold: int):
     """
     # Run the Wavefront Detector algorithm
     cdef cnp.ndarray[DTYPE_t, ndim=2] wavefront_map = map.copy().astype(DTYPE)
+    wavefront_map[wavefront_map==OBSTACLE] = NEG_OBSTACLE
     wavefront_value = 1
     wavefront_map[drone_position[0], drone_position[1]] = wavefront_value
 
@@ -139,6 +140,9 @@ def get_frontiers(map, drone_position, frontiers_threshold: int):
                     wavefront_map[neighbor] = wavefront_value + 1
 
         wavefront_value += 1
+
+    # plt.imsave("map.png",map)
+    # plt.imsave("wavefront.png",wavefront_map)
 
     # Extract frontiers from the computed wavefront map
     frontiers = extract_frontiers(wavefront_map, frontiers_threshold)

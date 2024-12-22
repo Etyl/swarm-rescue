@@ -291,17 +291,24 @@ class Roamer:
         if not self.frontiers:
             return None  # No frontiers found
 
-        selected_frontiers_id : List[int] = []
-        selected_frontiers_distance : List[float] = []
-        selected_frontiers_repulsion_angle : List[float] = []
-        
-        # select the closest frontiers
-        for idx, frontier in enumerate(self.frontiers):
-            
+        frontier_centers = []
+        for frontier in self.frontiers:
             frontier_center = Vector2D(
                 sum(point.x for point in frontier) / len(frontier),
                 sum(point.y for point in frontier) / len(frontier)
             )
+            centroid = min(frontier, key=lambda point: point.distance(frontier_center))
+            frontier_centers.append(centroid)
+
+        selected_frontiers_id : List[int] = []
+        selected_frontiers_distance : List[float] = []
+        selected_frontiers_repulsion_angle : List[float] = []
+
+        
+        # select the closest frontiers
+        for idx, frontier in enumerate(self.frontiers):
+            
+            frontier_center = frontier_centers[idx]
             
             distance = frontier_center.distance(drone_position_grid)
             
@@ -314,16 +321,8 @@ class Roamer:
                 selected_frontiers_id[max_idx] = idx
                 selected_frontiers_distance[max_idx] = distance
                 continue
-        
-        # calculate the path length for each selected frontier
-        frontiers = []
-        for idx,frontier_id in enumerate(selected_frontiers_id):
-            frontier = self.frontiers[frontier_id]
-            frontier_center = Vector2D(
-                sum(point.x for point in frontier) / len(frontier),
-                sum(point.y for point in frontier) / len(frontier)
-            )
-            frontiers.append(frontier_center)
+
+        frontiers = [frontier_centers[idx] for idx in selected_frontiers_id]
 
         # results = pool.map(self.get_path_length, frontiers)
         for idx, frontier in enumerate(frontiers):
