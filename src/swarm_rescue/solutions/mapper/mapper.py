@@ -14,7 +14,7 @@ if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
 
 EVERY_N = 2
-LIDAR_DIST_CLIP = 40.0
+LIDAR_DIST_CLIP = 15.0
 EMPTY_ZONE_VALUE = -0.602
 OBSTACLE_ZONE_VALUE = 2.0
 FREE_ZONE_VALUE = -8

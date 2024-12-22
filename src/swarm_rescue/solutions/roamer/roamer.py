@@ -34,7 +34,7 @@ class RoamerController(StateMachine):
 
     # maximum number of times the drone can be in the same position
     # i.e. the maximum number of times the check_target_reached function can return False
-    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD : int = 100
+    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD : int = 40
 
     # maximum number of times the drone can be close to the previous searching start point
     # i.e. the maximum number of times the test_position_close_start_point function can return True
@@ -368,7 +368,7 @@ class Roamer:
             score = (2 * obs["distance"] +
                      obs["size"] +
                      obs["count"] +
-                     2 * obs["angle"])
+                     4 * obs["angle"])
 
         else:
             total_obs = np.concatenate(list(obs.values()), axis=0)

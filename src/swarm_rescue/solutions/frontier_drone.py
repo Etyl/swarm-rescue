@@ -60,12 +60,7 @@ class FrontierDrone(DroneAbstract):
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
         self.target: Optional[Vector2D] = None # target for the drone for the path planning
         self.killed_drones : List[int] = [] # the list of killed drones ids
-        self.prev_command : Dict = {
-            "forward": 0.0,
-            "lateral": 0.0,
-            "rotation": 0.0,
-            "grasper": 0
-        }
+
         self.command_pos: Vector2D = Vector2D()
         self.visible_drones: List[Tuple[int,Vector2D]] = [] # List of (id,drone_position)
         self.searching_time : int = 0 # time spent searching for next target
@@ -78,7 +73,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
@@ -89,7 +84,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_repulsion = False
         self.debug_kill_zones = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = False
+        self.debug_frontiers = True
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -101,7 +96,12 @@ class FrontierDrone(DroneAbstract):
             "rotation": 0.0,
             "grasper": 0
         }
-        self.prev_command: Dict[str, float] = self._command
+        self.prev_command: Dict[str, float] = {
+            "forward": 0.0,
+            "lateral": 0.0,
+            "rotation": 0.0,
+            "grasper": 0
+        }
 
         self.map : Map = Map(area_world=self.size_area, resolution=4, identifier=self.identifier, debug_mode=self.debug_mapper)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
@@ -482,8 +482,10 @@ class FrontierDrone(DroneAbstract):
 
         if self.controller.current_state in [self.controller.going_to_center, self.controller.approaching_wounded, self.controller.approaching_center]:
             self.repulsion_drone = 0.05 * repulsion
-        elif self.controller.current_state in [self.controller.going_to_return_zone, self.controller.going_to_return_zone]:
-            self.repulsion_drone = 0.2 * repulsion
+        elif self.controller.current_state == self.controller.going_to_return_zone:
+            self.repulsion_drone = 0.3 * repulsion
+        elif self.controller.current_state == self.controller.stay_in_return_zone:
+            self.repulsion_drone = 0.05 * repulsion
         else:
             self.repulsion_drone = repulsion
 
@@ -767,6 +769,18 @@ class FrontierDrone(DroneAbstract):
         # check if drone is dead
         if self.odometer_values() is None: return
 
+        # draw frontiers
+        if self.debug_frontiers:
+            pos = self.get_position().array + np.array(self.size_area) / 2
+            for frontierId, frontier in enumerate(self.frontiers):
+                for point in frontier:
+                    if frontierId == self.selected_frontier_id:
+                        pos = self.map.grid_to_world(point).array + np.array(self.size_area) / 2
+                        arcade.draw_rectangle_filled(pos[0], pos[1], 8, 8, map_id_to_color[self.identifier])
+                    else:
+                        pos = self.map.grid_to_world(point).array + np.array(self.size_area) / 2
+                        arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
+
         if self.debug_repulsion:
             pos = self.get_position().array + np.array(self.size_area) / 2
             repulsion = 2*self.repulsion_drone.rotate(self.get_angle())
@@ -834,17 +848,7 @@ class FrontierDrone(DroneAbstract):
         # check if drone is dead
         if self.odometer_values() is None: return
 
-        # draw frontiers
-        if self.debug_frontiers:
-            pos = self.get_position().array + np.array(self.size_area) / 2
-            for frontierId, frontier in enumerate(self.frontiers):
-                for point in frontier:
-                    if frontierId == self.selected_frontier_id:
-                        pos = self.map.grid_to_world(point).array + np.array(self.size_area) / 2
-                        arcade.draw_rectangle_filled(pos[0], pos[1], 8, 8, map_id_to_color[self.identifier])
-                    else:
-                        pos = self.map.grid_to_world(point).array + np.array(self.size_area) / 2
-                        arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
+
 
         if self.debug_path:
             for k in range(len(self.path)-1):
