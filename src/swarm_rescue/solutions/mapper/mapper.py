@@ -6,7 +6,7 @@ from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
 import matplotlib.pyplot as plt
 
 from solutions.utils.types import Vector2D  # type: ignore
-from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR # type: ignore
+from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR  # type: ignore
 from solutions.pathfinder.pathfinder import pathfinder, pathfinder_fast # type: ignore
 from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
 
@@ -126,43 +126,26 @@ class Map:
         boundary_mask = np.logical_or(self.occupancy_grid.get_grid() == THRESHOLD_MIN, self.occupancy_grid.get_grid() == THRESHOLD_MAX)
         buffer = self.occupancy_grid.get_grid().copy()
 
-        #lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
-        #lidar_angles = lidar.ray_angles[::EVERY_N].copy()
-
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        #downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
-        #downsample_indices = downsample_indices[downsample_indices % 2 == 0]
+        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR)
 
-        #mask = np.zeros(lidar_dist.shape, dtype=bool)
-        #mask[downsample_indices] = True
-        #mask[lidar_dist > MAX_RANGE_LIDAR_SENSOR/2] = True
-
-        # downsampled_lidar_dist = lidar_dist[mask]
-        # downsampled_lidar_angles = lidar_angles[mask]
-
-        downsampled_lidar_dist = lidar_dist
-        downsampled_lidar_angles = lidar_angles
-
-        if drone.gps_disabled:
-            max_range = 0.9 * MAX_RANGE_LIDAR_SENSOR
-        else:
-            max_range = 0.65 * MAX_RANGE_LIDAR_SENSOR
-        
-        lidar_dist_clip = np.minimum(np.maximum(downsampled_lidar_dist - LIDAR_DIST_CLIP, 0.0), max_range)
-
-        world_points_free = np.column_stack((pose.position[0] + np.multiply(lidar_dist_clip, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_clip, np.sin(downsampled_lidar_angles + pose.orientation))))
+        world_points_free = np.column_stack((
+            pose.position[0] + np.multiply(lidar_dist_clip, np.cos(lidar_angles + pose.orientation)),
+            pose.position[1] + np.multiply(lidar_dist_clip, np.sin(lidar_angles + pose.orientation))
+        ))
 
         self.occupancy_grid.add_value_along_lines(pose.position[0], pose.position[1], world_points_free[:,0].astype(np.float32), world_points_free[:,1].astype(np.float32), EMPTY_ZONE_VALUE)
 
-        lidar_dist_hit = downsampled_lidar_dist[downsampled_lidar_dist < max_range]
-        lidar_angles_hit = downsampled_lidar_angles[downsampled_lidar_dist < max_range]
+        lidar_dist_hit = lidar_dist[lidar_dist < MAX_RANGE_SEMANTIC_SENSOR]
+        lidar_angles_hit = lidar_angles[lidar_dist < MAX_RANGE_SEMANTIC_SENSOR]
 
         world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
 
         self.occupancy_grid.set_grid(np.where(boundary_mask, buffer, self.occupancy_grid.get_grid()))
         self.occupancy_grid.add_points(world_points_hit[:,0].astype(np.float32), world_points_hit[:,1].astype(np.float32), OBSTACLE_ZONE_VALUE)
+
         # Mark the current position of the drone as free
         self.occupancy_grid.add_point(int(pose.position[0]), int(pose.position[1]), FREE_ZONE_VALUE)
 
