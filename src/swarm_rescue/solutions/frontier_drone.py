@@ -478,17 +478,14 @@ class FrontierDrone(DroneAbstract):
             return
 
         repulsion = repulsion.normalize()
-        repulsion *= min(2,1.5*repulsion_coef(min_dist-20)+0.2)
+        repulsion *= min(2.0,1.5*repulsion_coef(min_dist-20)+0.2)
 
-        if (self.controller.current_state == self.controller.going_to_center or
-            self.controller.current_state == self.controller.approaching_wounded or
-            self.controller.current_state == self.controller.approaching_center):
+        if self.controller.current_state in [self.controller.going_to_center, self.controller.approaching_wounded, self.controller.approaching_center]:
             self.repulsion_drone = 0.05 * repulsion
+        elif self.controller.current_state in [self.controller.going_to_return_zone, self.controller.going_to_return_zone]:
+            self.repulsion_drone = 0.2 * repulsion
         else:
             self.repulsion_drone = repulsion
-
-        if self.repulsion_drone.norm() > 1.3:
-            pass
 
         if self.ignore_repulsion <= 0:
             self.command_pos += self.repulsion_drone
