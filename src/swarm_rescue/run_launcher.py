@@ -2,6 +2,8 @@ import sys
 import threading
 import subprocess
 import time
+from typing import List
+
 from spg_overlay.reporting.result_path_creator import ResultPathCreator
 from spg_overlay.reporting.team_info import TeamInfo
 import uuid
@@ -52,7 +54,7 @@ if __name__ == "__main__":
         ("MyMapFinal_2023_24_03", "NO_GPS_ZONE")
     ]
 
-    complete_map_names = []
+    complete_map_names: List = []
     for map_name in map_names:
         complete_map_names = complete_map_names + [map_name]*round_count
     video_capture_enabled = True
