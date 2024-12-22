@@ -32,7 +32,7 @@ class MyMapFinal2022_23(MapAbstract):
     def __init__(self, zones_config: ZonesConfig = ()):
         super().__init__(zones_config)
         self._max_timestep_limit = 7200
-        self._max_walltime_limit = 1440  # In seconds
+        self._max_walltime_limit = 10000  # In seconds
 
         # PARAMETERS MAP
         self._size_area = (1819, 1350)

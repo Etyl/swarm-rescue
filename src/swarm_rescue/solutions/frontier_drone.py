@@ -483,7 +483,7 @@ class FrontierDrone(DroneAbstract):
         if self.controller.current_state in [self.controller.going_to_center, self.controller.approaching_wounded, self.controller.approaching_center]:
             self.repulsion_drone = 0.05 * repulsion
         elif self.controller.current_state == self.controller.going_to_return_zone:
-            if self.drone_position.distance(self.return_zone_position) <= 200:
+            if self.drone_position.distance(self.return_zone_position) <= 400:
                 self.repulsion_drone = 0.05 * repulsion
             else:
                 self.repulsion_drone = 0.3 * repulsion
