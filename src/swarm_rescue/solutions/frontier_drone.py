@@ -84,7 +84,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_repulsion = False
         self.debug_kill_zones = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = True
+        self.debug_frontiers = False
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -179,7 +179,7 @@ class FrontierDrone(DroneAbstract):
         return drone_row * size + size/2, drone_col * size + size/2
 
 
-    def check_waypoint(self):
+    def check_waypoint(self) -> bool:
         """
         checks if the drone has reached the waypoint
         """
@@ -483,7 +483,10 @@ class FrontierDrone(DroneAbstract):
         if self.controller.current_state in [self.controller.going_to_center, self.controller.approaching_wounded, self.controller.approaching_center]:
             self.repulsion_drone = 0.05 * repulsion
         elif self.controller.current_state == self.controller.going_to_return_zone:
-            self.repulsion_drone = 0.3 * repulsion
+            if self.drone_position.distance(self.return_zone_position) <= 200:
+                self.repulsion_drone = 0.05 * repulsion
+            else:
+                self.repulsion_drone = 0.3 * repulsion
         elif self.controller.current_state == self.controller.stay_in_return_zone:
             self.repulsion_drone = 0.05 * repulsion
         else:
