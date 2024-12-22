@@ -6,6 +6,7 @@ from typing import List, TYPE_CHECKING, Optional, Dict, Tuple
 import matplotlib.pyplot as plt
 
 from solutions.utils.types import Vector2D  # type: ignore
+from spg_overlay.entities.drone_distance_sensors import DroneSemanticSensor # type: ignore
 from spg_overlay.utils.constants import MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_SEMANTIC_SENSOR  # type: ignore
 from solutions.pathfinder.pathfinder import pathfinder, pathfinder_fast # type: ignore
 from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
@@ -13,8 +14,8 @@ from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
 
-EVERY_N = 2
-LIDAR_DIST_CLIP = 15.0
+EVERY_N = 1
+LIDAR_DIST_CLIP = 20.0
 EMPTY_ZONE_VALUE = -0.602
 OBSTACLE_ZONE_VALUE = 2.0
 FREE_ZONE_VALUE = -8
@@ -118,11 +119,14 @@ class Map:
 
         #display_grid(self.confidence_grid_downsampled, pose, title="Confidence grid of drone {}".format(drone_id))
 
-    def update_occupancy_grid(self, pose, lidar, drone: FrontierDrone):
+    def update_occupancy_grid(self, pose, lidar, drone: FrontierDrone) -> None:
         """
         Update occupancy grid with drone's semantic sensor data
         """
-         # Save values at the boundaries
+        drone_pos: Vector2D = drone.drone_position
+        drone_angle: float = drone.drone_angle
+
+        # Save values at the boundaries
         boundary_mask = np.logical_or(self.occupancy_grid.get_grid() == THRESHOLD_MIN, self.occupancy_grid.get_grid() == THRESHOLD_MAX)
         buffer = self.occupancy_grid.get_grid().copy()
 
@@ -132,14 +136,24 @@ class Map:
         lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR)
 
         world_points_free = np.column_stack((
-            pose.position[0] + np.multiply(lidar_dist_clip, np.cos(lidar_angles + pose.orientation)),
-            pose.position[1] + np.multiply(lidar_dist_clip, np.sin(lidar_angles + pose.orientation))
+            drone_pos.x + np.multiply(lidar_dist_clip, np.cos(lidar_angles + drone_angle)),
+            drone_pos.y + np.multiply(lidar_dist_clip, np.sin(lidar_angles + drone_angle))
         ))
 
         self.occupancy_grid.add_value_along_lines(pose.position[0], pose.position[1], world_points_free[:,0].astype(np.float32), world_points_free[:,1].astype(np.float32), EMPTY_ZONE_VALUE)
 
-        lidar_dist_hit = lidar_dist[lidar_dist < MAX_RANGE_SEMANTIC_SENSOR]
-        lidar_angles_hit = lidar_angles[lidar_dist < MAX_RANGE_SEMANTIC_SENSOR]
+        detection_semantic = drone.semantic_values()
+        angles_available_arr = np.ones(181).astype(bool)
+        for data in detection_semantic:
+            if data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER:
+                continue
+            i = int(round(180 * ((np.pi + data.angle) / (2 * np.pi))))
+            for k in range((i - 3) % 181, (i + 4) % 181):
+                angles_available_arr[k] = False
+
+        mask = np.logical_and(angles_available_arr,lidar_dist < MAX_RANGE_SEMANTIC_SENSOR)
+        lidar_dist_hit = lidar_dist[mask]
+        lidar_angles_hit = lidar_angles[mask]
 
         world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
 
