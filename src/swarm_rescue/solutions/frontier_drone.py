@@ -503,6 +503,9 @@ class FrontierDrone(DroneAbstract):
         update repulsion vector for the drone from the walls (local drone vector)
         """
 
+        if self.controller.current_state == self.controller.stay_in_return_zone:
+            return
+
         lidar_dist = self.lidar().get_sensor_values()
         lidar_angles = self.lidar().ray_angles
         detection_semantic = self.semantic_values()
@@ -548,7 +551,8 @@ class FrontierDrone(DroneAbstract):
         self.update_drone_repulsion()
         self.update_wall_repulsion()
 
-        self.command_pos = self.command_pos.normalize()
+        if self.command_pos.norm()>1:
+            self.command_pos = self.command_pos.normalize()
         self._command["forward"] = self.command_pos.x
         self._command["lateral"] = self.command_pos.y
 
@@ -670,7 +674,7 @@ class FrontierDrone(DroneAbstract):
         """
         checks if the simulation time limit is reached
         """
-        max_timestep = self._misc_data.max_timestep_limit * 0.85
+        max_timestep = self._misc_data.max_timestep_limit * 0.2
         max_wall_time = self._misc_data.max_walltime_limit * 0.85
         return self.elapsed_timestep >= max_timestep or self.elapsed_walltime >= max_wall_time
 
@@ -731,6 +735,11 @@ class FrontierDrone(DroneAbstract):
             self._command["rotation"] /=2
             self._command["forward"] /=2
             self._command["lateral"] /=2
+        elif self.controller.current_state == self.controller.stay_in_return_zone:
+            self._command["rotation"] /= 4
+            self._command["forward"] /= 4
+            self._command["lateral"] /= 4
+
 
         self.point_of_interest = self.compute_point_of_interest()
         self.prev_command = self._command
