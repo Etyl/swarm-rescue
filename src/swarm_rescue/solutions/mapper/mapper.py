@@ -69,6 +69,8 @@ class Map:
             p = start + (i/n)*(end-start)
             x = int(round(p.x))
             y = int(round(p.y))
+            if not (0<=x<self.width and 0<=y<self.height):
+                continue
             if self.map[x, y] == Zone.OBSTACLE or self.map[x,y] == Zone.UNEXPLORED:
                 return True
         return False
