@@ -2,13 +2,10 @@ import numpy as np
 from scipy.ndimage import label # type: ignore
 import matplotlib.pyplot as plt
 
-#from libcpp.set cimport set
-#from libcpp.pair cimport pair
-#from libcpp.vector cimport vector
 cimport numpy as cnp
 cnp.import_array()
-DTYPE = np.int64
-ctypedef cnp.int64_t DTYPE_t
+DTYPE = np.int32
+ctypedef cnp.int32_t DTYPE_t
 
 
 ctypedef enum Zone:
@@ -46,7 +43,7 @@ cdef find_frontier(wavefront_map, int start_row,int start_col, visited):
             if (
                 0 <= n_row < wavefront_map.shape[0]
                 and 0 <= n_col < wavefront_map.shape[1]
-                and wavefront_map[n_row, n_col] > 1):
+                and wavefront_map[n_row, n_col] >= 1):
                 has_empty_neighbor = True
                 break
 
@@ -119,28 +116,66 @@ cdef getFrontiersCount(frontiers, connectedMap, connectedCount):
 
     return frontier_count
 
+
+cdef dfs_fill_array(cnp.ndarray[cnp.int32_t, ndim=2] arr, int start_x, int start_y):
+    """
+    Perform DFS on a 2D numpy array starting from (start_x, start_y).
+    Fill traversed coordinates with 1. Negative values are obstacles.
+
+    Parameters:
+    arr (np.ndarray): 2D numpy array to traverse.
+    start_x (int): Starting x-coordinate.
+    start_y (int): Starting y-coordinate.
+    """
+    cdef:
+        int rows = arr.shape[0]
+        int cols = arr.shape[1]
+        int x, y, nx, ny
+        int dx[8]
+        int dy[8]
+
+    stack = []
+    dx[:] = [-1, 1, 0, 0, -1, -1, 1, 1]
+    dy[:] = [0, 0, -1, 1, -1, 1, -1, 1]
+
+    # Push the starting position onto the stack
+    stack.append((start_x, start_y))
+    arr[start_x,start_y] = 1
+
+    while len(stack)>0:
+        x, y = stack.pop()
+
+        # Push all valid neighbors onto the stack
+        for i in range(8):
+            nx = x + dx[i]
+            ny = y + dy[i]
+            if 0<=nx<rows and 0<=ny<cols and arr[nx, ny] == EMPTY:
+                arr[nx, ny] = 1
+                stack.append((nx, ny))
+
 def get_frontiers(map, drone_position, frontiers_threshold: int):
     """
     Compute the Wavefront Detector algorithm on the current map
     """
     # Run the Wavefront Detector algorithm
-    cdef cnp.ndarray[DTYPE_t, ndim=2] wavefront_map = map.copy().astype(DTYPE)
+    cdef cnp.ndarray[DTYPE_t, ndim=2] wavefront_map = map.copy().astype(np.int32)
     wavefront_map[wavefront_map==OBSTACLE] = NEG_OBSTACLE
-    wavefront_value = 1
-    wavefront_map[drone_position[0], drone_position[1]] = wavefront_value
 
-    while wavefront_value <= np.max(wavefront_map):
-        indices = np.where(wavefront_map == wavefront_value)
+    dfs_fill_array(wavefront_map, drone_position[0], drone_position[1])
 
-        for i, j in zip(indices[0], indices[1]):
-            neighbors = [(i + x, j + y) for x in [-1, 0, 1] for y in [-1, 0, 1] if (x != 0 or y != 0)]
+    # while wavefront_value <= np.max(wavefront_map):
+    #     indices = np.where(wavefront_map == wavefront_value)
+    #
+    #     for i, j in zip(indices[0], indices[1]):
+    #         neighbors = [(i + x, j + y) for x in [-1, 0, 1] for y in [-1, 0, 1] if (x != 0 or y != 0)]
+    #
+    #         for neighbor in neighbors:
+    #             if 0 <= neighbor[0] < wavefront_map.shape[0] and 0 <= neighbor[1] < wavefront_map.shape[1] and wavefront_map[neighbor] == EMPTY:
+    #                 wavefront_map[neighbor] = wavefront_value + 1
+    #
+    #     wavefront_value += 1
 
-            for neighbor in neighbors:
-                if 0 <= neighbor[0] < wavefront_map.shape[0] and 0 <= neighbor[1] < wavefront_map.shape[1] and wavefront_map[neighbor] == EMPTY:
-                    wavefront_map[neighbor] = wavefront_value + 1
-
-        wavefront_value += 1
-
+    # print("plotting")
     # plt.imsave("map.png",map)
     # plt.imsave("wavefront.png",wavefront_map)
 
