@@ -279,8 +279,8 @@ class Roamer:
 
         map_matrix = cv2.resize(self.map.get_map_matrix(), (0, 0), fx=1/MAP_SCALE, fy=1/MAP_SCALE, interpolation=cv2.INTER_NEAREST_EXACT)
 
-        plt.imsave(f"map_{self.drone.identifier}.png",self.map.get_map_matrix())
-        plt.imsave(f"map_r_{self.drone.identifier}.png",map_matrix)
+        # plt.imsave(f"map_{self.drone.identifier}.png",self.map.get_map_matrix())
+        # plt.imsave(f"map_r_{self.drone.identifier}.png",map_matrix)
 
         frontiers_output, frontier_count = get_frontiers(map_matrix, drone_position_grid.array//MAP_SCALE, frontiers_threshold)
         vector_frontiers = []
