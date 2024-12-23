@@ -674,7 +674,7 @@ class FrontierDrone(DroneAbstract):
         """
         checks if the simulation time limit is reached
         """
-        max_timestep = self._misc_data.max_timestep_limit * 0.2
+        max_timestep = self._misc_data.max_timestep_limit * 0.85
         max_wall_time = self._misc_data.max_walltime_limit * 0.85
         return self.elapsed_timestep >= max_timestep or self.elapsed_walltime >= max_wall_time
 
