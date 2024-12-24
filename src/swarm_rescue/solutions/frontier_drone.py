@@ -46,7 +46,6 @@ class FrontierDrone(DroneAbstract):
         self.START_IDLE_TIME = FrontierDrone.START_IDLE_TIME
 
         self.path : List[Vector2D] = []
-        self.waypoint_index : Optional[int] = None # The index to the next waypoint to go to
         self.drone_angle_offset : float = 0 # The angle offset of the drone that can be changed by the states
         self.found_wounded : bool = False # True if the drone has found a wounded person
         self.last_positions : Deque[Vector2D] = deque()
@@ -58,7 +57,6 @@ class FrontierDrone(DroneAbstract):
         self.center_angle : Optional[float] = None # angle from the visible rescue center
         self.rescue_center_dist : Optional[float] = None # distance from the visible rescue center
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
-        self.target: Optional[Vector2D] = None # target for the drone for the path planning
         self.killed_drones : List[int] = [] # the list of killed drones ids
 
         self.command_pos: Vector2D = Vector2D()
@@ -73,7 +71,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
@@ -141,10 +139,11 @@ class FrontierDrone(DroneAbstract):
 
     @property
     def next_waypoint(self) -> Optional[Vector2D]:
-        if self.waypoint_index is None or self.waypoint_index>=len(self.path):
-            return None
-        else:
-            return self.path[self.waypoint_index]
+        return self.localizer.next_waypoint
+
+    @property
+    def target(self) -> Optional[Vector2D]:
+        return self.localizer.target
 
     @property
     def has_collided(self) -> bool:
@@ -179,20 +178,6 @@ class FrontierDrone(DroneAbstract):
         return drone_row * size + size/2, drone_col * size + size/2
 
 
-    def check_waypoint(self) -> bool:
-        """
-        checks if the drone has reached the waypoint
-        """
-        next_waypoint: Vector2D = self.next_waypoint
-        if next_waypoint is None:
-            return False
-
-        if (len(self.path)==0):
-            return self.drone_position.distance(next_waypoint) < 80
-
-        return self.drone_position.distance(next_waypoint) < 40
-
-
     def define_message_for_all(self):
         data = DroneData(
             id = self.identifier,
@@ -210,12 +195,6 @@ class FrontierDrone(DroneAbstract):
             rescue_center_position=self.rescue_center_position
         )
         return data
-
-    def waypoint_index(self) -> Vector2D:
-        """
-        returns the position of the drone
-        """
-        return self.drone_position
 
     def add_wounded(self, data_wounded):
         """
@@ -402,24 +381,6 @@ class FrontierDrone(DroneAbstract):
         return self.map.shortest_path(self.drone_position, pos)[0]
 
 
-    # TODO improve using pure pursuit
-    def update_waypoint_index(self) -> None:
-        if self.waypoint_index is None:
-            self.target = None
-            return
-
-        curr_proj: Optional[Vector2D] = None
-        if 0 < self.waypoint_index <= len(self.path) - 1 and self.path[self.waypoint_index-1] != self.path[self.waypoint_index]:
-            curr_proj = self.drone_position.project(self.path[self.waypoint_index-1],self.path[self.waypoint_index])
-            adv_proj = curr_proj + (self.path[self.waypoint_index]-self.path[self.waypoint_index-1]).normalize()*40
-            if adv_proj.distance(self.path[self.waypoint_index-1]) >= self.path[self.waypoint_index].distance(self.path[self.waypoint_index-1]):
-                curr_proj = self.path[self.waypoint_index]
-            else:
-                curr_proj = adv_proj
-
-        self.target = curr_proj
-
-
     def compute_rescue_center_position(self):
         """
         computes the position of the rescue center
@@ -601,17 +562,13 @@ class FrontierDrone(DroneAbstract):
         """
         resets the path
         """
-        self.path = []
-        self.waypoint_index = None
+        self.localizer.reset_path()
 
     def set_path(self, path: Optional[List[Vector2D]]) -> None:
         """
         set a new path
         """
-        if path is None:
-            return
-        self.path = path
-        self.waypoint_index = 1
+        self.localizer.set_path(path)
 
     def compute_kill_zone(self):
         """
@@ -856,9 +813,9 @@ class FrontierDrone(DroneAbstract):
 
 
         if self.debug_path:
-            for k in range(len(self.path)-1):
-                pt1 = self.path[k].array + np.array(self.size_area) / 2
-                pt2 = self.path[k+1].array + np.array(self.size_area) / 2
+            for k in range(len(self.localizer.path)-1):
+                pt1 = self.localizer.path[k].array + np.array(self.size_area) / 2
+                pt2 = self.localizer.path[k+1].array + np.array(self.size_area) / 2
                 arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(0, 255, 0))
 
             if self.next_waypoint is not None:
@@ -866,8 +823,8 @@ class FrontierDrone(DroneAbstract):
                 pt2 = self.drone_position.array + np.array(self.size_area) / 2
                 arcade.draw_line(pt2[0], pt2[1], pt1[0], pt1[1], color=(255, 0, 0))
 
-            if self.target is not None:
-                pt = self.target.array + np.array(self.size_area) / 2
+            if self.localizer.target is not None:
+                pt = self.localizer.target.array + np.array(self.size_area) / 2
                 arcade.draw_circle_filled(pt[0], pt[1], 10, [255,0,255])
 
         if self.debug_kill_zones and self.kill_zone_mode:

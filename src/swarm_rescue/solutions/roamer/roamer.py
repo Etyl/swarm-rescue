@@ -116,7 +116,7 @@ class RoamerController(StateMachine):
         if self.count_close_previous_searching_start_point >= self._COUNT_CLOSE_PREVIOUS_SEARCHING_START_POINT_THRESHOLD: return True
 
         # in case the drone has ended its path
-        if self.drone.waypoint_index is None: return True
+        if self.drone.next_waypoint is None: return True
 
         # if there is no target
         if self.target is None or self.target==0: return True
@@ -127,6 +127,8 @@ class RoamerController(StateMachine):
         """
         checks if the drone has reached the waypoint
         """
+        if len(self.drone.localizer.path) == 0:
+            return False
 
         dist = self.drone.drone_position.distance(self.target)
         if len(self.drone.path) == 0: return dist < 20
@@ -159,7 +161,6 @@ class RoamerController(StateMachine):
 
         self.none_target_count = 0 # reset none target counter
 
-        self.drone.waypoint_index = 1
 
     def before_searching_for_target(self):
         pass
@@ -170,7 +171,8 @@ class RoamerController(StateMachine):
         # END OTHER IMPL - ASYNC
         self.drone.add_searching_time()
         if self.last_time_updates >= self._COMPUTE_FRONTIER_COOLDOWN:
-            self.drone.path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
+            path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
+            self.drone.set_path(path)
             if not self.first_time:
                 self.last_time_updates = 0
             else:

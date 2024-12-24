@@ -50,6 +50,8 @@ class Localizer:
         self.confidence_position = 0
         self.time_approaching_center = 0
 
+        # State
+
         self._drone_velocity: Vector2D = Vector2D()
         self._drone_velocity_angle: float = 0
         self._drone_position: Vector2D = Vector2D()
@@ -69,6 +71,12 @@ class Localizer:
         self._theoretical_velocity: Vector2D = Vector2D(INF,INF)
         self._theoretical_angle: float = 0
         self._theoretical_angle_velocity: float = 0
+
+        # Path planning
+
+        self.path: List[Vector2D] = []
+        self.waypoint_index: Optional[int] = None  # The index to the next waypoint to go to
+        self.target: Optional[Vector2D] = None
 
     @property
     def drone_speed(self) -> float:
@@ -107,6 +115,14 @@ class Localizer:
         if self._measured_position is None:
             return None
         return self._measured_position.copy()
+
+    @property
+    def next_waypoint(self) -> Optional[Vector2D]:
+        if self.waypoint_index is None or self.waypoint_index >= len(self.path):
+            return None
+        else:
+            return self.path[self.waypoint_index]
+
 
     def update_previous(self) -> None:
         if self._measured_velocity is not None:
@@ -392,19 +408,70 @@ class Localizer:
                    "rotation": 0.0,
                    "grasper": 0}
 
-        self.drone.update_waypoint_index()
-        if self.drone.next_waypoint is not None and self.drone.check_waypoint():
-            if self.drone.check_waypoint():
-                if self.drone.waypoint_index < len(self.drone.path)-1:
-                    self.drone.waypoint_index += 1
-                    self.drone.update_waypoint_index()
+        self.update_waypoint_index()
+        if self.next_waypoint is not None and self.check_waypoint():
+            if self.check_waypoint():
+                if self.waypoint_index < len(self.path)-1:
+                    self.waypoint_index += 1
+                    self.update_waypoint_index()
                 else:
-                    self.drone.reset_path()
+                    self.reset_path()
 
-        if self.drone.target is None or self.drone.drone_position is None:
-            self.drone.reset_path()
+        if self.target is None or self.drone_position is None:
+            self.reset_path()
             return command
 
-        command = self.get_control_from_target(self.drone.target)
+        command = self.get_control_from_target(self.target)
 
         return command
+
+    # TODO improve using pure pursuit
+    def update_waypoint_index(self) -> None:
+        if self.waypoint_index is None:
+            self.target = None
+            return
+
+        curr_proj: Optional[Vector2D] = None
+        if 0 < self.waypoint_index <= len(self.path) - 1 and self.path[self.waypoint_index - 1] != self.path[
+            self.waypoint_index]:
+            curr_proj = self.drone_position.project(self.path[self.waypoint_index - 1],
+                                                    self.path[self.waypoint_index])
+            adv_proj = curr_proj + (
+                        self.path[self.waypoint_index] - self.path[self.waypoint_index - 1]).normalize() * 40
+            if adv_proj.distance(self.path[self.waypoint_index - 1]) >= self.path[self.waypoint_index].distance(
+                    self.path[self.waypoint_index - 1]):
+                curr_proj = self.path[self.waypoint_index]
+            else:
+                curr_proj = adv_proj
+
+        self.target = curr_proj
+
+
+    def check_waypoint(self) -> bool:
+        """
+        checks if the drone has reached the waypoint
+        """
+        next_waypoint: Vector2D = self.next_waypoint
+        if next_waypoint is None:
+            return False
+
+        if (len(self.path)==0):
+            return self.drone_position.distance(next_waypoint) < 80
+
+        return self.drone_position.distance(next_waypoint) < 40
+
+    def reset_path(self) -> None:
+        """
+        resets the path
+        """
+        self.path = []
+        self.waypoint_index = None
+
+    def set_path(self, path: Optional[List[Vector2D]]) -> None:
+        """
+        set a new path
+        """
+        if path is None:
+            return
+        self.path = path
+        self.waypoint_index = 1
