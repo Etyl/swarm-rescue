@@ -128,10 +128,10 @@ class RoamerController(StateMachine):
         checks if the drone has reached the waypoint
         """
 
-        dist = self.drone.get_position().distance(self.target)
+        dist = self.drone.drone_position.distance(self.target)
         if len(self.drone.path) == 0: return dist < 20
 
-        v1 : Vector2D = self.target- self.drone.get_position()
+        v1 : Vector2D = self.target- self.drone.drone_position
 
         v2 : Vector2D = self.drone.path[-1] - self.map.grid_to_world(self.target)
         
@@ -204,7 +204,7 @@ class RoamerController(StateMachine):
                             "grasper": 0}
             return
         
-        self.previous_searching_start_point = self.drone.get_position()
+        self.previous_searching_start_point = self.drone.drone_position
         self.count_close_previous_searching_start_point = 0
         
         self.force_going_to_target()
@@ -231,7 +231,7 @@ class RoamerController(StateMachine):
         """
         if self.previous_searching_start_point is None: return False
 
-        dist = self.drone.get_position().distance(self.previous_searching_start_point)
+        dist = self.drone.drone_position.distance(self.previous_searching_start_point)
         return dist < threshold
 
 
@@ -273,7 +273,7 @@ class Roamer:
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
 
-        drone_position = self.drone.get_position()
+        drone_position = self.drone.drone_position
 
         drone_position_grid = self.map.world_to_grid(drone_position)
 
@@ -497,7 +497,7 @@ class Roamer:
             - target: the target
         """
         if target is None: return np.inf, 1
-        path, next_waypoint = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target), fast=True)
+        path, next_waypoint = self.map.shortest_path(self.drone.drone_position, self.map.grid_to_world(target), fast=True)
 
         if path is None or len(path) <= 1:
             return np.inf, 0
@@ -506,7 +506,7 @@ class Roamer:
         for k in range(len(path)-1):
             path_length += path[k].distance(path[k+1])
         
-        waypoint_direction : Vector2D = next_waypoint - self.drone.get_position()
+        waypoint_direction : Vector2D = next_waypoint - self.drone.drone_position
         waypoint_direction.normalize()
 
         direction = self.drone.drone_direction_group
@@ -528,10 +528,10 @@ class Roamer:
         if target is None:
             return [], None
         
-        if self.drone.get_position().distance(self.drone.map.grid_to_world(target)) < 50:
+        if self.drone.drone_position.distance(self.drone.map.grid_to_world(target)) < 50:
             return [], 0
 
-        path = self.map.shortest_path(self.drone.get_position(), self.map.grid_to_world(target))[0]
+        path = self.map.shortest_path(self.drone.drone_position, self.map.grid_to_world(target))[0]
 
         if path is None:
             return [], None

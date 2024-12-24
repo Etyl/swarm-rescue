@@ -196,8 +196,8 @@ class FrontierDrone(DroneAbstract):
     def define_message_for_all(self):
         data = DroneData(
             id = self.identifier,
-            position = self.get_position(),
-            angle = self.get_angle(),
+            position = self.drone_position,
+            angle = self.drone_angle,
             vel_angle = self.localizer.drone_velocity_angle,
             wounded_target = self.wounded_target,
             map = self.map,
@@ -211,18 +211,11 @@ class FrontierDrone(DroneAbstract):
         )
         return data
 
-    def get_position(self) -> Vector2D:
+    def waypoint_index(self) -> Vector2D:
         """
         returns the position of the drone
         """
         return self.drone_position
-
-    def get_angle(self) -> float:
-        """
-        returns the angle of the drone
-        """
-        return self.drone_angle
-
 
     def add_wounded(self, data_wounded):
         """
@@ -231,7 +224,7 @@ class FrontierDrone(DroneAbstract):
 
         def get_wounded_position():
             pos = self.drone_position.copy()
-            angle = normalize_angle(self.get_angle() + data_wounded.angle)
+            angle = normalize_angle(self.drone_angle + data_wounded.angle)
             pos.setX(pos.x + data_wounded.distance * math.cos(angle))
             pos.setY(pos.y + data_wounded.distance * math.sin(angle))
             return pos
@@ -260,7 +253,7 @@ class FrontierDrone(DroneAbstract):
 
         for k in range(len(self.wounded_found_list)-1,-1,-1):
             self.wounded_found_list[k].last_seen += 1
-            if self.get_position().distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE and self.wounded_found_list[k].last_seen > 5:
+            if self.drone_position.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE and self.wounded_found_list[k].last_seen > 5:
                 self.wounded_found_list.pop(k)
 
     def update_drones(self, drone_data : DroneData):
@@ -320,7 +313,7 @@ class FrontierDrone(DroneAbstract):
 
             # Select the best one among wounded persons detected
             for i,wounded in enumerate(self.wounded_found_list):
-                distance = self.get_position().distance(wounded.position)
+                distance = self.drone_position.distance(wounded.position)
 
                 # check if the wounded is taken by another drone
                 if self.wounded_visible and wounded.drone_taker is not None and wounded.drone_taker > self.identifier:
@@ -417,7 +410,7 @@ class FrontierDrone(DroneAbstract):
 
         curr_proj: Optional[Vector2D] = None
         if 0 < self.waypoint_index <= len(self.path) - 1 and self.path[self.waypoint_index-1] != self.path[self.waypoint_index]:
-            curr_proj = self.get_position().project(self.path[self.waypoint_index-1],self.path[self.waypoint_index])
+            curr_proj = self.drone_position.project(self.path[self.waypoint_index-1],self.path[self.waypoint_index])
             adv_proj = curr_proj + (self.path[self.waypoint_index]-self.path[self.waypoint_index-1]).normalize()*40
             if adv_proj.distance(self.path[self.waypoint_index-1]) >= self.path[self.waypoint_index].distance(self.path[self.waypoint_index-1]):
                 curr_proj = self.path[self.waypoint_index]
@@ -563,7 +556,7 @@ class FrontierDrone(DroneAbstract):
             if not self.map.is_reachable(self.drone_position, self.target):
                 self.reset_path()
 
-        self.last_positions.append(self.get_position())
+        self.last_positions.append(self.drone_position)
         if len(self.last_positions) >= FrontierDrone.POSITION_QUEUE_SIZE:
             self.last_positions.popleft()
         else:
@@ -578,8 +571,8 @@ class FrontierDrone(DroneAbstract):
         closest_drone = None
         dist = np.inf
         for drone in self.drone_list:
-            if closest_drone is None or drone.position.distance(self.get_position()) < dist:
-                dist = drone.position.distance(self.get_position())
+            if closest_drone is None or drone.position.distance(self.drone_position) < dist:
+                dist = drone.position.distance(self.drone_position)
                 closest_drone = drone
 
         if (closest_drone is not None and
@@ -696,7 +689,7 @@ class FrontierDrone(DroneAbstract):
         self.test_stuck()
 
         if self.return_zone_position is None:
-            self.return_zone_position = self.get_position().copy()
+            self.return_zone_position = self.drone_position.copy()
 
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
@@ -753,7 +746,7 @@ class FrontierDrone(DroneAbstract):
         """
         updates the map
         """
-        estimated_pose = Pose(self.get_position().array, self.get_angle())
+        estimated_pose = Pose(self.drone_position.array, self.drone_angle)
 
         if not self.gps_disabled:
             self.map.update(estimated_pose, self.lidar(), self)
@@ -783,7 +776,7 @@ class FrontierDrone(DroneAbstract):
 
         # draw frontiers
         if self.debug_frontiers:
-            pos = self.get_position().array + np.array(self.size_area) / 2
+            pos = self.drone_position.array + np.array(self.size_area) / 2
             for frontierId, frontier in enumerate(self.frontiers):
                 for point in frontier:
                     if frontierId == self.selected_frontier_id:
@@ -794,28 +787,28 @@ class FrontierDrone(DroneAbstract):
                         arcade.draw_rectangle_filled(pos[0], pos[1], 2, 2, map_id_to_color[self.identifier])
 
         if self.debug_repulsion:
-            pos = self.get_position().array + np.array(self.size_area) / 2
-            repulsion = 2*self.repulsion_drone.rotate(self.get_angle())
+            pos = self.drone_position.array + np.array(self.size_area) / 2
+            repulsion = 2*self.repulsion_drone.rotate(self.drone_angle)
             arcade.draw_line(pos[0], pos[1], pos[0]+repulsion.x*20, pos[1]+repulsion.y*20, arcade.color.RED)
 
-            repulsion = 2*self.repulsion_wall.rotate(self.get_angle())
+            repulsion = 2*self.repulsion_wall.rotate(self.drone_angle)
             arcade.draw_line(pos[0], pos[1], pos[0] + repulsion.x * 20, pos[1] + repulsion.y * 20, arcade.color.GREEN)
 
-            repulsion = 2*self.closest_wall.rotate(self.get_angle())
+            repulsion = 2*self.closest_wall.rotate(self.drone_angle)
             arcade.draw_line(pos[0], pos[1], pos[0] + repulsion.x * 20, pos[1] + repulsion.y * 20, arcade.color.BLUE)
 
         if self.debug_wall_repulsion:
-            pos = self.get_position().array + np.array(self.size_area) / 2
-            wall_repulsion = self.repulsion_wall.rotate(self.get_angle())
+            pos = self.drone_position.array + np.array(self.size_area) / 2
+            wall_repulsion = self.repulsion_wall.rotate(self.drone_angle)
             arcade.draw_line(pos[0], pos[1], pos[0]+wall_repulsion.x*0.25*MAX_RANGE_LIDAR_SENSOR, pos[1]+wall_repulsion.y*0.25*MAX_RANGE_LIDAR_SENSOR, arcade.color.RED)
 
         if self.debug_lidar:
             lidar_dist = self.lidar().get_sensor_values()[::].copy()
             lidar_angles = self.lidar().ray_angles[::].copy()
             for k in range(len(lidar_dist)):
-                pos = self.get_position().array + np.array(self.size_area) / 2
-                pos[0] += lidar_dist[k]*math.cos(lidar_angles[k]+self.get_angle())
-                pos[1] += lidar_dist[k]*math.sin(lidar_angles[k]+self.get_angle())
+                pos = self.drone_position.array + np.array(self.size_area) / 2
+                pos[0] += lidar_dist[k]*math.cos(lidar_angles[k]+self.drone_angle)
+                pos[1] += lidar_dist[k]*math.sin(lidar_angles[k]+self.drone_angle)
                 arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
 
         if self.debug_wounded:
@@ -829,14 +822,14 @@ class FrontierDrone(DroneAbstract):
                 arcade.draw_circle_outline(pos[0], pos[1],FrontierDrone.WOUNDED_DISTANCE, arcade.color.RED)
 
         if self.debug_positions:
-            pos = self.get_position().array + np.array(self.size_area) / 2
+            pos = self.drone_position.array + np.array(self.size_area) / 2
             if self._command["grasper"] == 1:
                 arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.RED)
             else:
                 arcade.draw_circle_filled(pos[0], pos[1],5, arcade.color.GREEN)
 
             direction = np.array([1,0])
-            rot = np.array([[math.cos(self.get_angle()), math.sin(self.get_angle())],[-math.sin(self.get_angle()), math.cos(self.get_angle())]])
+            rot = np.array([[math.cos(self.drone_angle), math.sin(self.drone_angle)],[-math.sin(self.drone_angle), math.cos(self.drone_angle)]])
             direction = direction@rot
             arcade.draw_line(pos[0], pos[1], pos[0]+direction[0]*50, pos[1]+direction[1]*50, arcade.color.RED)
             arcade.draw_text(f"{self.localizer.confidence_position:.3f}", pos[0]+10, pos[1]+10, arcade.color.BLACK, font_size=15)
@@ -849,11 +842,11 @@ class FrontierDrone(DroneAbstract):
                 arcade.draw_circle_filled(pos[0], pos[1], 10, arcade.color.BLUE)
 
             # draw drone health over the drone
-            pos = self.get_position().array + np.array(self.size_area) / 2
+            pos = self.drone_position.array + np.array(self.size_area) / 2
             arcade.draw_text(f"{self.drone_health}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
         if self.debug_frontiers:
-            pos = self.get_position().array + np.array(self.size_area) / 2
+            pos = self.drone_position.array + np.array(self.size_area) / 2
             arcade.draw_text(str(self.identifier), pos[0], pos[1], map_id_to_color[self.identifier], 20)
 
     def draw_bottom_layer(self):

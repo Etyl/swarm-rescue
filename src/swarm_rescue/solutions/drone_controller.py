@@ -144,7 +144,7 @@ class DroneController(StateMachine):
         if self.drone.wounded_target is None:
             self.command["grasper"] = 0
             return
-        dist = self.drone.wounded_target.distance(self.drone.get_position())
+        dist = self.drone.wounded_target.distance(self.drone.drone_position)
         if dist < 80:
             self.command["grasper"] = 1
         else:

@@ -44,7 +44,7 @@ class Localizer:
     tau = 20
     queue_size = 3
 
-    def __init__(self, drone: FrontierDrone):
+    def __init__(self, drone: FrontierDrone) -> None:
         self.drone = drone
         self.last_impact: int = 10000
         self.confidence_position = 0
@@ -80,7 +80,7 @@ class Localizer:
 
     @property
     def drone_velocity(self) -> Vector2D:
-        return self._drone_velocity
+        return self._drone_velocity.copy()
 
     @property
     def drone_velocity_angle(self) -> float:
@@ -88,7 +88,7 @@ class Localizer:
 
     @property
     def drone_position(self) -> Vector2D:
-        return self._drone_position
+        return self._drone_position.copy()
 
     @property
     def drone_angle(self) -> float:
@@ -96,15 +96,17 @@ class Localizer:
 
     @property
     def theoretical_position(self) -> Vector2D:
-        return self._theoretical_position
+        return self._theoretical_position.copy()
 
     @property
     def theoretical_velocity(self) -> Vector2D:
-        return self._theoretical_velocity
+        return self._theoretical_velocity.copy()
 
     @property
-    def measured_position(self) -> Vector2D:
-        return self._measured_position
+    def measured_position(self) -> Optional[Vector2D]:
+        if self._measured_position is None:
+            return None
+        return self._measured_position.copy()
 
     def update_previous(self) -> None:
         if self._measured_velocity is not None:
