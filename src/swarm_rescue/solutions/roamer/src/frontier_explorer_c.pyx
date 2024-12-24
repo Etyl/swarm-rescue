@@ -138,6 +138,9 @@ cdef dfs_fill_array(cnp.ndarray[cnp.int32_t, ndim=2] arr, int start_x, int start
     dx[:] = [-1, 1, 0, 0, -1, -1, 1, 1]
     dy[:] = [0, 0, -1, 1, -1, 1, -1, 1]
 
+    start_x = max(0, min(rows-1, start_x))
+    start_y = max(0, min(cols-1, start_y))
+
     # Push the starting position onto the stack
     stack.append((start_x, start_y))
     arr[start_x,start_y] = 1
