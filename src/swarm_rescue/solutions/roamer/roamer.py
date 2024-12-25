@@ -34,7 +34,7 @@ class RoamerController(StateMachine):
 
     # maximum number of times the drone can be in the same position
     # i.e. the maximum number of times the check_target_reached function can return False
-    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD : int = 40
+    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD : int = 80
 
     # maximum number of times the drone can be close to the previous searching start point
     # i.e. the maximum number of times the test_position_close_start_point function can return True
@@ -119,7 +119,7 @@ class RoamerController(StateMachine):
         if self.drone.next_waypoint is None: return True
 
         # if there is no target
-        if self.target is None or self.target==0: return True
+        if self.target is None: return True
 
         return False
     
@@ -171,7 +171,7 @@ class RoamerController(StateMachine):
         # END OTHER IMPL - ASYNC
         self.drone.add_searching_time()
         if self.last_time_updates >= self._COMPUTE_FRONTIER_COOLDOWN:
-            path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold)
+            path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold, last_target=self.target)
             self.drone.set_path(path)
             if not self.first_time:
                 self.last_time_updates = 0
@@ -182,13 +182,6 @@ class RoamerController(StateMachine):
         else:
             self.last_time_updates += 1
             return
-        # if need to wait
-        if self.target == -1:
-            self.command = {"forward": 0.0,
-                            "lateral": 0.0,
-                            "rotation": 0.1,
-                            "grasper": 0}
-            return
 
         # if no target found
         if self.target is None:
@@ -196,14 +189,6 @@ class RoamerController(StateMachine):
 
             if self.none_target_count >= self._NONE_TARGET_FOUND_THRESHOLD:
                 self.frontiers_threshold = max(self._MIN_FRONTIERS_THRESHOLD, self.frontiers_threshold - 1)
-            return
-        
-        # if target is too close
-        if self.target == 0:
-            self.command = {"forward": 0.0,
-                            "lateral": 0.0,
-                            "rotation": 0.0,
-                            "grasper": 0}
             return
         
         self.previous_searching_start_point = self.drone.drone_position
@@ -269,9 +254,9 @@ class Roamer:
             file.write('\n') 
 
 
-    def find_next_unexplored_target(self, frontiers_threshold: int) -> Optional[Vector2D]:
+    def find_next_unexplored_target(self, frontiers_threshold: int, last_target: Optional[Vector2D]) -> Optional[Vector2D]:
         """
-        Find the closest unexplored target from the drone's curretn position
+        Find the closest unexplored target from the drone's current position
         It comes to finding the closest INEXPLORED point which is next to a explored point in the map
         """
 
@@ -306,7 +291,6 @@ class Roamer:
         selected_frontiers_distance : List[float] = []
         selected_frontiers_repulsion_angle : List[float] = []
 
-        
         # select the closest frontiers
         for idx, frontier in enumerate(self.frontiers):
             
@@ -324,6 +308,16 @@ class Roamer:
                 selected_frontiers_distance[max_idx] = distance
                 continue
 
+        # add the 2 largest frontiers
+        sizes = [len(frontier) for frontier in self.frontiers]
+        sizes_sort = sorted(sizes, reverse=True)
+        for max_val in sizes_sort[:min(2,len(sizes))]:
+            idx = sizes.index(max_val)
+            if idx not in selected_frontiers_id:
+                max_idx = selected_frontiers_distance.index(max(selected_frontiers_distance))
+                selected_frontiers_id[max_idx] = idx
+                selected_frontiers_distance[max_idx] = 0
+
         frontiers = [frontier_centers[idx] for idx in selected_frontiers_id]
 
         # results = pool.map(self.get_path_length, frontiers)
@@ -340,6 +334,14 @@ class Roamer:
         selected_frontiers_distance_array = np.array(selected_frontiers_distance)
         selected_frontiers_repulsion_angle_array = np.array(selected_frontiers_repulsion_angle)
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
+        frontiers_distance_last = np.zeros_like(frontiers_size)
+        if last_target is not None:
+            frontiers_distance_last = np.array([
+                last_target.distance(frontier_centers[idx]) for idx in selected_frontiers_id
+            ])
+        # TODO chose what normalisation (softmax or divide by max)
+        frontiers_distance_last = np.exp(frontiers_distance_last-np.max(frontiers_distance_last))
+        frontiers_distance_last = frontiers_distance_last / np.sum(frontiers_distance_last)
 
         # normalize
         frontier_distance_noInf = [x for x in selected_frontiers_distance_array if x != -np.inf and x != np.inf]
@@ -360,6 +362,7 @@ class Roamer:
         obs['count'] = frontier_count
         obs['distance'] = selected_frontiers_distance_array
         obs['angle'] = selected_frontiers_repulsion_angle_array
+        obs['distance_last'] = frontiers_distance_last
         for key in obs:
             if len(obs[key]) < FRONTIER_COUNT :
                 obs[key] = np.concatenate((obs[key], np.zeros(FRONTIER_COUNT - len(obs[key]))), axis=0)
@@ -374,7 +377,9 @@ class Roamer:
             score = (2 * obs["distance"] +
                      obs["size"] +
                      obs["count"] +
-                     4 * obs["angle"])
+                     4 * obs["angle"] +
+                     2 * obs["distance_last"]
+            )
 
         else:
             total_obs = np.concatenate(list(obs.values()), axis=0)
@@ -519,19 +524,20 @@ class Roamer:
 
 
 
-    def find_path(self, frontiers_threshold):
+    def find_path(self, frontiers_threshold: int, last_target:Optional[Vector2D]):
         """
         Find the path to the target
         params
             - sampling_rate: the sampling rate of the path (in order to reduce the number of points)
+            - last_target: the last selected frontier
         """
-        target = self.find_next_unexplored_target(frontiers_threshold)
+        target = self.find_next_unexplored_target(frontiers_threshold, last_target)
 
         if target is None:
             return [], None
         
         if self.drone.drone_position.distance(self.drone.map.grid_to_world(target)) < 50:
-            return [], 0
+            return [], None
 
         path = self.map.shortest_path(self.drone.drone_position, self.map.grid_to_world(target))[0]
 
