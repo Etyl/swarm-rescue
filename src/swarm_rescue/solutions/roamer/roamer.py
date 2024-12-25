@@ -317,20 +317,23 @@ class Roamer:
         np.random.shuffle(selected_frontiers_id)
 
         frontiers = [frontier_centers[idx] for idx in selected_frontiers_id]
-        print(len(self.frontiers), len(frontiers))
 
-        frontiers_distance_last = np.zeros(FRONTIER_COUNT)
+        frontiers_distance_last = []
         if last_target is not None:
-            for i,frontier_center in enumerate(frontiers):
-                frontiers_distance_last[i] = last_target.distance(frontier_center)
+            for frontier_center in frontiers:
+                frontiers_distance_last.append(last_target.distance(frontier_center))
+        frontiers_distance_last_arr = np.array(frontiers_distance_last)
+        frontiers_distance_last_arr = frontiers_distance_last_arr / np.linalg.norm(map_matrix.shape)
 
         selected_frontiers_distance = []
         selected_frontiers_repulsion_angle = []
+        selected_frontiers_direction_angle = []
 
         for frontier in frontiers:
-            distance, repulsion_angle = self.get_path_length(frontier)
+            distance, repulsion_angle, direction_angle = self.get_path_length(frontier)
             selected_frontiers_distance.append(distance)
             selected_frontiers_repulsion_angle.append(repulsion_angle)
+            selected_frontiers_direction_angle.append(direction_angle)
 
         obs: Dict[str,np.ndarray] = {}
 
@@ -339,14 +342,8 @@ class Roamer:
         frontier_count = np.array([frontier_count[idx] for idx in selected_frontiers_id])
         selected_frontiers_distance_array = np.array(selected_frontiers_distance)
         selected_frontiers_repulsion_angle_array = np.array(selected_frontiers_repulsion_angle)
+        selected_frontiers_direction_angle_array = np.array(selected_frontiers_direction_angle)
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
-        if last_target is not None:
-            frontiers_distance_last = np.array([
-                last_target.distance(frontier_centers[idx]) for idx in selected_frontiers_id
-            ])
-        # TODO chose what normalisation (softmax or divide by max)
-        frontiers_distance_last = np.exp(frontiers_distance_last-np.max(frontiers_distance_last))
-        frontiers_distance_last = frontiers_distance_last / np.sum(frontiers_distance_last)
 
         # normalize
         frontier_distance_noInf = [x for x in selected_frontiers_distance_array if x != -np.inf and x != np.inf]
@@ -362,12 +359,14 @@ class Roamer:
 
         selected_frontiers_distance_array = 1 - selected_frontiers_distance_array
         selected_frontiers_repulsion_angle_array = 1 - selected_frontiers_repulsion_angle_array
+        selected_frontiers_direction_angle_array = 1 - selected_frontiers_direction_angle_array
 
         obs['size'] = frontiers_size
         obs['count'] = frontier_count
         obs['distance'] = selected_frontiers_distance_array
-        obs['angle'] = selected_frontiers_repulsion_angle_array
-        obs['distance_last'] = frontiers_distance_last
+        obs['repulsion_angle'] = selected_frontiers_repulsion_angle_array
+        obs['direction_angle'] = selected_frontiers_direction_angle_array
+        obs['distance_last'] = frontiers_distance_last_arr
         for key in obs:
             if len(obs[key]) < FRONTIER_COUNT :
                 obs[key] = np.concatenate((obs[key], np.zeros(FRONTIER_COUNT - len(obs[key]))), axis=0)
@@ -380,11 +379,11 @@ class Roamer:
         score = None
         if self.policy is None:
             score = (2 * obs["distance"] +
-                     obs["size"] +
-                     obs["count"] +
-                     4 * obs["angle"] +
-                     0.5 * obs["distance_last"]
-
+                     1 * obs["size"] +
+                     1 * obs["count"] +
+                     4 * obs["repulsion_angle"] +
+                     0.5 * obs["distance_last"] +
+                     1 * obs['direction_angle']
             )
 
         else:
@@ -503,17 +502,17 @@ class Roamer:
 
 
     # TODO: fix angle (fast shortest_path gives A* path so no indication on direction)
-    def get_path_length(self, target : Optional[Vector2D]) -> Tuple[float,float]:
+    def get_path_length(self, target : Optional[Vector2D]) -> Tuple[float,float,float]:
         """
         Get the length of the path to the target
         params:
             - target: the target
         """
-        if target is None: return np.inf, 1
+        if target is None: return np.inf, 1, 1
         path, next_waypoint = self.map.shortest_path(self.drone.drone_position, self.map.grid_to_world(target), fast=True)
 
         if path is None or len(path) <= 1:
-            return np.inf, 0
+            return np.inf, 1, 1
         
         path_length = 0
         for k in range(len(path)-1):
@@ -522,11 +521,16 @@ class Roamer:
         waypoint_direction : Vector2D = next_waypoint - self.drone.drone_position
         waypoint_direction.normalize()
 
-        direction = self.drone.drone_direction_group
-        if direction.norm()==0:
-            return path_length, 0
-        else:
-            return path_length, abs(normalize_angle(waypoint_direction.get_angle(direction)))/np.pi
+
+        direction_angle = self.drone.drone_angle - waypoint_direction.get_angle(Vector2D(1,0))
+        direction_angle = abs(normalize_angle(direction_angle))/np.pi
+
+        repulsion_angle = 1
+        repulsion_direction = self.drone.drone_direction_group
+        if repulsion_direction.norm()>0:
+            repulsion_angle = abs(normalize_angle(waypoint_direction.get_angle(repulsion_direction)))/np.pi
+
+        return path_length, repulsion_angle, direction_angle
 
 
 
