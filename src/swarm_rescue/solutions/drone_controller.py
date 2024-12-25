@@ -201,6 +201,5 @@ class DroneController(StateMachine):
     @stay_in_return_zone.enter
     def on_enter_stay_in_return_zone(self) -> None:
         self.drone.reset_path()
-        self.drone.target = None
 
 
