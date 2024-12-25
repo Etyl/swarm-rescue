@@ -7,7 +7,7 @@ from __future__ import annotations
 from solutions.mapper.mapper import Map  # type: ignore
 from solutions.mapper.mapper import Zone  # type: ignore
 from solutions.roamer.frontier_explorer import get_frontiers  # type: ignore
-from solutions.utils.constants import FRONTIER_COUNT
+from solutions.utils.constants import FRONTIER_COUNT # type: ignore
 from solutions.utils.types import Vector2D # type: ignore
 from solutions.utils.utils import normalize_angle # type: ignore
 
@@ -16,9 +16,7 @@ from typing import TYPE_CHECKING, Optional, Tuple, List, Dict
 import numpy as np
 import os
 import cv2
-import matplotlib.pyplot as plt
-import sys
-# from multiprocessing.pool import ThreadPool as Pool
+import matplotlib.pyplot as plt # type: ignore
 
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
@@ -34,7 +32,7 @@ class RoamerController(StateMachine):
 
     # maximum number of times the drone can be in the same position
     # i.e. the maximum number of times the check_target_reached function can return False
-    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD : int = 80
+    _LOOP_COUNT_GOING_TO_TARGET_THRESHOLD : int = 50
 
     # maximum number of times the drone can be close to the previous searching start point
     # i.e. the maximum number of times the test_position_close_start_point function can return True
@@ -287,43 +285,51 @@ class Roamer:
             centroid = min(frontier, key=lambda point: point.distance(frontier_center))
             frontier_centers.append(centroid)
 
-        selected_frontiers_id : List[int] = []
-        selected_frontiers_distance : List[float] = []
-        selected_frontiers_repulsion_angle : List[float] = []
+        selected_frontiers_id = []
 
-        # select the closest frontiers
-        for idx, frontier in enumerate(self.frontiers):
-            
-            frontier_center = frontier_centers[idx]
-            
-            distance = frontier_center.distance(drone_position_grid)
-            
-            if len(selected_frontiers_id) < FRONTIER_COUNT :
-                selected_frontiers_id.append(idx)
-                selected_frontiers_distance.append(distance)
-                continue
-            elif distance < max(selected_frontiers_distance):
-                max_idx = selected_frontiers_distance.index(max(selected_frontiers_distance))
-                selected_frontiers_id[max_idx] = idx
-                selected_frontiers_distance[max_idx] = distance
-                continue
+        # calculate distance to previous target
+        frontiers_distance_last = np.zeros(len(self.frontiers))
+        if last_target is not None:
+            frontiers_distance_last = np.array([
+                last_target.distance(frontier_center) for frontier_center in frontier_centers
+            ])
+        # TODO chose what normalisation (softmax or divide by max)
+        frontiers_distance_last = frontiers_distance_last / np.linalg.norm(map_matrix.shape)
 
-        # add the 2 largest frontiers
-        sizes = [len(frontier) for frontier in self.frontiers]
-        sizes_sort = sorted(sizes, reverse=True)
-        for max_val in sizes_sort[:min(2,len(sizes))]:
-            idx = sizes.index(max_val)
-            if idx not in selected_frontiers_id:
-                max_idx = selected_frontiers_distance.index(max(selected_frontiers_distance))
-                selected_frontiers_id[max_idx] = idx
-                selected_frontiers_distance[max_idx] = 0
+        # select the 2 closest frontiers to the previous target
+        if last_target is not None:
+            frontiers_distance_last_sorted = sorted(frontiers_distance_last, reverse=True)
+            for i in range(min(2, len(frontiers_distance_last_sorted))):
+                max_val = frontiers_distance_last_sorted[i]
+                idx = np.where(frontiers_distance_last == max_val)
+                selected_frontiers_id.append(idx[0][0])
+
+        # fill the rest of selected frontiers by random
+        possible_frontier_idx = set(range(len(frontier_centers)))
+        possible_frontier_idx = possible_frontier_idx - set(selected_frontiers_id)
+
+        random_size = min(len(possible_frontier_idx),FRONTIER_COUNT-len(selected_frontiers_id))
+        random_size = max(0,random_size)
+        random_idx = np.random.choice(list(possible_frontier_idx), size=random_size, replace=False)
+
+        selected_frontiers_id = selected_frontiers_id + list(random_idx)
+        selected_frontiers_id = np.array(selected_frontiers_id)
+        np.random.shuffle(selected_frontiers_id)
 
         frontiers = [frontier_centers[idx] for idx in selected_frontiers_id]
+        print(len(self.frontiers), len(frontiers))
 
-        # results = pool.map(self.get_path_length, frontiers)
-        for idx, frontier in enumerate(frontiers):
+        frontiers_distance_last = np.zeros(FRONTIER_COUNT)
+        if last_target is not None:
+            for i,frontier_center in enumerate(frontiers):
+                frontiers_distance_last[i] = last_target.distance(frontier_center)
+
+        selected_frontiers_distance = []
+        selected_frontiers_repulsion_angle = []
+
+        for frontier in frontiers:
             distance, repulsion_angle = self.get_path_length(frontier)
-            selected_frontiers_distance[idx] = distance
+            selected_frontiers_distance.append(distance)
             selected_frontiers_repulsion_angle.append(repulsion_angle)
 
         obs: Dict[str,np.ndarray] = {}
@@ -334,7 +340,6 @@ class Roamer:
         selected_frontiers_distance_array = np.array(selected_frontiers_distance)
         selected_frontiers_repulsion_angle_array = np.array(selected_frontiers_repulsion_angle)
         frontiers_size = np.array([len(frontier) for frontier in frontiers])
-        frontiers_distance_last = np.zeros_like(frontiers_size)
         if last_target is not None:
             frontiers_distance_last = np.array([
                 last_target.distance(frontier_centers[idx]) for idx in selected_frontiers_id
@@ -378,7 +383,8 @@ class Roamer:
                      obs["size"] +
                      obs["count"] +
                      4 * obs["angle"] +
-                     2 * obs["distance_last"]
+                     0.5 * obs["distance_last"]
+
             )
 
         else:

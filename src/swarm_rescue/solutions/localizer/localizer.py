@@ -74,7 +74,7 @@ class Localizer:
 
         # Path planning
 
-        self.path: List[Vector2D] = []
+        self.path: List[Vector2D] = [] # current path
         self.waypoint_index: Optional[int] = None  # The index to the next waypoint to go to
         self.target: Optional[Vector2D] = None
 
