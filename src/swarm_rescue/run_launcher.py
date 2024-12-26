@@ -10,11 +10,15 @@ import uuid
 import os
 import multiprocessing
 
+def convert_seconds(seconds):
+    return time.strftime("%H:%M:%S", time.gmtime(seconds))
+
 def launch_parallel_task(args):
     script_name, map_name, name, result_path, zone_type, video_capture_enabled = args
     os.makedirs(result_path, exist_ok=True)
     log_file_path = os.path.join(result_path, "log.txt")
     with open(log_file_path, "w") as log_file:
+        print(f"starting: {result_path}")
         subprocess.run(
             [
                 sys.executable,
@@ -85,7 +89,10 @@ if __name__ == "__main__":
 
     num_workers = min(len(tasks), 10)
 
+    time_start = time.time()
+
     with multiprocessing.Pool(processes=num_workers) as pool:
         pool.map(launch_parallel_task, tasks)
 
+    print(f"Finished tasks in {convert_seconds(time.time() - time_start)}")
     print("All run information saved in: ", name)
