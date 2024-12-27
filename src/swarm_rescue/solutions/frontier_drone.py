@@ -71,7 +71,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = False # True if the path must be displayed
+        self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_map = False
@@ -82,7 +82,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_repulsion = False
         self.debug_kill_zones = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = False
+        self.debug_frontiers = True
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -410,7 +410,12 @@ class FrontierDrone(DroneAbstract):
         repulsion = Vector2D()
         min_dist = np.inf
         for data in self.semantic_values():
-            if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE: #and not self.is_inside_return_area:
+            if (
+                data.entity_type == DroneSemanticSensor.TypeEntity.DRONE or (
+                data.entity_type == DroneSemanticSensor.TypeEntity.WOUNDED_PERSON and
+                data.grasped == True and
+                self.controller.current_state not in [self.controller.going_to_center, self.controller.approaching_center]
+            )):
                 angle = data.angle
                 dist = data.distance
                 min_dist = min(min_dist, dist)
@@ -432,7 +437,7 @@ class FrontierDrone(DroneAbstract):
             return
 
         repulsion = repulsion.normalize()
-        repulsion *= min(2.0,1.5*repulsion_coef(min_dist-20)+0.2)
+        repulsion *= min(2.0,2*repulsion_coef(min_dist))
 
         if self.controller.current_state in [self.controller.going_to_center, self.controller.approaching_wounded, self.controller.approaching_center]:
             self.repulsion_drone = 0.05 * repulsion
@@ -469,6 +474,7 @@ class FrontierDrone(DroneAbstract):
             if (data.entity_type == DroneSemanticSensor.TypeEntity.RESCUE_CENTER and
                 self.controller.current_state != self.controller.approaching_center):
                 continue
+
             i = int(round(180*((np.pi+data.angle)/(2*np.pi))))
             for k in range((i-3)%181,(i+4)%181):
                 angles_available_arr[k]=False
