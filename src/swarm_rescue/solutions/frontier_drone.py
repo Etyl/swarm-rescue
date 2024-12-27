@@ -45,7 +45,6 @@ class FrontierDrone(DroneAbstract):
 
         self.START_IDLE_TIME = FrontierDrone.START_IDLE_TIME
 
-        self.path : List[Vector2D] = []
         self.drone_angle_offset : float = 0 # The angle offset of the drone that can be changed by the states
         self.found_wounded : bool = False # True if the drone has found a wounded person
         self.last_positions : Deque[Vector2D] = deque()

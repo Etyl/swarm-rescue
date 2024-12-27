@@ -130,7 +130,7 @@ class DroneController(StateMachine):
 
     @going_to_wounded.enter
     def on_enter_going_to_wounded(self) -> None:
-        if len(self.drone.path)==0 and self.drone.next_waypoint is None:
+        if self.drone.next_waypoint is None:
             path = self.drone.get_path(self.drone.wounded_target)
             self.drone.set_path(path)
         self.command = self.drone.localizer.get_control_from_path()

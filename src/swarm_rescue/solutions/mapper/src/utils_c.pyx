@@ -44,6 +44,7 @@ cdef class Grid:
         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
         cdef float error
         cdef DTYPE_t[:, :] grid_view  # Declare memoryview for direct array access
+        cdef unexplored_count = 0
 
         # Handle NaNs
         if isnan(x_0) or isnan(y_0) or isnan(x_1) or isnan(y_1):
@@ -158,11 +159,12 @@ cdef class Grid:
         cdef int x_start, y_start, x_end, y_end, dx, dy, is_steep, y_step, y, x
         cdef float error, added_value, inverse_dist
         cdef int dist_from_start
+        cdef int unexplored_count = 0
         cdef DTYPE_t[:, :] grid_view  # Assuming DTYPE_t is defined as a float or double
 
         # Handle NaNs
         if isnan(x_0) or isnan(y_0) or isnan(x_1) or isnan(y_1):
-            return
+            return 0
 
         # Convert to grid coordinates and other setup...
         # Convert to grid coordinates
@@ -172,7 +174,7 @@ cdef class Grid:
         # Check bounds
         if (x_start < 0 or x_start >= self.x_max_grid or y_start < 0 or y_start >= self.y_max_grid or
             x_end < 0 or x_end >= self.x_max_grid or y_end < 0 or y_end >= self.y_max_grid):
-            return
+            return 0
 
         # Setup for Bresenham's line algorithm
         dx = x_end - x_start
@@ -208,9 +210,13 @@ cdef class Grid:
             # Check boundaries and add value
             if is_steep == 1:
                 if 0 <= y < self.x_max_grid and 0 <= x < self.y_max_grid:
+                    if grid_view[y, x] == 0:
+                        unexplored_count += 1
                     grid_view[y, x] += added_value
             else:
                 if 0 <= x < self.x_max_grid and 0 <= y < self.y_max_grid:
+                    if grid_view[x, y] == 0:
+                        unexplored_count += 1
                     grid_view[x, y] += added_value
                 
             error -= abs(dy)
@@ -218,15 +224,20 @@ cdef class Grid:
                 y += y_step
                 error += dx
 
+        return unexplored_count
+
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
     def add_value_along_lines_confidence(self, float x_0, float y_0, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, DTYPE_t val):
         cdef int num_points = points_x.shape[0]
         cdef int i
+        cdef int explored_count = 0
 
         for i in range(num_points):
-            self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)
+            explored_count += self.add_value_along_line_confidence(x_0, y_0, points_x[i], points_y[i], val)
+
+        return explored_count
         
     @cython.boundscheck(False)
     @cython.wraparound(False)

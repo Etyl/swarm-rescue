@@ -129,11 +129,11 @@ class RoamerController(StateMachine):
             return False
 
         dist = self.drone.drone_position.distance(self.target)
-        if len(self.drone.path) == 0: return dist < 20
+        if len(self.drone.localizer.path) == 0: return dist < 20
 
         v1 : Vector2D = self.target- self.drone.drone_position
 
-        v2 : Vector2D = self.drone.path[-1] - self.map.grid_to_world(self.target)
+        v2 : Vector2D = self.drone.localizer.path[-1] - self.map.grid_to_world(self.target)
         
         if v1.norm() == 0 or v2.norm() == 0:
             turning_angle = 0
@@ -360,6 +360,7 @@ class Roamer:
         selected_frontiers_distance_array = 1 - selected_frontiers_distance_array
         selected_frontiers_repulsion_angle_array = 1 - selected_frontiers_repulsion_angle_array
         selected_frontiers_direction_angle_array = 1 - selected_frontiers_direction_angle_array
+        frontiers_distance_last_arr = 1 - frontiers_distance_last_arr
 
         obs['size'] = frontiers_size
         obs['count'] = frontier_count
@@ -367,7 +368,16 @@ class Roamer:
         obs['repulsion_angle'] = selected_frontiers_repulsion_angle_array
         obs['direction_angle'] = selected_frontiers_direction_angle_array
         obs['distance_last'] = frontiers_distance_last_arr
-        for key in obs:
+        keys = [
+            'size',
+            'count',
+            'distance',
+            'repulsion_angle',
+            'direction_angle',
+            'distance_last'
+        ]
+        keys.sort()
+        for key in keys:
             if len(obs[key]) < FRONTIER_COUNT :
                 obs[key] = np.concatenate((obs[key], np.zeros(FRONTIER_COUNT - len(obs[key]))), axis=0)
 
@@ -378,17 +388,29 @@ class Roamer:
         # score (the higher the better)
         score = None
         if self.policy is None:
-            score = (2 * obs["distance"] +
+            score = (4 * obs["distance"] +
                      1 * obs["size"] +
                      1 * obs["count"] +
                      4 * obs["repulsion_angle"] +
-                     0.5 * obs["distance_last"] +
-                     1 * obs['direction_angle']
+                     1 * obs["distance_last"] +
+                     3 * obs['direction_angle']
             )
 
         else:
-            total_obs = np.concatenate(list(obs.values()), axis=0)
-            policy_input = np.concatenate((np.array([self.drone.map.exploration_score]),total_obs), axis=0)
+            total_obs = np.concatenate([obs[key] for key in keys], axis=0)
+            local_exploration = self.drone.map.tiles_explored / self.drone.map.total_tiles
+            self.drone.map.tiles_explored = 0
+
+            global_exploration_score = self.drone.map.exploration_score
+            global_exploration_progress = global_exploration_score - self.drone.map.last_exploration_score
+            self.drone.map.last_exploration_score = global_exploration_score
+
+            if global_exploration_progress == 0:
+                local_exploration_score = 0
+            else:
+                local_exploration_score = local_exploration / global_exploration_progress
+
+            policy_input = np.concatenate((total_obs,np.array([global_exploration_score,global_exploration_progress,local_exploration_score])), axis=0)
             if self.save_run is not None and len(self.previous_input)>0:
                 combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.elapsed_timestep])), axis=0)
                 self.save_run.append(combined)
@@ -519,7 +541,7 @@ class Roamer:
             path_length += path[k].distance(path[k+1])
         
         waypoint_direction : Vector2D = next_waypoint - self.drone.drone_position
-        waypoint_direction.normalize()
+        waypoint_direction = waypoint_direction.normalize()
 
 
         direction_angle = self.drone.drone_angle - waypoint_direction.get_angle(Vector2D(1,0))

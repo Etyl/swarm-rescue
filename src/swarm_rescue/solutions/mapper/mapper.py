@@ -57,6 +57,10 @@ class Map:
         self.kill_zones : Dict[int, Vector2D] = {}
         self.no_gps_zones : List[Vector2D] = []
 
+        self.tiles_explored: int = 0  # number of tiles explored since last frontier selection (used for RL)
+        self.total_tiles: int = (self.width * self.height) // 4 # total tiles measured of tiles_explored
+        self.last_exploration_score: float = 0 # the previous total measured % of exploration
+
 
     @property
     def exploration_score(self) -> float:
@@ -107,10 +111,12 @@ class Map:
 
         world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
 
-        if not drone.gps_disabled:
-            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0].astype(np.float32), world_points[:,1].astype(np.float32), CONFIDENCE_VALUE)
-        else:
-            self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0].astype(np.float32), world_points[:,1].astype(np.float32), CONFIDENCE_VALUE/2)
+        confidence:float = CONFIDENCE_VALUE
+        if drone.gps_disabled:
+            confidence = confidence / 2
+
+        self.tiles_explored += self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0].astype(np.float32), world_points[:,1].astype(np.float32), confidence)
+
         # for x, y in world_points:
         #     self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
 

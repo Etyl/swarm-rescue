@@ -29,7 +29,7 @@ def get_obs(input:np.ndarray)->Dict[str, np.ndarray]:
     keys.sort()
     obs = {}
     for k in range(FRONTIER_COUNT):
-        obs[keys[k]] = input[k:k+FRONTIER_FEATURES]
+        obs[keys[k]] = input[k*FRONTIER_FEATURES:(k+1)*FRONTIER_FEATURES]
     return obs
 
 
