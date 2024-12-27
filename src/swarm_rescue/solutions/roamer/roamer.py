@@ -381,7 +381,7 @@ class Roamer:
             score = (2 * obs["distance"] +
                      1 * obs["size"] +
                      1 * obs["count"] +
-                     4 * obs["repulsion_angle"] +
+                     4 * obs["repulsion_angle"] -
                      0.5 * obs["distance_last"] +
                      1 * obs['direction_angle']
             )
@@ -429,7 +429,9 @@ class Roamer:
             Zone.EMPTY: (255, 255, 255),
             Zone.WOUNDED: (0, 0, 255),
             Zone.RESCUE_CENTER: (255, 255, 0),
-            Zone.UNEXPLORED: (0, 0, 0)
+            Zone.UNEXPLORED: (0, 0, 0),
+            Zone.KILL_ZONE: (255, 0, 0),
+            Zone.NO_COM_ZONE: (0, 255, 0)
         }
         
         img = np.zeros((x_max_grid, y_max_grid, 3), np.uint8)
@@ -453,7 +455,9 @@ class Roamer:
             Zone.EMPTY: (255, 255, 255),
             Zone.WOUNDED: (0, 0, 255),
             Zone.RESCUE_CENTER: (255, 255, 0),
-            Zone.UNEXPLORED: (50, 50, 50),
+            Zone.UNEXPLORED: (0, 0, 0),
+            Zone.KILL_ZONE: (255, 0, 0),
+            Zone.NO_COM_ZONE: (0, 255, 0)
         }
 
         x_max_grid, y_max_grid = grid_map.shape
