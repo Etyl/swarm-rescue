@@ -4,11 +4,12 @@ import numpy as np
 from functools import partial
 
 from rl_env.MapsRL import LargeMap02, LargeMap01
-from solutions.frontier_drone import FrontierDrone
-from solutions.utils.constants import OBSERVATION_SPACE, ACTION_SPACE
-from spg_overlay.gui_map.gui_sr import GuiSR
-from spg_overlay.gui_map.map_abstract import MapAbstract
-from spg_overlay.reporting.evaluation import ZonesConfig, EvalConfig
+from rl_env.policies import epsilon_greedy_deterministic
+from solutions.frontier_drone import FrontierDrone # type: ignore
+from solutions.utils.constants import OBSERVATION_SPACE, ACTION_SPACE # type: ignore
+from spg_overlay.gui_map.gui_sr import GuiSR # type: ignore
+from spg_overlay.gui_map.map_abstract import MapAbstract # type: ignore
+from spg_overlay.reporting.evaluation import ZonesConfig, EvalConfig # type: ignore
 
 
 
@@ -43,8 +44,8 @@ def get_run(
 
     my_map = eval_config.map_type(eval_config.zones_config)
 
-    exp_score = []
-    save_run = []
+    exp_score: List[float] = []
+    save_run: List[np.ndarray] = []
     my_playground = my_map.construct_playground(drone_type=partial(FrontierDrone, policy=policy, save_run=save_run))
     rl_playground = PlaygroundWrapperRL(my_playground, my_map, exp_score)
 
@@ -80,10 +81,5 @@ def get_run(
         print(error_msg)
 
 
-def dummy_policy(obs:np.ndarray):
-    if len(obs) != OBSERVATION_SPACE:
-        raise "Wrong input shape"
-    return np.ones(ACTION_SPACE)/ACTION_SPACE
-
 if __name__ == "__main__":
-    get_run(dummy_policy, "run0.txt", "score0.txt", map_type=LargeMap02)
+    get_run(epsilon_greedy_deterministic(0), "run0.txt", "score0.txt", map_type=LargeMap02)
