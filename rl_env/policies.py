@@ -1,3 +1,4 @@
+import functools
 from typing import Dict
 
 import numpy as np
@@ -5,17 +6,6 @@ import numpy as np
 from solutions.utils.constants import ACTION_SPACE, FRONTIER_COUNT, FRONTIER_FEATURES  # type: ignore
 
 
-def epsilon_greedy(eps:float):
-    def epsilon_greedy_wrapper(base_policy):
-        def policy(input):
-            if np.random.random() < eps:
-                output = np.zeros(ACTION_SPACE)
-                output[np.random.randint(0,ACTION_SPACE)] = 1
-                return output
-            else:
-                return base_policy(input)
-        return policy
-    return epsilon_greedy_wrapper
 
 def get_obs(input:np.ndarray)->Dict[str, np.ndarray]:
     keys = [
@@ -49,5 +39,13 @@ def deterministic_policy(input):
     return output
 
 
-def epsilon_greedy_deterministic(eps:float):
-    return epsilon_greedy(eps=eps)(deterministic_policy)
+def epsilon_greedy_policy(input,eps):
+    if np.random.random() < eps:
+        output = np.zeros(ACTION_SPACE)
+        output[np.random.randint(0,ACTION_SPACE)] = 1
+        return output
+    else:
+        return deterministic_policy(input)
+
+def epsilon_greedy_wrapper(eps):
+    return functools.partial(epsilon_greedy_policy, eps=eps)

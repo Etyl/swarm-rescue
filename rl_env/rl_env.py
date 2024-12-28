@@ -6,7 +6,7 @@ import numpy as np
 from functools import partial
 
 from maps.map_final_2022_23 import MyMapFinal2022_23 # type: ignore
-from policies import epsilon_greedy_deterministic # type: ignore
+from policies import deterministic_policy
 from solutions.frontier_drone import FrontierDrone # type: ignore
 from solutions.utils.constants import OBSERVATION_SPACE, ACTION_SPACE # type: ignore
 from spg_overlay.gui_map.gui_sr import GuiSR # type: ignore
@@ -127,4 +127,4 @@ def get_run(
 
 
 if __name__ == "__main__":
-    get_run(epsilon_greedy_deterministic(0), "./", map_type=MyMapFinal2022_23)
+    get_run(deterministic_policy, "./", map_type=MyMapFinal2022_23)

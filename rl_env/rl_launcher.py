@@ -3,6 +3,8 @@ from datetime import datetime
 import os
 import time
 import multiprocessing
+import numpy as np
+
 
 from maps.map_final_2022_23 import MyMapFinal2022_23
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
@@ -10,15 +12,14 @@ from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
 from maps.map_final_2023_24_03 import MyMapFinal_2023_24_03
 from maps.map_medium_01 import MyMapMedium01
 from maps.map_medium_02 import MyMapMedium02
-from policies import epsilon_greedy_deterministic, deterministic_policy
+from policies import deterministic_policy,epsilon_greedy_wrapper
 from rl_env import get_run_wrapped
+
 
 def convert_seconds(seconds):
     return time.strftime("%H:%M:%S", time.gmtime(seconds))
 
 if __name__ == '__main__':
-
-    policy = deterministic_policy
 
     maps = [
         MyMapFinal2022_23,
@@ -35,13 +36,15 @@ if __name__ == '__main__':
     if not os.path.exists(main_dir):
         os.makedirs(main_dir)
 
-    number_rounds = 1
+    number_rounds = 100
     tasks = []
     for map in maps:
-        for _ in range(number_rounds):
-            file_path  = os.path.join(main_dir, map.__name__+"_"+str(uuid.uuid4()))
+        epsilon = lambda t: 0.5 * (number_rounds-1-t)/(number_rounds-1)
+        for k in range(number_rounds):
+            file_path  = os.path.join(main_dir, map.__name__+"_"+str(round(epsilon(k),3))+"_"+str(uuid.uuid4()))
             if not os.path.exists(file_path):
                 os.makedirs(file_path)
+            policy = epsilon_greedy_wrapper(epsilon(k))
             tasks.append((policy,file_path,map))
 
 
