@@ -3,13 +3,9 @@ from datetime import datetime
 import os
 import time
 import multiprocessing
-import sys
 
-from policies import deterministic_policy,epsilon_greedy_wrapper
-from rl_env import get_run_wrapped
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src/swarm_rescue')))
-
+from rl_env.policies import deterministic_policy,epsilon_greedy_wrapper
+from rl_env.rl_env import get_run_wrapped
 from maps.map_final_2022_23 import MyMapFinal2022_23
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
 from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
