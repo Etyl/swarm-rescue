@@ -4,14 +4,15 @@ import os
 import time
 import multiprocessing
 
-from rl_env.policies import deterministic_policy,epsilon_greedy_wrapper
-from rl_env.rl_env import get_run_wrapped
+
 from maps.map_final_2022_23 import MyMapFinal2022_23
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
 from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
 from maps.map_final_2023_24_03 import MyMapFinal_2023_24_03
 from maps.map_medium_01 import MyMapMedium01
 from maps.map_medium_02 import MyMapMedium02
+from rl_env.policies import deterministic_policy,epsilon_greedy_wrapper
+from rl_env.rl_env import get_run_wrapped
 
 
 

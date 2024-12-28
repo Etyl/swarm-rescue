@@ -4,7 +4,6 @@ import numpy as np
 
 from solutions.utils.constants import FRONTIER_COUNT, ACTION_SPACE, FRONTIER_FEATURES
 
-
 def get_obs(input:np.ndarray)->Dict[str, np.ndarray]:
     keys = [
         'size',
