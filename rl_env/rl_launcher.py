@@ -3,8 +3,12 @@ from datetime import datetime
 import os
 import time
 import multiprocessing
-import numpy as np
+import sys
 
+from policies import deterministic_policy,epsilon_greedy_wrapper
+from rl_env import get_run_wrapped
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src/swarm_rescue')))
 
 from maps.map_final_2022_23 import MyMapFinal2022_23
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
@@ -12,8 +16,7 @@ from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
 from maps.map_final_2023_24_03 import MyMapFinal_2023_24_03
 from maps.map_medium_01 import MyMapMedium01
 from maps.map_medium_02 import MyMapMedium02
-from policies import deterministic_policy,epsilon_greedy_wrapper
-from rl_env import get_run_wrapped
+
 
 
 def convert_seconds(seconds):
