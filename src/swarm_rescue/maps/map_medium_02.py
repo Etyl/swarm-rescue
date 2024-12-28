@@ -31,8 +31,8 @@ class MyMapMedium02(MapAbstract):
 
     def __init__(self, zones_config: ZonesConfig = ()):
         super().__init__(zones_config)
-        self._max_timestep_limit = 7200
-        self._max_walltime_limit = 720  # In seconds
+        self._max_timestep_limit = 3500
+        self._max_walltime_limit = 3000  # In seconds
 
         # PARAMETERS MAP
         self._size_area = (1113, 750)
