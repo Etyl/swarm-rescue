@@ -4,9 +4,14 @@ import traceback
 from typing import Optional, List, Tuple
 import numpy as np
 from functools import partial
+import sys
+import os
+
+from policies import deterministic_policy
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src/swarm_rescue')))
 
 from maps.map_final_2022_23 import MyMapFinal2022_23 # type: ignore
-from policies import deterministic_policy
 from solutions.frontier_drone import FrontierDrone # type: ignore
 from solutions.utils.constants import OBSERVATION_SPACE, ACTION_SPACE # type: ignore
 from spg_overlay.gui_map.gui_sr import GuiSR # type: ignore

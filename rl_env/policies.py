@@ -1,7 +1,10 @@
 import functools
 from typing import Dict
-
+import sys
 import numpy as np
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../src/swarm_rescue')))
 
 from solutions.utils.constants import ACTION_SPACE, FRONTIER_COUNT, FRONTIER_FEATURES  # type: ignore
 
