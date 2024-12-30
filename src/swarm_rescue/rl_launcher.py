@@ -22,7 +22,8 @@ def run_simulation(task):
     """Run a single simulation task as a subprocess."""
     map_name, epsilon, file_path = task
     os.makedirs(file_path, exist_ok=True)
-    python_path = "src/swarm_rescue/parallel_rl.py"
+    python_path = os.path.dirname(os.path.abspath(__file__))
+    python_path = os.path.join(python_path, "parallel_rl.py")
     subprocess.run(
         [
             sys.executable,
