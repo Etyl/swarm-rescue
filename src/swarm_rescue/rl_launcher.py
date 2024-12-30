@@ -1,9 +1,10 @@
-import uuid
-from datetime import datetime
 import os
+import sys
 import time
-import multiprocessing
-
+import uuid
+import subprocess
+from datetime import datetime
+from multiprocessing import Pool
 
 from maps.map_final_2022_23 import MyMapFinal2022_23
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
@@ -11,16 +12,34 @@ from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
 from maps.map_final_2023_24_03 import MyMapFinal_2023_24_03
 from maps.map_medium_01 import MyMapMedium01
 from maps.map_medium_02 import MyMapMedium02
-from rl_env.policies import deterministic_policy,epsilon_greedy_wrapper
-from rl_env.rl_env import get_run_wrapped
-
 
 
 def convert_seconds(seconds):
     return time.strftime("%H:%M:%S", time.gmtime(seconds))
 
-if __name__ == '__main__':
 
+def run_simulation(task):
+    """Run a single simulation task as a subprocess."""
+    map_name, epsilon, file_path = task
+    os.makedirs(file_path, exist_ok=True)
+    python_path = os.path.dirname(os.path.abspath(__file__))
+    python_path = os.path.join(python_path, "rl_env")
+    python_path = os.path.join(python_path, "rl_env.py")
+    subprocess.run(
+        [
+            sys.executable,
+            python_path,  # Replace with your actual script name
+            "--map",
+            map_name,
+            "--epsilon",
+            epsilon,
+            "--output",
+            file_path,
+        ]
+    )
+
+
+if __name__ == "__main__":
     maps = [
         MyMapFinal2022_23,
         MyMapFinal_2023_24_01,
@@ -31,31 +50,27 @@ if __name__ == '__main__':
     ]
 
     date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    main_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rl-run_"+date)
+    main_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"rl-run_{date}")
+    os.makedirs(main_dir, exist_ok=True)
 
-    if not os.path.exists(main_dir):
-        os.makedirs(main_dir)
-
-    number_rounds = 100
+    number_rounds = 2
     tasks = []
-    for map in maps:
-        epsilon = lambda t: 0.5 * (number_rounds-1-t)/(number_rounds-1)
+    for map_class in maps:
+        epsilon = lambda t: 0.5 * (number_rounds - 1 - t) / (number_rounds - 1)
         for k in range(number_rounds):
-            file_path  = os.path.join(main_dir, map.__name__+"_"+str(round(epsilon(k),3))+"_"+str(uuid.uuid4()))
-            if not os.path.exists(file_path):
-                os.makedirs(file_path)
-            policy = epsilon_greedy_wrapper(epsilon(k))
-            tasks.append((policy,file_path,map))
-
+            file_path = os.path.join(
+                main_dir,
+                f"{map_class.__name__}_{round(epsilon(k),3)}_{uuid.uuid4()}"
+            )
+            tasks.append((map_class.__name__, str(round(epsilon(k),3)), file_path))
 
     num_workers = min(len(tasks), 10)
-
     time_start = time.time()
 
-    print(f"Starting tasks, saved in {main_dir}")
+    print(f"Starting {len(tasks)} tasks with {num_workers} workers.")
 
-    with multiprocessing.Pool(processes=num_workers) as pool:
-        pool.map(get_run_wrapped, tasks)
+    with Pool(processes=num_workers) as pool:
+        pool.map(run_simulation, tasks)
 
-    print(f"Finished tasks in {convert_seconds(time.time() - time_start)}")
-
+    print(f"Finished all tasks in {convert_seconds(time.time() - time_start)}")
+    print(f"All results saved in: {main_dir}")
