@@ -53,7 +53,7 @@ if __name__ == "__main__":
     main_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"rl-run_{date}")
     os.makedirs(main_dir, exist_ok=True)
 
-    number_rounds = 2
+    number_rounds = 50
     tasks = []
     for map_class in maps:
         epsilon = lambda t: 0.5 * (number_rounds - 1 - t) / (number_rounds - 1)
@@ -64,7 +64,7 @@ if __name__ == "__main__":
             )
             tasks.append((map_class.__name__, str(round(epsilon(k),3)), file_path))
 
-    num_workers = min(len(tasks), 10)
+    num_workers = min(len(tasks), 20)
     time_start = time.time()
 
     print(f"Starting {len(tasks)} tasks with {num_workers} workers.")
