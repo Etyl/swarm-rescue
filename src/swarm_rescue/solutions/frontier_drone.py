@@ -602,11 +602,9 @@ class FrontierDrone(DroneAbstract):
         for drone in self.drone_list:
             if drone.id == self.identifier: continue
             if drone.id in self.killed_drones:
-                print("No communication zone mode")
                 self.reset_kill_zones()
 
     def reset_kill_zones(self):
-        print("No communication zone mode")
         self.kill_zones = []
         self.killed_drones = []
         self.map.reset_kill_zones()
