@@ -24,9 +24,9 @@ THRESHOLD_MAX = 40
 CONFIDENCE_VALUE = 500
 CONFIDENCE_THRESHOLD = 1000
 CONFIDENCE_THRESHOLD_MIN = 0
-KILL_ZONE_SIZE = 10
-SAFE_ZONE_SIZE = 20
-DISTANCE_KILL_ZONE = 20 # distance to be considered as the same kill zone
+KILL_ZONE_SIZE = 15
+SAFE_ZONE_SIZE = 30
+KILL_ZONE_INCREFMENT = 0.2
 
 DRONE_SIZE_RADIUS = 12
 
@@ -125,7 +125,7 @@ class Map:
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR)
+        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR * 0.8)
 
         world_points_free = np.column_stack((
             drone_pos.x + np.multiply(lidar_dist_clip, np.cos(lidar_angles + drone_angle)),
@@ -143,7 +143,7 @@ class Map:
             for k in range((i - 3) % 181, (i + 4) % 181):
                 angles_available_arr[k] = False
 
-        mask = np.logical_and(angles_available_arr,lidar_dist < MAX_RANGE_SEMANTIC_SENSOR)
+        mask = np.logical_and(angles_available_arr,lidar_dist < MAX_RANGE_SEMANTIC_SENSOR * 0.8)
         lidar_dist_hit = lidar_dist[mask]
         lidar_angles_hit = lidar_angles[mask]
 
@@ -175,7 +175,7 @@ class Map:
 
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        self.map = np.where(np.logical_and(self.kill_zone.get_grid() == 1, self.map == Zone.EMPTY), Zone.KILL_ZONE, self.map)
+        self.map = np.where(np.logical_and(self.kill_zone.get_grid() >= 1, self.map == Zone.EMPTY), Zone.KILL_ZONE, self.map)
         self.map = np.where(np.logical_or(np.logical_and(self.no_comm_zone.get_grid() == 1, self.map == Zone.EMPTY), np.logical_and(self.no_comm_zone.get_grid() == 1, self.map == Zone.KILL_ZONE)), Zone.NO_COM_ZONE, self.map)
 
         if self.debug_mode:
@@ -202,7 +202,7 @@ class Map:
             for y in range(kill_zone_pos_grid.y - KILL_ZONE_SIZE, kill_zone_pos_grid.y + KILL_ZONE_SIZE):
                 if 0 <= x < self.width and 0 <= y < self.height:
                     pos = self.grid_to_world(Vector2D(x, y))
-                    self.kill_zone.set_point(pos.x, pos.y, 1)
+                    self.kill_zone.add_point(pos.x, pos.y, KILL_ZONE_INCREFMENT)
 
     def display_map(self, drone: FrontierDrone):
         """
@@ -303,6 +303,10 @@ class Map:
 
         for other_map in other_maps:
             self.no_comm_zone.set_grid(np.maximum(self.no_comm_zone.get_grid(), other_map.no_comm_zone.get_grid()))
+            # Count the number of pixels in the other map kill zone that are not in the current map kill zone
+            count = np.count_nonzero(np.logical_and(other_map.kill_zone.get_grid() >= 1, self.kill_zone.get_grid() < 1))
+            if count > 0:
+                drone.reset_path()       
             self.kill_zone.set_grid(np.maximum(self.kill_zone.get_grid(), other_map.kill_zone.get_grid()))
 
     
@@ -318,7 +322,7 @@ class Map:
         obstacle_grid = np.where(np.logical_or(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.UNEXPLORED), np.logical_and(self.map == Zone.KILL_ZONE, self.map != Zone.NO_COM_ZONE)), 2, 0).astype(np.float64)
 
         # Save obstacle_grid for debugging
-        # cv2.imwrite("obstacle_grid.png", 100*obstacle_grid)
+        cv2.imwrite("obstacle_grid.png", 100*obstacle_grid)
        
         grid_start = self.world_to_grid(start)
         grid_end = self.world_to_grid(end)
