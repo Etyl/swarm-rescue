@@ -1,5 +1,6 @@
 import argparse
 import gc
+import os
 
 from maps.map_final_2022_23 import MyMapFinal2022_23 # type: ignore
 from maps.map_final_2023_24_01 import MyMapFinal_2023_24_01
@@ -33,7 +34,10 @@ if __name__ == "__main__":
     map_type = maps_dict[args.map]
 
     # policy = epsilon_greedy_wrapper(float(args.epsilon))
-    policy = get_custom_policy("rl_env/data/Q_func.pkl", float(args.epsilon))
+
+    agent_path = os.path.abspath(os.path.dirname(__file__))
+    agent_path = os.path.join(agent_path, "rl_env/data/Q_func.pth")
+    policy = get_custom_policy(agent_path, float(args.epsilon))
 
     output_path = args.output
 

@@ -3,6 +3,7 @@ from typing import Dict
 import numpy as np
 import pickle
 import torch
+import os
 
 from solutions.utils.constants import FRONTIER_COUNT, ACTION_SPACE, FRONTIER_FEATURES
 
@@ -51,8 +52,8 @@ def epsilon_greedy_wrapper(eps):
 
 
 def get_custom_policy(agent_file, epsilon):
-    with open(agent_file,"rb") as f:
-        agent = pickle.load(f)
+
+    agent = torch.load(agent_file, map_location=torch.device('cpu'), weights_only=False)
 
     def policy(input):
         if np.random.random() < epsilon:
@@ -61,9 +62,9 @@ def get_custom_policy(agent_file, epsilon):
             return output
         else:
             with torch.no_grad():
-                input_tensor = torch.tensor(input)
+                input_tensor = torch.tensor(input, dtype=torch.float32)
                 output_tensor = agent(input_tensor)
-                output = output_tensor.to_array()
+                output = output_tensor.detach().cpu().numpy()
             return output
 
     return policy
