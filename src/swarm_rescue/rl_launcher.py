@@ -52,7 +52,7 @@ if __name__ == "__main__":
     main_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"rl-run_{date}")
     os.makedirs(main_dir, exist_ok=True)
 
-    number_rounds = 50
+    number_rounds = 2
     tasks = []
     for map_class in maps:
         epsilon = lambda t: 0.5 * (number_rounds - 1 - t) / (number_rounds - 1)

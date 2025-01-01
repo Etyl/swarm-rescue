@@ -7,7 +7,7 @@ from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
 from maps.map_final_2023_24_03 import MyMapFinal_2023_24_03
 from maps.map_medium_01 import MyMapMedium01
 from maps.map_medium_02 import MyMapMedium02
-from rl_env.policies import deterministic_policy, epsilon_greedy_wrapper # type: ignore
+from rl_env.policies import deterministic_policy, epsilon_greedy_wrapper, get_custom_policy  # type: ignore
 from rl_env.rl_env import get_run # type: ignore
 
 
@@ -31,7 +31,10 @@ if __name__ == "__main__":
     maps_dict = {map.__name__: map for map in maps}
 
     map_type = maps_dict[args.map]
-    policy = epsilon_greedy_wrapper(float(args.epsilon))
+
+    # policy = epsilon_greedy_wrapper(float(args.epsilon))
+    policy = get_custom_policy("rl_env/data/Q_func.pkl", float(args.epsilon))
+
     output_path = args.output
 
     get_run(policy, output_path, map_type)

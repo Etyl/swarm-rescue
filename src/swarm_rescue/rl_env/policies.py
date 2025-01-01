@@ -1,6 +1,8 @@
 import functools
 from typing import Dict
 import numpy as np
+import pickle
+import torch
 
 from solutions.utils.constants import FRONTIER_COUNT, ACTION_SPACE, FRONTIER_FEATURES
 
@@ -46,3 +48,22 @@ def epsilon_greedy_policy(input,eps):
 
 def epsilon_greedy_wrapper(eps):
     return functools.partial(epsilon_greedy_policy, eps=eps)
+
+
+def get_custom_policy(agent_file, epsilon):
+    with open(agent_file,"rb") as f:
+        agent = pickle.load(f)
+
+    def policy(input):
+        if np.random.random() < epsilon:
+            output = np.zeros(ACTION_SPACE)
+            output[np.random.randint(0, ACTION_SPACE)] = 1
+            return output
+        else:
+            with torch.no_grad():
+                input_tensor = torch.tensor(input)
+                output_tensor = agent(input_tensor)
+                output = output_tensor.to_array()
+            return output
+
+    return policy
