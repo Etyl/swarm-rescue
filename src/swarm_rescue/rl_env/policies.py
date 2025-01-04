@@ -5,7 +5,7 @@ import pickle
 import torch
 import os
 
-from solutions.utils.constants import FRONTIER_COUNT, ACTION_SPACE, FRONTIER_FEATURES
+from solutions.utils.constants import FRONTIER_COUNT, ACTION_SPACE, FRONTIER_FEATURES,OTHER_FRONTIER_INPUTS
 
 def get_obs(input:np.ndarray)->Dict[str, np.ndarray]:
     keys = [
@@ -68,3 +68,20 @@ def get_custom_policy(agent_file, epsilon):
             return output
 
     return policy
+
+
+def get_multi_input_policy(agent_file, epsilon):
+    policy = get_custom_policy(agent_file, epsilon)
+
+    def new_policy(x):
+        output = torch.zeros(ACTION_SPACE, device=x.device, dtype=x.dtype)
+        for i in range(ACTION_SPACE):
+            input = torch.zeros(FRONTIER_FEATURES + OTHER_FRONTIER_INPUTS, device=x.device, dtype=x.dtype)
+            for j in range(ACTION_SPACE):
+                input[j] = x[j * FRONTIER_FEATURES + i]
+            for j in range(OTHER_FRONTIER_INPUTS):
+                input[FRONTIER_FEATURES + j] = x[ACTION_SPACE * FRONTIER_FEATURES + j]
+            output[i] = policy(input)[0]
+        return output.detach().cpu().numpy()
+
+    return new_policy
