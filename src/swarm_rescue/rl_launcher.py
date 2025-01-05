@@ -56,7 +56,7 @@ if __name__ == "__main__":
     epsilon_rounds = 35
     tasks = []
     for map_class in maps:
-        epsilon = lambda t: 0.3 * (epsilon_rounds - 1 - t) / (epsilon_rounds - 1)
+        epsilon = lambda t: 0.4 * (epsilon_rounds - 1 - t) / (epsilon_rounds - 1)
         
         for k in range(test_rounds):
             file_path = os.path.join(

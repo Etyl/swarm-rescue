@@ -74,14 +74,14 @@ def get_multi_input_policy(agent_file, epsilon):
     policy = get_custom_policy(agent_file, epsilon)
 
     def new_policy(x):
-        output = torch.zeros(ACTION_SPACE, device=x.device, dtype=x.dtype)
+        output = np.zeros(ACTION_SPACE)
         for i in range(ACTION_SPACE):
-            input = torch.zeros(FRONTIER_FEATURES + OTHER_FRONTIER_INPUTS, device=x.device, dtype=x.dtype)
+            input = np.zeros(FRONTIER_FEATURES + OTHER_FRONTIER_INPUTS)
             for j in range(ACTION_SPACE):
                 input[j] = x[j * FRONTIER_FEATURES + i]
             for j in range(OTHER_FRONTIER_INPUTS):
                 input[FRONTIER_FEATURES + j] = x[ACTION_SPACE * FRONTIER_FEATURES + j]
             output[i] = policy(input)[0]
-        return output.detach().cpu().numpy()
+        return output
 
     return new_policy
