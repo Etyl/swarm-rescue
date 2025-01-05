@@ -392,11 +392,14 @@ class FrontierDrone(DroneAbstract):
 
         repulsion = Vector2D()
         min_dist = np.inf
+        min_angle = 0
         for data in self.semantic_values():
             if data.entity_type == DroneSemanticSensor.TypeEntity.DRONE: #and not self.is_inside_return_area:
                 angle = data.angle
                 dist = data.distance
-                min_dist = min(min_dist, dist)
+                if dist < min_dist:
+                    min_dist = dist
+                    min_angle = angle
 
                 pos = self.drone_position + dist * Vector2D(1,0).rotate(angle)
                 if not add_pos(pos):
@@ -427,6 +430,10 @@ class FrontierDrone(DroneAbstract):
         elif self.controller.current_state == self.controller.stay_in_return_zone:
             self.repulsion_drone = 0.05 * repulsion
         else:
+            if min_dist < 40:
+                repulsion_norm: Vector2D = -Vector2D(1,0).rotate(min_angle)
+                self.command_pos += -(self.command_pos @ repulsion_norm) * repulsion_norm
+                if repulsion.norm()>1: repulsion = repulsion.normalize()
             self.repulsion_drone = repulsion
 
         if self.ignore_repulsion <= 0:
