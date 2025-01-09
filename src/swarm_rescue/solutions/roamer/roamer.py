@@ -236,6 +236,7 @@ class Roamer:
         self.save_run = save_run
         self.previous_input = np.array([])
         self.previous_score = np.array([])
+        self.previous_local_exploration = 0
 
     
     def print_num_map(self, drone_map : Map, output_file='output.txt'):
@@ -398,7 +399,8 @@ class Roamer:
 
         else:
             total_obs = np.concatenate([obs[key] for key in keys], axis=0)
-            local_exploration = self.drone.map.tiles_explored / self.drone.map.total_tiles
+            total_local_exploration = self.drone.map.tiles_explored / self.drone.map.total_tiles
+            local_exploration = total_local_exploration - self.previous_local_exploration
             self.drone.map.tiles_explored = 0
 
             global_exploration_score = self.drone.map.exploration_score
@@ -412,12 +414,13 @@ class Roamer:
 
             policy_input = np.concatenate((total_obs,np.array([global_exploration_score,global_exploration_progress,local_exploration_score])), axis=0)
             if self.save_run is not None and len(self.previous_input)>0:
-                combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.elapsed_timestep])), axis=0)
+                combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([total_local_exploration,self.drone.elapsed_timestep])), axis=0)
                 self.save_run.append(combined)
 
             score = self.policy(policy_input)
             self.previous_input = policy_input
             self.previous_score = score
+            self.previous_local_exploration = total_local_exploration
 
 
         #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)
