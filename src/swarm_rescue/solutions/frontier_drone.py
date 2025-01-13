@@ -380,7 +380,7 @@ class FrontierDrone(DroneAbstract):
         """
 
         def repulsion_coef(dist:float) -> float:
-            return max(0,min(1,((MAX_RANGE_SEMANTIC_SENSOR-dist+20)/MAX_RANGE_SEMANTIC_SENSOR)))**2
+            return 2*max(0,min(1,((MAX_RANGE_SEMANTIC_SENSOR-dist+20)/MAX_RANGE_SEMANTIC_SENSOR)))**2
 
         found_pos = []
         def add_pos(p:Vector2D) -> bool:
@@ -418,7 +418,7 @@ class FrontierDrone(DroneAbstract):
             return
 
         repulsion = repulsion.normalize()
-        repulsion *= min(2.0,1.5*repulsion_coef(min_dist-20)+0.2)
+        repulsion *= min(2.0,repulsion_coef(min_dist-20)+0.2)
 
         if self.controller.current_state in [self.controller.going_to_center, self.controller.approaching_wounded, self.controller.approaching_center]:
             self.repulsion_drone = 0.05 * repulsion
@@ -430,7 +430,7 @@ class FrontierDrone(DroneAbstract):
         elif self.controller.current_state == self.controller.stay_in_return_zone:
             self.repulsion_drone = 0.05 * repulsion
         else:
-            if min_dist < 40:
+            if min_dist < 70:
                 repulsion_norm: Vector2D = -Vector2D(1,0).rotate(min_angle)
                 self.command_pos += -(self.command_pos @ repulsion_norm) * repulsion_norm
                 if repulsion.norm()>1: repulsion = repulsion.normalize()
