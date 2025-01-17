@@ -203,6 +203,7 @@ class Map:
                 if 0 <= x < self.width and 0 <= y < self.height:
                     pos = self.grid_to_world(Vector2D(x, y))
                     self.kill_zone.add_point(pos.x, pos.y, KILL_ZONE_INCREFMENT)
+                    self.kill_zone.set_point(pos.x, pos.y, min(100, self.kill_zone.get_grid()[x, y]))
 
     def display_map(self, drone: FrontierDrone):
         """
@@ -304,7 +305,7 @@ class Map:
         for other_map in other_maps:
             self.no_comm_zone.set_grid(np.maximum(self.no_comm_zone.get_grid(), other_map.no_comm_zone.get_grid()))
             # Count the number of pixels in the other map kill zone that are not in the current map kill zone
-            count = np.count_nonzero(np.logical_and(other_map.kill_zone.get_grid() >= 1, self.kill_zone.get_grid() < 1))
+            count = np.count_nonzero(np.logical_and(other_map.kill_zone.get_grid() > 0, self.kill_zone.get_grid() < 1))
             if count > 0:
                 drone.reset_path()       
             self.kill_zone.set_grid(np.maximum(self.kill_zone.get_grid(), other_map.kill_zone.get_grid()))
