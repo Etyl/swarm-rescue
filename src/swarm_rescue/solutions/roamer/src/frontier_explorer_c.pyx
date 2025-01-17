@@ -15,6 +15,8 @@ ctypedef enum Zone:
     RESCUE_CENTER = 3
     INEXPLORED = -1
     NEG_OBSTACLE = -2
+    KILL_ZONE = 4
+    NO_COM_ZONE = 5
 
 
 cdef find_frontier(wavefront_map, int start_row,int start_col, visited):
@@ -152,7 +154,7 @@ cdef dfs_fill_array(cnp.ndarray[cnp.int32_t, ndim=2] arr, int start_x, int start
         for i in range(8):
             nx = x + dx[i]
             ny = y + dy[i]
-            if 0<=nx<rows and 0<=ny<cols and arr[nx, ny] == EMPTY:
+            if 0<=nx<rows and 0<=ny<cols and (arr[nx, ny] == EMPTY or arr[nx, ny] == NO_COM_ZONE):
                 arr[nx, ny] = 1
                 stack.append((nx, ny))
 

@@ -108,9 +108,7 @@ class DroneData:
     wounded_target: Vector2D
     map : typing.Any
     semantic_values: np.ndarray
-    kill_zone_mode: bool
     next_waypoint : Vector2D
-    killed_drones: List[int] # the list of killed drones ids
     confidence_position: float
     visible_drones: List[Tuple[int, Vector2D]]
     rescue_center_position: Optional[Vector2D]

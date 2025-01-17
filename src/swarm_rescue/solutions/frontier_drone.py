@@ -28,6 +28,7 @@ class FrontierDrone(DroneAbstract):
     REFRESH_PATH_LIMIT = 40 # frames before refreshing the path
     WOUNDED_DISTANCE = 50 # The distance between wounded person to be considered as the same
     START_IDLE_TIME = 40 # Time before the drone starts moving
+    SAME_DRONE_THRESHOLD = 100 # The distance between two drones to be considered as the same
 
     def __init__(
         self,
@@ -57,30 +58,29 @@ class FrontierDrone(DroneAbstract):
         self.center_angle : Optional[float] = None # angle from the visible rescue center
         self.rescue_center_dist : Optional[float] = None # distance from the visible rescue center
         self.ignore_repulsion : int = 0 # timer to ignore the repulsion vector (>0 => ignore)
-        self.killed_drones : List[int] = [] # the list of killed drones ids
 
         self.command_pos: Vector2D = Vector2D()
         self.visible_drones: List[Tuple[int,Vector2D]] = [] # List of (id,drone_position)
         self.searching_time : int = 0 # time spent searching for next target
         self.return_zone_position : Optional[Vector2D] = None # The position of the return zone
+        self.no_comm_zone_mode : bool = False # True if the drone is in the no communication zone
 
         self.rescue_center_position: Optional[Vector2D] = None
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
         self.wounded_target : Optional[Vector2D] = None # The wounded position to go to
         self.drone_list : List[DroneData] = [] # The list of drones
+        self.iteration : int = 0 # The number of iterations
 
         ## Debug controls
 
         self.debug_path = True # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
-        self.debug_map = False
         self.debug_roamer = False
         self.debug_controller = False
         self.debug_mapper = False
         self.debug_lidar = False
         self.debug_repulsion = False
-        self.debug_kill_zones = False
         self.debug_wall_repulsion = False
         self.debug_frontiers = True
 
@@ -107,11 +107,6 @@ class FrontierDrone(DroneAbstract):
         self.localizer : Localizer = Localizer(self)
 
         self.controller : DroneController = DroneController(self, debug_mode=self.debug_controller)
-
-        self.last_other_drones_position : Dict[int, Tuple[Vector2D, float]] = {}
-        self.kill_zones : List[Vector2D] = []
-        self.potential_kill_zones : List[Vector2D] = []
-        self.kill_zone_mode = True
 
         self.point_of_interest = (0,0)
         self.frontiers : List[List[Vector2D]] = []
@@ -187,9 +182,7 @@ class FrontierDrone(DroneAbstract):
             wounded_target = self.wounded_target,
             map = self.map,
             semantic_values = self.semantic_values(),
-            kill_zone_mode = self.kill_zone_mode,
             next_waypoint= self.next_waypoint,
-            killed_drones = self.killed_drones,
             confidence_position = self.localizer.confidence_position,
             visible_drones = self.visible_drones,
             rescue_center_position=self.rescue_center_position
@@ -249,16 +242,6 @@ class FrontierDrone(DroneAbstract):
                     #self.wounded_found_list[k].taken = True
                     self.wounded_found_list[k].drone_taker = drone_data.id
                     break
-
-        # update the kill zones
-        if not drone_data.kill_zone_mode and self.kill_zone_mode:
-            print("Found someone in no kill zone mode")
-            self.reset_kill_zones()
-
-        # update killed drones
-        for killed in drone_data.killed_drones:
-            if killed not in self.killed_drones:
-                self.killed_drones.append(killed)
 
         # update the drone information
         for k in range(len(self.drone_list)):
@@ -397,7 +380,7 @@ class FrontierDrone(DroneAbstract):
         """
 
         def repulsion_coef(dist:float) -> float:
-            return max(0,min(1,((MAX_RANGE_SEMANTIC_SENSOR-dist+20)/MAX_RANGE_SEMANTIC_SENSOR)))**2
+            return 2*max(0,min(1,((MAX_RANGE_SEMANTIC_SENSOR-dist+20)/MAX_RANGE_SEMANTIC_SENSOR)))**2
 
         found_pos = []
         def add_pos(p:Vector2D) -> bool:
@@ -409,6 +392,7 @@ class FrontierDrone(DroneAbstract):
 
         repulsion = Vector2D()
         min_dist = np.inf
+        min_angle = 0
         for data in self.semantic_values():
             if (
                 data.entity_type == DroneSemanticSensor.TypeEntity.DRONE or (
@@ -418,7 +402,9 @@ class FrontierDrone(DroneAbstract):
             )):
                 angle = data.angle
                 dist = data.distance
-                min_dist = min(min_dist, dist)
+                if dist < min_dist:
+                    min_dist = dist
+                    min_angle = angle
 
                 pos = self.drone_position + dist * Vector2D(1,0).rotate(angle)
                 if not add_pos(pos):
@@ -437,7 +423,7 @@ class FrontierDrone(DroneAbstract):
             return
 
         repulsion = repulsion.normalize()
-        repulsion *= min(2.0,2*repulsion_coef(min_dist))
+        repulsion *= min(2.0,repulsion_coef(min_dist-20)+0.2)
 
         if self.controller.current_state in [self.controller.going_to_center, self.controller.approaching_wounded, self.controller.approaching_center]:
             self.repulsion_drone = 0.05 * repulsion
@@ -449,6 +435,10 @@ class FrontierDrone(DroneAbstract):
         elif self.controller.current_state == self.controller.stay_in_return_zone:
             self.repulsion_drone = 0.05 * repulsion
         else:
+            if min_dist < 70:
+                repulsion_norm: Vector2D = -Vector2D(1,0).rotate(min_angle)
+                self.command_pos += -(self.command_pos @ repulsion_norm) * repulsion_norm
+                if repulsion.norm()>1: repulsion = repulsion.normalize()
             self.repulsion_drone = repulsion
 
         if self.ignore_repulsion <= 0:
@@ -580,39 +570,24 @@ class FrontierDrone(DroneAbstract):
         """
         computes the kill zone
         """
-        other_drones_id = [drone.id for drone in self.drone_list]
-        killed_ids = []
-        for droneId in self.last_other_drones_position:
-            if droneId not in other_drones_id:
-                last_pos = self.last_other_drones_position[droneId][0]
-                last_angle = self.last_other_drones_position[droneId][1]
-                if (last_pos.distance(self.drone_position)) < RANGE_COMMUNICATION * 0.7:
-                    kill_zone_x = last_pos.x + 30 * math.cos(last_angle)
-                    kill_zone_y = last_pos.y + 30 * math.sin(last_angle)
-                    self.map.add_kill_zone(droneId, Vector2D(kill_zone_x, kill_zone_y))
+        detection_semantic = self.semantic_values()
+
+        for data in detection_semantic:
+            if (data.entity_type == DroneSemanticSensor.TypeEntity.DRONE):
+                angle = data.angle
+                dist = data.distance
+
+                pos = self.drone_position + dist * Vector2D(math.cos(angle + self.drone_angle), math.sin(angle + self.drone_angle))
+                # Check if this drone is communicating
+                dead = True
+                for drone in self.drone_list:
+                    if drone.id == self.identifier: continue
+                    if drone.position.distance(pos) < self.SAME_DRONE_THRESHOLD:
+                        dead = False
+                        break
+                if dead:
+                    self.map.add_kill_zone(pos)
                     self.reset_path()
-                    killed_ids.append(droneId)
-        for droneId in killed_ids:
-            self.last_other_drones_position.pop(droneId)
-            self.killed_drones.append(droneId)
-
-    def check_if_no_com_zone_mode(self):
-        """
-        checks if the map is in no communication zone mode by checking if we communicate with other drones that should be dead
-        """
-        for drone in self.drone_list:
-            if drone.id == self.identifier: continue
-            if drone.id in self.killed_drones:
-                print("No communication zone mode")
-                self.reset_kill_zones()
-
-    def reset_kill_zones(self):
-        print("No communication zone mode")
-        self.kill_zones = []
-        self.killed_drones = []
-        self.map.reset_kill_zones()
-        self.kill_zone_mode = False
-        self.reset_path()
 
     def add_searching_time(self):
         """
@@ -635,7 +610,6 @@ class FrontierDrone(DroneAbstract):
         return self.elapsed_timestep >= max_timestep or self.elapsed_walltime >= max_wall_time
 
     def control(self):
-
         # check if drone is dead
         if self.odometer_values() is None:
             return
@@ -657,9 +631,10 @@ class FrontierDrone(DroneAbstract):
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
 
-        if self.kill_zone_mode:
-            self.compute_kill_zone()
-            self.check_if_no_com_zone_mode()
+        if not self.communicator_is_disabled():
+            if self.iteration > 10:
+                self.compute_kill_zone()
+            # self.check_if_no_com_zone_mode()
         self.update_last_other_drones_position()
 
         if self.roaming:
@@ -700,6 +675,8 @@ class FrontierDrone(DroneAbstract):
         self.point_of_interest = self.compute_point_of_interest()
         self.prev_command = self._command
         self.previous_drone_health = self.drone_health
+
+        self.iteration += 1
 
         return self._command
 
@@ -832,8 +809,3 @@ class FrontierDrone(DroneAbstract):
             if self.localizer.target is not None:
                 pt = self.localizer.target.array + np.array(self.size_area) / 2
                 arcade.draw_circle_filled(pt[0], pt[1], 10, [255,0,255])
-
-        if self.debug_kill_zones and self.kill_zone_mode:
-            for killed_drone_pos in self.map.kill_zones.values():
-                # draw a rectangle
-                arcade.draw_rectangle_filled(killed_drone_pos.x + self.size_area[0]/2, killed_drone_pos.y + self.size_area[1]/2, 100, 100, arcade.color.RED)
