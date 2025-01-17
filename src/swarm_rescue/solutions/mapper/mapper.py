@@ -24,7 +24,9 @@ THRESHOLD_MAX = 40
 CONFIDENCE_VALUE = 500
 CONFIDENCE_THRESHOLD = 1000
 CONFIDENCE_THRESHOLD_MIN = 0
-KILL_ZONE_SIZE = 10
+KILL_ZONE_SIZE = 15
+SAFE_ZONE_SIZE = 30
+KILL_ZONE_INCREFMENT = 0.2
 
 DRONE_SIZE_RADIUS = 12
 
@@ -34,6 +36,8 @@ class Zone:
     WOUNDED = 2
     RESCUE_CENTER = 3
     UNEXPLORED = -1
+    KILL_ZONE = 4
+    NO_COM_ZONE = 5
 
 class Map:
     def __init__(self, area_world: List[int], resolution: int, identifier:int, debug_mode: bool=False) -> None:
@@ -45,16 +49,20 @@ class Map:
         self.height : int = int(area_world[1] / self.resolution + 0.5)
 
         self.occupancy_grid : Grid = Grid(area_world, resolution)
+        self.no_comm_zone : Grid = Grid(area_world, resolution)
+        self.kill_zone : Grid = Grid(area_world, resolution)
         self.binary_occupancy_grid : np.ndarray = np.zeros((self.width, self.height)).astype(np.uint8)
         self.confidence_grid : Grid = Grid(area_world, resolution)
         self.confidence_grid_downsampled : Grid = Grid(area_world, resolution * 2)
         self.confidence_wall_map : np.ndarray = np.zeros((self.width, self.height)).astype(np.float64)
         self.merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.occupancy_grid)
+        self.no_comm_zone_merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.no_comm_zone)
+        self.kill_zone_merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.kill_zone)
 
         self.map : np.ndarray = np.full((self.width, self.height), Zone.UNEXPLORED)
 
         self.rescue_center : Optional[Vector2D] = None
-        self.kill_zones : Dict[int, Vector2D] = {}
+        self.kill_zones : List[Vector2D] = {}
         self.no_gps_zones : List[Vector2D] = []
 
         self.tiles_explored: int = 0  # number of tiles explored since last frontier selection (used for RL)
@@ -65,7 +73,6 @@ class Map:
     @property
     def exploration_score(self) -> float:
         return np.count_nonzero(self.map-Zone.UNEXPLORED) / (self.height * self.width)
-
 
     def has_wall(self, start: Vector2D, end:Vector2D) -> bool:
         n = int(round((end-start).norm())+1)
@@ -99,17 +106,7 @@ class Map:
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        # downsample_indices = np.where(lidar_dist < MAX_RANGE_LIDAR_SENSOR/2)[0]
-        # downsample_indices = downsample_indices[downsample_indices % 2 == 0]
-
-        # mask = np.zeros(lidar_dist.shape, dtype=bool)
-        # mask[downsample_indices] = True
-        # mask[lidar_dist > MAX_RANGE_LIDAR_SENSOR/2] = True
-
-        downsampled_lidar_dist = lidar_dist
-        downsampled_lidar_angles = lidar_angles
-
-        world_points = np.column_stack((pose.position[0] + np.multiply(downsampled_lidar_dist, np.cos(downsampled_lidar_angles + pose.orientation)), pose.position[1] + np.multiply(downsampled_lidar_dist, np.sin(downsampled_lidar_angles + pose.orientation))))
+        world_points = np.column_stack((pose.position[0] + np.multiply(lidar_dist, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist, np.sin(lidar_angles + pose.orientation))))
 
         confidence:float = CONFIDENCE_VALUE
         if drone.gps_disabled:
@@ -117,15 +114,8 @@ class Map:
 
         self.tiles_explored += self.confidence_grid_downsampled.add_value_along_lines_confidence(pose.position[0], pose.position[1], world_points[:,0].astype(np.float32), world_points[:,1].astype(np.float32), confidence)
 
-        # for x, y in world_points:
-        #     self.confidence_grid_downsampled.add_value_along_line_confidence(pose.position[0], pose.position[1], x, y, CONFIDENCE_VALUE)
-
         self.confidence_grid_downsampled.set_grid(np.clip(self.confidence_grid_downsampled.get_grid(), 0, CONFIDENCE_THRESHOLD))
-        #self.confidence_grid.display(pose, title="Confidence grid of drone {}".format(drone_id))
-        # Resize confidence_grid_downsampled to the size of the confidence_grid
         self.confidence_grid.set_grid(cv2.resize(self.confidence_grid_downsampled.get_grid(), (self.height, self.width), interpolation=cv2.INTER_LINEAR_EXACT))
-
-        #display_grid(self.confidence_grid_downsampled, pose, title="Confidence grid of drone {}".format(drone_id))
 
     def update_occupancy_grid(self, pose, lidar, drone: FrontierDrone) -> None:
         """
@@ -141,7 +131,7 @@ class Map:
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR)
+        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR * 0.8)
 
         world_points_free = np.column_stack((
             drone_pos.x + np.multiply(lidar_dist_clip, np.cos(lidar_angles + drone_angle)),
@@ -159,7 +149,7 @@ class Map:
             for k in range((i - 3) % 181, (i + 4) % 181):
                 angles_available_arr[k] = False
 
-        mask = np.logical_and(angles_available_arr,lidar_dist < MAX_RANGE_SEMANTIC_SENSOR)
+        mask = np.logical_and(angles_available_arr,lidar_dist < MAX_RANGE_SEMANTIC_SENSOR * 0.8)
         lidar_dist_hit = lidar_dist[mask]
         lidar_angles_hit = lidar_angles[mask]
 
@@ -175,8 +165,7 @@ class Map:
         self.binary_occupancy_grid = np.where(self.occupancy_grid.get_grid() > 0, 1, -1)
 
         #self.filter_occupancy_grid()
-        #self.occupancy_grid.display(pose, title="Occupancy grid of drone {}".format(drone_id))
-        #display_grid(self.occupancy_grid, pose, title="Occupancy grid of drone {}".format(drone_id))
+
     
     def filter_occupancy_grid(self):
         """
@@ -189,15 +178,17 @@ class Map:
         """
         Update the map with the occupancy grid and the confidence grid
         """
-        #self.map = np.where(self.confidence_grid.get_grid() > CONFIDENCE_THRESHOLD_MIN, Zone.EMPTY, self.map)
+
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
-        if drone.debug_map and drone.identifier==0:
-           self.display_map()
+        self.map = np.where(np.logical_and(self.kill_zone.get_grid() >= 1, self.map == Zone.EMPTY), Zone.KILL_ZONE, self.map)
+        self.map = np.where(np.logical_or(np.logical_and(self.no_comm_zone.get_grid() == 1, self.map == Zone.EMPTY), np.logical_and(self.no_comm_zone.get_grid() == 1, self.map == Zone.KILL_ZONE)), Zone.NO_COM_ZONE, self.map)
+
+        if self.debug_mode:
+           self.display_map(drone)
 
     def __setitem__(self, pos, zone):
-        x,y = pos
-        self.map[x][y] = zone
+        self.map[pos.x][pos.y] = zone
 
     def __getitem__(self, pos : Vector2D):
         return self.map[pos.x][pos.y]
@@ -205,21 +196,22 @@ class Map:
     def get_map_matrix(self):
         return self.map
     
-    def add_kill_zone(self, zone_id: int, kill_zone: Vector2D):
+    def add_kill_zone(self, kill_zone_pos: Vector2D):
         """
         Add a kill zone to the map
         """
-        if zone_id not in self.kill_zones:
-            self.kill_zones[zone_id] = kill_zone
+        kill_zone_pos_grid = self.world_to_grid(kill_zone_pos)
+        if self.no_comm_zone.get_grid()[kill_zone_pos_grid.x, kill_zone_pos_grid.y] == 1:
+            return
 
-    def remove_kill_zone(self, zone_id: int):
-        """
-        Remove a kill zone from the map
-        """
-        if zone_id in self.kill_zones:
-            self.kill_zones.pop(zone_id)
+        for x in range(kill_zone_pos_grid.x - KILL_ZONE_SIZE, kill_zone_pos_grid.x + KILL_ZONE_SIZE):
+            for y in range(kill_zone_pos_grid.y - KILL_ZONE_SIZE, kill_zone_pos_grid.y + KILL_ZONE_SIZE):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    pos = self.grid_to_world(Vector2D(x, y))
+                    self.kill_zone.add_point(pos.x, pos.y, KILL_ZONE_INCREFMENT)
+                    self.kill_zone.set_point(pos.x, pos.y, min(100, self.kill_zone.get_grid()[x, y]))
 
-    def display_map(self):
+    def display_map(self, drone: FrontierDrone):
         """
         Display the map
         """
@@ -229,8 +221,8 @@ class Map:
             Zone.WOUNDED: (0, 0, 255),
             Zone.RESCUE_CENTER: (255, 255, 0),
             Zone.UNEXPLORED: (0, 0, 0),
-            1: (255, 255, 255),  # Color for points with value 1 (white)
-            1000: (139, 69, 19)  # Color for points with value 1000 (brown)
+            Zone.KILL_ZONE: (255, 0, 0),
+            Zone.NO_COM_ZONE: (0, 255, 0)
         }
 
         img = np.zeros((self.width, self.height, 3), np.uint8)
@@ -238,15 +230,10 @@ class Map:
         # Assign colors to each point based on the color map
         for x in range(self.width):
             for y in range(self.height):
-                img[x][y] = np.array(color_map[self[x, y]]) #* self.confidence_grid.get_grid()[x][y] / CONFIDENCE_THRESHOLD
+                img[x][y] = np.array(color_map[self[Vector2D(x, y)]])
 
-        # draw kill zones as rectangles
-        for kill_zone in self.kill_zones.values():
-            img = cv2.rectangle(img, (kill_zone.y - KILL_ZONE_SIZE, kill_zone.x - KILL_ZONE_SIZE), (kill_zone.y + KILL_ZONE_SIZE, kill_zone.x + KILL_ZONE_SIZE), (255, 0, 0), 1)
-
-        # # Display the image
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
-        cv2.imshow("Map", np.transpose(img, (1, 0, 2)))
+        cv2.imshow(f"Map {drone.identifier==0}", np.transpose(img, (1, 0, 2)))
         cv2.waitKey(1)
 
     def world_to_grid(self, pos: Vector2D) -> Vector2D:
@@ -281,18 +268,27 @@ class Map:
         self.update_confidence_grid(pose, lidar, drone)
         self.update_occupancy_grid(pose, lidar, drone)
         self.update_merkle(drone)
+        self.update_no_comm_zone(drone)
         self.update_map(drone)
 
-        #plt.imsave(f"confidence{self.identifier}.png", self.confidence_grid.get_grid())
-        #plt.imsave(f"occupancy{self.identifier}.png", self.occupancy_grid.get_grid())
-
+    def update_no_comm_zone(self, drone: FrontierDrone):
+        """
+        Update the safe zone
+        """
+        if not drone.communicator_is_disabled(): return
+        # Add reactangle around the drone
+        drone_pos = self.world_to_grid(drone.drone_position)
+        for x in range(drone_pos.x - SAFE_ZONE_SIZE, drone_pos.x + SAFE_ZONE_SIZE):
+            for y in range(drone_pos.y - SAFE_ZONE_SIZE, drone_pos.y + SAFE_ZONE_SIZE):
+                if 0 <= x < self.width and 0 <= y < self.height:
+                    pos = self.grid_to_world(Vector2D(x, y))
+                    self.no_comm_zone.set_point(pos.x, pos.y, 1)
 
     def update_merkle(self, drone: FrontierDrone):
         p1 = drone.drone_position - Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
         p2 = drone.drone_position + Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
         p1 = self.world_to_grid(p1)
         p2 = self.world_to_grid(p2)
-        # self.merkle_tree.update(p1.x, p1.y, p2.x, p2.y)
         self.merkle_tree.update(0,0,self.height-1, self.width-1) # TODO fix
 
 
@@ -300,40 +296,26 @@ class Map:
         """
         Merge the map with other maps using the confidence grid : if confidence of the current map is higher than the other maps, keep the current map value, else, keep the other map value
         """
-        # confidence = np.maximum(self.confidence_grid.get_grid(), other_map.confidence_grid.get_grid()).astype(np.float32)
-        # occupancy = np.where(self.confidence_grid.get_grid() > other_map.confidence_grid.get_grid(),
-        #                     self.occupancy_grid.get_grid(),
-        #                     other_map.occupancy_grid.get_grid()
-        #             ).astype(np.float32)
-
-        reset = False
-        for other_map in other_maps:
-            for other_id in other_map.kill_zones:
-                if other_id not in self.kill_zones:
-                    self.kill_zones[other_id] = other_map.kill_zones[other_id]
-                    reset = True
-        if reset:
-            drone.reset_path()
-
         maps = [self] + other_maps
         new_maps = []
         while len(maps) > 1:
             for i in range(0,len(maps),2):
                 if i+1<len(maps):
                     maps[i].merkle_tree.merge(maps[i+1].merkle_tree)
+                    # maps[i].no_comm_zone_merkle_tree.merge(maps[i+1].no_comm_zone_merkle_tree)
+                    # maps[i].kill_zone_merkle_tree.merge(maps[i+1].kill_zone_merkle_tree)
                 new_maps.append(maps[i])
             maps = new_maps
             new_maps = []
 
-        # print("confidence:", (confidence == self.confidence_grid.get_grid()).all())
-        # print("occupancy:", (occupancy == self.occupancy_grid.get_grid()).all())
+        for other_map in other_maps:
+            self.no_comm_zone.set_grid(np.maximum(self.no_comm_zone.get_grid(), other_map.no_comm_zone.get_grid()))
+            # Count the number of pixels in the other map kill zone that are not in the current map kill zone
+            count = np.count_nonzero(np.logical_and(other_map.kill_zone.get_grid() > 0, self.kill_zone.get_grid() < 1))
+            if count > 0:
+                drone.reset_path()
+            self.kill_zone.set_grid(np.maximum(self.kill_zone.get_grid(), other_map.kill_zone.get_grid()))
 
-
-    def reset_kill_zones(self):
-        """
-        Reset the kill zones
-        """
-        self.kill_zones = {}
     
     def shortest_path(self, start: Vector2D, end: Vector2D, fast=False) -> Tuple[Optional[List[Vector2D]],Optional[Vector2D]]:
         """
@@ -344,36 +326,13 @@ class Map:
         Returns:
             - path: list of positions (world coordinates)
         """
-        # self.binary_occupancy_grid = 1 if obstacle or unexplored, 0 if free
-        obstacle_grid = np.where(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.UNEXPLORED), 2, 0).astype(np.float64)
-        kill_zone_grid = np.zeros((self.width, self.height)).astype(np.float64)
-        # put kill zones as obstacles
-        if self.kill_zones:
-            for kill_zone in self.kill_zones.values():
-                kill_zone = self.world_to_grid(kill_zone)
-                kill_zone_grid[kill_zone.x - KILL_ZONE_SIZE:kill_zone.x + KILL_ZONE_SIZE, kill_zone.y - KILL_ZONE_SIZE:kill_zone.y + KILL_ZONE_SIZE] = 2
-        #cv2.imwrite("./kill_zones.png", kill_zone_grid * 255)
-        # gaussian blur tp smooth kill zones
-        #kill_zone_grid = cv2.GaussianBlur(kill_zone_grid, (15, 15), 0)
-        #cv2.imwrite("./kill_zones_smooth.png", kill_zone_grid * 255)
+        obstacle_grid = np.where(np.logical_or(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.UNEXPLORED), np.logical_and(self.map == Zone.KILL_ZONE, self.map != Zone.NO_COM_ZONE)), 2, 0).astype(np.float64)
 
-        obstacle_grid = obstacle_grid + kill_zone_grid
+        # Save obstacle_grid for debugging
+        cv2.imwrite("obstacle_grid.png", 100*obstacle_grid)
 
-        # plt.imshow(obstacle_grid)
-        # plt.savefig("./map.png")
-
-        zoom_factor = 1
-        #
-        # if zoom_factor != 1:
-        #     obstacle_grid = cv2.resize(obstacle_grid, (0, 0), fx=zoom_factor, fy=zoom_factor)
-        #     # erosion
-        #     # kernel = np.ones((2,2),np.uint8)
-        #     # obstacle_grid = cv2.erode(obstacle_grid, kernel, iterations=2)
-        # save obstacle grid as image
-        #cv2.imwrite("./map.png", obstacle_grid.T * 255/2)
-
-        grid_start = zoom_factor * self.world_to_grid(start)
-        grid_end = zoom_factor * self.world_to_grid(end)
+        grid_start = self.world_to_grid(start)
+        grid_end = self.world_to_grid(end)
 
         grid_path: Optional[np.ndarray] = None
         next_waypoint = None
@@ -383,12 +342,12 @@ class Map:
                 next_waypoint = Vector2D(next_waypoint[0], next_waypoint[1])
                 next_waypoint = self.grid_to_world(next_waypoint)
         else:
-            grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, 6*zoom_factor)
+            grid_path = pathfinder(obstacle_grid, grid_start.array, grid_end.array, 6)
 
 
         if grid_path is None:
             return None,None
-        path = [self.grid_to_world(Vector2D(pos[0] / zoom_factor, pos[1] / zoom_factor)) for pos in grid_path]
+        path = [self.grid_to_world(Vector2D(pos[0], pos[1])) for pos in grid_path]
 
         return path, next_waypoint
 
@@ -397,13 +356,7 @@ class Map:
         returns the confidence wall map
         """
         self.confidence_wall_map = np.where(self.occupancy_grid.get_grid() > 0, 1, 0).astype(np.float64)
-        #confidence_wall_map = confidence_wall_map.astype(np.uint8)
 
-        # Apply a gaussian blur to smooth the map
-        #confidence_wall_map = cv2.GaussianBlur(confidence_wall_map, (3, 3), 0)
-        # confidence_wall_map = confidence_wall_map.astype(np.float64)
-        # confidence_wall_map = confidence_wall_map * self.confidence_grid.get_grid() / CONFIDENCE_THRESHOLD
-        #confidence_wall_map = confidence_wall_map * self.confidence_grid.get_grid() / CONFIDENCE_THRESHOLD
         self.confidence_wall_map[0:2,] = 1
         self.confidence_wall_map[-3:-1,:] = 1
         self.confidence_wall_map[:,0:2] = 1
@@ -411,9 +364,6 @@ class Map:
         #erosion
         kernel = np.ones((2,2),np.uint8)
         self.confidence_wall_map = cv2.erode(self.confidence_wall_map, kernel, iterations=1)
-        # get the botder of the binary grid with Cannys algorithm
-        #self.confidence_map = cv2.Canny(self.confidence_map, 0, 1)
-        # apply a gaussian blur to the confidence map
         self.confidence_wall_map = cv2.GaussianBlur(self.confidence_wall_map, (7,7), 0)
 
 
