@@ -5,9 +5,11 @@ import numpy as np
 from typing import Optional, List, Tuple, Deque, Dict
 import arcade
 from collections import deque
+import os
 
 from statemachine import exceptions
 
+from solutions.roamer.frontier_policies import get_multi_input_policy
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.utils.misc_data import MiscData
 from spg_overlay.utils.utils import circular_mean
@@ -22,6 +24,12 @@ from solutions.mapper.mapper import Map, DRONE_SIZE_RADIUS
 from solutions.drone_controller import DroneController
 from solutions.roamer.roamer import RoamerController
 
+agent_path = os.path.abspath(os.path.dirname(__file__))
+agent_path = os.path.join(agent_path, "roamer")
+agent_path = os.path.join(agent_path, "data")
+agent_path = os.path.join(agent_path, "Q_function_17.pth")
+frontier_policy = get_multi_input_policy(agent_path, 0)
+
 class FrontierDrone(DroneAbstract):
 
     POSITION_QUEUE_SIZE = 30 # number of positions to check if the drone is stuck
@@ -34,7 +42,7 @@ class FrontierDrone(DroneAbstract):
         self,
         identifier: Optional[int] = None,
         misc_data: Optional[MiscData] = None,
-        policy = None,
+        policy = frontier_policy,
         save_run = None,
         **kwargs):
 
