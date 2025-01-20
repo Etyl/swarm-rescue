@@ -101,6 +101,8 @@ class Map:
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
+        lidar_dist = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR * 0.8)
+
         world_points = np.column_stack((pose.position[0] + np.multiply(lidar_dist, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist, np.sin(lidar_angles + pose.orientation))))
 
         if not drone.gps_disabled:
