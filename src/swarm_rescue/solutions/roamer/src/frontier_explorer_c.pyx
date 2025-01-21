@@ -158,13 +158,13 @@ cdef dfs_fill_array(cnp.ndarray[cnp.int32_t, ndim=2] arr, int start_x, int start
                 arr[nx, ny] = 1
                 stack.append((nx, ny))
 
-def get_frontiers(map, drone_position, frontiers_threshold: int):
+def get_frontiers(map, obstacle_grid, drone_position, frontiers_threshold: int):
     """
     Compute the Wavefront Detector algorithm on the current map
     """
     # Run the Wavefront Detector algorithm
     cdef cnp.ndarray[DTYPE_t, ndim=2] wavefront_map = map.copy().astype(np.int32)
-    wavefront_map[wavefront_map==OBSTACLE] = NEG_OBSTACLE
+    wavefront_map[obstacle_grid==2] = NEG_OBSTACLE
 
     dfs_fill_array(wavefront_map, drone_position[0], drone_position[1])
 

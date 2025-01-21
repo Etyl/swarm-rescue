@@ -312,6 +312,9 @@ class Map:
                 drone.reset_path()       
             self.kill_zone.set_grid(np.maximum(self.kill_zone.get_grid(), other_map.kill_zone.get_grid()))
 
+    def get_obstacle_grid(self):
+        obstacle_grid = np.where(np.logical_or(self.map == Zone.OBSTACLE, np.logical_and(self.map == Zone.KILL_ZONE, self.map != Zone.NO_COM_ZONE)), 2, 0).astype(np.float64)
+        return obstacle_grid
     
     def shortest_path(self, start: Vector2D, end: Vector2D, fast=False) -> Tuple[Optional[List[Vector2D]],Optional[Vector2D]]:
         """
