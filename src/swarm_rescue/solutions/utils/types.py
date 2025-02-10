@@ -112,3 +112,4 @@ class DroneData:
     confidence_position: float
     visible_drones: List[Tuple[int, Vector2D]]
     rescue_center_position: Optional[Vector2D]
+    no_comm_zone_mode: bool

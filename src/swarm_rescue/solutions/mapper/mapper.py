@@ -49,14 +49,12 @@ class Map:
         self.height : int = int(area_world[1] / self.resolution + 0.5)
 
         self.occupancy_grid : Grid = Grid(area_world, resolution)
-        self.no_comm_zone : Grid = Grid(area_world, resolution)
         self.kill_zone : Grid = Grid(area_world, resolution)
         self.binary_occupancy_grid : np.ndarray = np.zeros((self.width, self.height)).astype(np.uint8)
         self.confidence_grid : Grid = Grid(area_world, resolution)
         self.confidence_grid_downsampled : Grid = Grid(area_world, resolution * 2)
         self.confidence_wall_map : np.ndarray = np.zeros((self.width, self.height)).astype(np.float64)
         self.merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.occupancy_grid)
-        self.no_comm_zone_merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.no_comm_zone)
         self.kill_zone_merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.kill_zone)
 
         self.map : np.ndarray = np.full((self.width, self.height), Zone.UNEXPLORED)
@@ -77,7 +75,7 @@ class Map:
             y = int(round(p.y))
             if not (0<=x<self.width and 0<=y<self.height):
                 continue
-            if self.map[x, y] == Zone.OBSTACLE or self.map[x,y] == Zone.UNEXPLORED:
+            if self.map[x, y] == Zone.OBSTACLE or self.map[x,y] == Zone.UNEXPLORED or self.map[x,y] == Zone.KILL_ZONE:
                 return True
         return False
 
@@ -178,7 +176,6 @@ class Map:
         self.map = np.where(self.occupancy_grid.get_grid() > 0, Zone.OBSTACLE, self.map)
         self.map = np.where(self.occupancy_grid.get_grid() < 0, Zone.EMPTY, self.map)
         self.map = np.where(np.logical_and(self.kill_zone.get_grid() >= 1, self.map == Zone.EMPTY), Zone.KILL_ZONE, self.map)
-        self.map = np.where(np.logical_or(np.logical_and(self.no_comm_zone.get_grid() == 1, self.map == Zone.EMPTY), np.logical_and(self.no_comm_zone.get_grid() == 1, self.map == Zone.KILL_ZONE)), Zone.NO_COM_ZONE, self.map)
 
         if self.debug_mode:
            self.display_map(drone)
@@ -197,8 +194,6 @@ class Map:
         Add a kill zone to the map
         """
         kill_zone_pos_grid = self.world_to_grid(kill_zone_pos)
-        if self.no_comm_zone.get_grid()[kill_zone_pos_grid.x, kill_zone_pos_grid.y] == 1:
-            return
         
         for x in range(kill_zone_pos_grid.x - KILL_ZONE_SIZE, kill_zone_pos_grid.x + KILL_ZONE_SIZE):
             for y in range(kill_zone_pos_grid.y - KILL_ZONE_SIZE, kill_zone_pos_grid.y + KILL_ZONE_SIZE):
@@ -206,6 +201,12 @@ class Map:
                     pos = self.grid_to_world(Vector2D(x, y))
                     self.kill_zone.add_point(pos.x, pos.y, KILL_ZONE_INCREFMENT)
                     self.kill_zone.set_point(pos.x, pos.y, min(100, self.kill_zone.get_grid()[x, y]))
+
+    def reset_kill_zone(self):
+        """
+        Reset the kill zone
+        """
+        self.kill_zone.set_grid(np.zeros((self.width, self.height)).astype(np.float32))
 
     def display_map(self, drone: FrontierDrone):
         """
@@ -264,21 +265,8 @@ class Map:
         self.update_confidence_grid(pose, lidar, drone)
         self.update_occupancy_grid(pose, lidar, drone)
         self.update_merkle(drone)
-        self.update_no_comm_zone(drone)
         self.update_map(drone)
 
-    def update_no_comm_zone(self, drone: FrontierDrone):
-        """
-        Update the safe zone
-        """
-        if not drone.communicator_is_disabled(): return
-        # Add reactangle around the drone
-        drone_pos = self.world_to_grid(drone.drone_position)
-        for x in range(drone_pos.x - SAFE_ZONE_SIZE, drone_pos.x + SAFE_ZONE_SIZE):
-            for y in range(drone_pos.y - SAFE_ZONE_SIZE, drone_pos.y + SAFE_ZONE_SIZE):
-                if 0 <= x < self.width and 0 <= y < self.height:
-                    pos = self.grid_to_world(Vector2D(x, y))
-                    self.no_comm_zone.set_point(pos.x, pos.y, 1)
 
     def update_merkle(self, drone: FrontierDrone):
         p1 = drone.drone_position - Vector2D(MAX_RANGE_LIDAR_SENSOR, MAX_RANGE_LIDAR_SENSOR)
@@ -298,18 +286,11 @@ class Map:
             for i in range(0,len(maps),2):
                 if i+1<len(maps):
                     maps[i].merkle_tree.merge(maps[i+1].merkle_tree)
-                    # maps[i].no_comm_zone_merkle_tree.merge(maps[i+1].no_comm_zone_merkle_tree)
-                    # maps[i].kill_zone_merkle_tree.merge(maps[i+1].kill_zone_merkle_tree)
                 new_maps.append(maps[i])
             maps = new_maps
             new_maps = []
 
         for other_map in other_maps:
-            self.no_comm_zone.set_grid(np.maximum(self.no_comm_zone.get_grid(), other_map.no_comm_zone.get_grid()))
-            # Count the number of pixels in the other map kill zone that are not in the current map kill zone
-            count = np.count_nonzero(np.logical_and(other_map.kill_zone.get_grid() > 0, self.kill_zone.get_grid() < 1))
-            if count > 0:
-                drone.reset_path()       
             self.kill_zone.set_grid(np.maximum(self.kill_zone.get_grid(), other_map.kill_zone.get_grid()))
 
     def get_obstacle_grid(self):
@@ -325,10 +306,10 @@ class Map:
         Returns:
             - path: list of positions (world coordinates)
         """
-        obstacle_grid = np.where(np.logical_or(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.UNEXPLORED), np.logical_and(self.map == Zone.KILL_ZONE, self.map != Zone.NO_COM_ZONE)), 2, 0).astype(np.float64)
+        obstacle_grid = np.where(np.logical_or(np.logical_or(self.map == Zone.OBSTACLE, self.map == Zone.UNEXPLORED), self.map == Zone.KILL_ZONE), 2, 0).astype(np.float64)
 
         # Save obstacle_grid for debugging
-        cv2.imwrite("obstacle_grid.png", 100*obstacle_grid)
+        # cv2.imwrite("obstacle_grid.png", 100*obstacle_grid)
        
         grid_start = self.world_to_grid(start)
         grid_end = self.world_to_grid(end)

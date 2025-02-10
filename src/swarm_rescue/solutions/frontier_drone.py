@@ -73,7 +73,7 @@ class FrontierDrone(DroneAbstract):
 
         ## Debug controls
 
-        self.debug_path = True # True if the path must be displayed
+        self.debug_path = False # True if the path must be displayed
         self.debug_wounded = False
         self.debug_positions = False
         self.debug_roamer = False
@@ -82,7 +82,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_lidar = False
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = True
+        self.debug_frontiers = False
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -185,7 +185,8 @@ class FrontierDrone(DroneAbstract):
             next_waypoint= self.next_waypoint,
             confidence_position = self.localizer.confidence_position,
             visible_drones = self.visible_drones,
-            rescue_center_position=self.rescue_center_position
+            rescue_center_position=self.rescue_center_position,
+            no_comm_zone_mode=self.no_comm_zone_mode
         )
         return data
 
@@ -234,6 +235,11 @@ class FrontierDrone(DroneAbstract):
         """
         if self.rescue_center_position is None and drone_data.rescue_center_position is not None:
             self.rescue_center_position = drone_data.rescue_center_position
+        
+        # set the no communication zone mode to True if one of the drones is in this mode
+        if drone_data.no_comm_zone_mode:
+            self.map.reset_kill_zone()
+            self.no_comm_zone_mode = True
 
         # update the wounded list
         if drone_data.wounded_target is not None:
@@ -587,7 +593,6 @@ class FrontierDrone(DroneAbstract):
                         break
                 if dead:
                     self.map.add_kill_zone(pos)
-                    self.reset_path()
 
     def add_searching_time(self):
         """
@@ -614,6 +619,10 @@ class FrontierDrone(DroneAbstract):
         if self.odometer_values() is None:
             return
         
+        if self.communicator_is_disabled():
+            self.map.reset_kill_zone()
+            self.no_comm_zone_mode = True
+        
         self.stuck_iteration += 1
         if self.gps_disabled:
             self.time_in_no_gps += 1
@@ -631,10 +640,9 @@ class FrontierDrone(DroneAbstract):
         if self.rescue_center_position is None:
             self.compute_rescue_center_position()
 
-        if not self.communicator_is_disabled():
+        if not self.communicator_is_disabled() and not self.no_comm_zone_mode:
             if self.iteration > 10:
                 self.compute_kill_zone()
-            # self.check_if_no_com_zone_mode()
         self.update_last_other_drones_position()
 
         if self.roaming:
