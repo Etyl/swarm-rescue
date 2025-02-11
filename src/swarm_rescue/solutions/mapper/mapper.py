@@ -15,9 +15,9 @@ if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
 
 EVERY_N = 1
-LIDAR_DIST_CLIP = 20.0
-EMPTY_ZONE_VALUE = -0.602
-OBSTACLE_ZONE_VALUE = 2.0
+LIDAR_DIST_CLIP = 10.0
+EMPTY_ZONE_VALUE = -0.2
+OBSTACLE_ZONE_VALUE = 3.0
 FREE_ZONE_VALUE = -8
 THRESHOLD_MIN = -40
 THRESHOLD_MAX = 40
@@ -212,6 +212,8 @@ class Map:
         """
         Display the map
         """
+        if self.identifier != 0:
+            return
         color_map = {
             Zone.OBSTACLE: (50, 100, 200),
             Zone.EMPTY: (255, 255, 255),
@@ -222,16 +224,16 @@ class Map:
             Zone.NO_COM_ZONE: (0, 255, 0)
         }
 
-        img = np.zeros((self.width, self.height, 3), np.uint8)
+        img = np.zeros((self.width//3, self.height//3, 3), np.uint8)
 
         # Assign colors to each point based on the color map
-        for x in range(self.width):
-            for y in range(self.height):
-                img[x][y] = np.array(color_map[self[Vector2D(x, y)]])
-
-        img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
-        cv2.imshow(f"Map {drone.identifier==0}", np.transpose(img, (1, 0, 2)))
-        cv2.waitKey(1)
+        for x in range(self.width//3):
+            for y in range(self.height//3):
+                img[x][y] = np.array(color_map[self[Vector2D(3*x, 3*y)]])
+        plt.imsave(f"map_{self.identifier}.png", img)
+        # img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
+        # cv2.imshow(f"Map {drone.identifier==0}", np.transpose(img, (1, 0, 2)))
+        # cv2.waitKey(1)
 
     def world_to_grid(self, pos: Vector2D) -> Vector2D:
         """
