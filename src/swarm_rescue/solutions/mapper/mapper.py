@@ -14,6 +14,7 @@ from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
 
+LIDAR_MAPPER_RANGE = 0.66*MAX_RANGE_LIDAR_SENSOR
 EVERY_N = 1
 LIDAR_DIST_CLIP = 10.0
 EMPTY_ZONE_VALUE = -0.2
@@ -99,7 +100,7 @@ class Map:
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        lidar_dist = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR * 0.8)
+        lidar_dist = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), LIDAR_MAPPER_RANGE)
 
         world_points = np.column_stack((pose.position[0] + np.multiply(lidar_dist, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist, np.sin(lidar_angles + pose.orientation))))
 
@@ -125,7 +126,7 @@ class Map:
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR * 0.8)
+        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), LIDAR_MAPPER_RANGE)
 
         world_points_free = np.column_stack((
             drone_pos.x + np.multiply(lidar_dist_clip, np.cos(lidar_angles + drone_angle)),
@@ -143,7 +144,7 @@ class Map:
             for k in range((i - 3) % 181, (i + 4) % 181):
                 angles_available_arr[k] = False
 
-        mask = np.logical_and(angles_available_arr,lidar_dist < MAX_RANGE_SEMANTIC_SENSOR * 0.8)
+        mask = np.logical_and(angles_available_arr,lidar_dist < LIDAR_MAPPER_RANGE)
         lidar_dist_hit = lidar_dist[mask]
         lidar_angles_hit = lidar_angles[mask]
 
