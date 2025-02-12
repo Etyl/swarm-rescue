@@ -7,13 +7,13 @@ import cv2
 
 FREE_TILE = 0
 OBSTACLE_TILE = 1
-MAX_CELL_SIZE = 1000
+MAX_CELL_SIZE = 500
 
 def get_neighbours(i0:int,j0:int,labels_map,obstacle_map):
     return [
         (i,j) for i in range(i0-1,i0+2) for j in range(j0-1,j0+2)
-        if (0<=i<len(labels_map) and
-            0<=j<len(obstacle_map) and
+        if (0<=i<labels_map.shape[0] and
+            0<=j<labels_map.shape[1] and
             (i!=i0 or j!=j0) and
             labels_map[i,j]==0 and
             obstacle_map[i,j]==FREE_TILE
@@ -63,18 +63,20 @@ COLORS = [(56, 120, 200), (23, 210, 55), (128, 64, 192), (240, 90, 33), (90, 200
 
 if __name__ == '__main__':
     image = mpimg.imread("obstacle.png")
-    image = cv2.resize(image, (image.shape[0]//6, image.shape[1]//6))
+    image = cv2.resize(image, (230, 170))
 
     obstacle_map = np.mean(image, axis=2)
-    obstacle_map = np.where(obstacle_map < 0.5, 1, 0)
+    obstacle_map = np.where(obstacle_map < 0.8, 1, 0)
 
-    labels_map, total_cell_tiles = create_graph_map(100,100,obstacle_map)
+    labels_map, total_cell_tiles = create_graph_map(60,200,obstacle_map)
     graph_display = np.zeros_like(image)
     for k in range(len(total_cell_tiles)):
         for i,j in total_cell_tiles[k]:
             graph_display[i,j] = COLORS[k%len(COLORS)]
     graph_display /= 255
-    plt.imshow(image)
+    plt.figure(figsize=(10, 10))
+    plt.imshow(obstacle_map)
+    plt.figure()
     plt.imshow(graph_display)
     plt.show()
 
