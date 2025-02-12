@@ -379,7 +379,7 @@ class Roamer:
         # score (the higher the better)
         score = None
         if self.policy is None:
-            score = (2 * obs["distance"] +
+            score = (8 * obs["distance"] +
                      1 * obs["size"] +
                      1 * obs["count"] +
                      4 * obs["repulsion_angle"] -
