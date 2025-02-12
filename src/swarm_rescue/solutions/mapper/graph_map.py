@@ -8,6 +8,7 @@ import cv2
 FREE_TILE = 0
 OBSTACLE_TILE = 1
 MAX_CELL_SIZE = 500
+MAX_CELL_RADIUS = 30
 
 def get_neighbours(i0:int,j0:int,labels_map,obstacle_map):
     return [
@@ -29,10 +30,14 @@ def propagate_cell(i0:int,j0:int,labels_map,obstacle_map,label) \
     wait : Deque[Tuple[int,int]] = deque([(i0,j0)])
     cell_tiles : List[Tuple[int,int]] = []
     cell_size = 0
-    while len(wait) > 0 and cell_size<MAX_CELL_SIZE:
+    min_i,max_i = i0,i0
+    min_j,max_j = j0,j0
+    while len(wait) > 0 and cell_size<MAX_CELL_SIZE and max_j-min_j<=MAX_CELL_RADIUS and max_i-min_i<=MAX_CELL_RADIUS:
         i,j = wait.popleft()
         if labels_map[i,j]!=0:
             continue
+        min_i,max_i = min(min_i,i),max(max_i,i)
+        min_j,max_j = min(min_j,j),max(max_j,j)
         cell_tiles.append((i,j))
         labels_map[i, j] = label
         cell_size += 1
@@ -58,8 +63,17 @@ def create_graph_map(i0,j0,obstacle_map):
 
     return labels_map, total_cell_tiles
 
-COLORS = [(56, 120, 200), (23, 210, 55), (128, 64, 192), (240, 90, 33), (90, 200, 70),
- (12, 240, 150), (255, 100, 200), (50, 70, 255), (180, 50, 100), (5, 255, 100)]
+COLORS = [
+    (255, 0, 0),    # Red
+    (0, 255, 0),    # Green
+    (0, 0, 255),    # Blue
+    (255, 255, 0),  # Yellow
+    (255, 165, 0),  # Orange
+    (128, 0, 128),  # Purple
+    (0, 255, 255),  # Cyan
+    (255, 192, 203),# Pink
+    (165, 42, 42),  # Brown
+]
 
 if __name__ == '__main__':
     image = mpimg.imread("obstacle.png")
