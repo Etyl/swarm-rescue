@@ -121,6 +121,16 @@ def add_drone_distance(A, features, starting_node):
 
 
 def create_graph_map(i0,j0,obstacle_map):
+    """
+    Params:
+        i0,j0: Coords of the drone
+        obstacle map: map with FREE_TILE, OBSTACLE_TILE, UNKNOWN_TILE
+    Returns:
+        labels_map: label[i,j] -> id of the corresponding node
+        total_cell_tiles: total_cell_tiles[node_id] -> list of all points associated to this node
+        features: features[node_id] -> dict of the features for this node
+        A: adjacency matrix of the graph
+    """
     labels_map = np.zeros_like(obstacle_map)
     wait = {(i0, j0)}
     current_label = 1
