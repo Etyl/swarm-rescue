@@ -1,11 +1,10 @@
 import heapq
-from typing import Deque, Tuple, List, Set
+from typing import Deque, Tuple, List, Set, Dict
 import numpy as np
 from collections import deque
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import cv2
-from networkx import adjacency_matrix
 
 FREE_TILE = 0
 OBSTACLE_TILE = 1
@@ -119,8 +118,13 @@ def add_drone_distance(A, features, starting_node):
         features[k]["drone_distance"] = dist[k]
 
 
-
-def create_graph_map(i0,j0,obstacle_map):
+def create_graph_map(i0,j0,obstacle_map:np.ndarray)\
+    -> Tuple[
+        np.ndarray,
+        List[List[Tuple[int,int]]],
+        List[Dict[str,float]],
+        np.ndarray
+    ]:
     """
     Params:
         i0,j0: Coords of the drone
