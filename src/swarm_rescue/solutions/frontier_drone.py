@@ -19,6 +19,7 @@ from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SEN
 from solutions.utils.types import DroneData, WoundedData, Vector2D
 from solutions.localizer.localizer import Localizer
 from solutions.mapper.mapper import Map, DRONE_SIZE_RADIUS
+from solutions.mapper.graph_map_class import GraphMap
 from solutions.drone_controller import DroneController
 from solutions.roamer.roamer import RoamerController
 
@@ -78,11 +79,12 @@ class FrontierDrone(DroneAbstract):
         self.debug_positions = False
         self.debug_roamer = False
         self.debug_controller = False
-        self.debug_mapper = False
+        self.debug_mapper = True
         self.debug_lidar = False
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = False
+        self.debug_frontiers = True
+        self.debug_graph_map = True
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -102,6 +104,7 @@ class FrontierDrone(DroneAbstract):
         }
 
         self.map : Map = Map(area_world=self.size_area, resolution=4, identifier=self.identifier, debug_mode=self.debug_mapper)
+        self.graph_map = GraphMap(drone=self, map=self.map)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
 
         self.localizer : Localizer = Localizer(self)
@@ -721,6 +724,9 @@ class FrontierDrone(DroneAbstract):
     def draw_top_layer(self):
         # check if drone is dead
         if self.odometer_values() is None: return
+
+        if self.debug_graph_map:
+            self.graph_map.draw()
 
         # draw frontiers
         if self.debug_frontiers:
