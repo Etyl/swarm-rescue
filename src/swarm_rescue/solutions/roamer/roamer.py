@@ -49,10 +49,10 @@ class RoamerController(StateMachine):
     _PATH_SAMPLING_RATE : int = 1
 
     # the number of points required in a frontier
-    _FRONTIERS_THRESHOLD : int = 6
+    _FRONTIERS_THRESHOLD : int = 2
 
     # the minimum number of points required in a frontier
-    _MIN_FRONTIERS_THRESHOLD : int = 6
+    _MIN_FRONTIERS_THRESHOLD : int = 2
 
     # the cooldown for computing the frontier
     # TODO rewrite/refactor

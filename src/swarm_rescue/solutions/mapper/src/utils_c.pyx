@@ -142,6 +142,8 @@ cdef class Grid:
             # Convert world coordinates to grid coordinates manually
             x_px = <int>((points_x[i] + half_width) / resolution)
             y_px = <int>((-points_y[i] + half_height) / resolution)
+            x_px = min(max(0,x_px), self.grid.shape[0]-1)
+            y_px = min(max(0,y_px), self.grid.shape[1]-1)
             x_0 = max(x_px-1,0)
             y_0 = max(y_px-1,0)
             x_1 = min(x_px+1,self.grid.shape[0]-1)

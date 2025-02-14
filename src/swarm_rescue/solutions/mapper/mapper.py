@@ -14,7 +14,7 @@ from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
 
-LIDAR_MAPPER_RANGE = 0.66*MAX_RANGE_LIDAR_SENSOR
+LIDAR_MAPPER_RANGE = 0.60*MAX_RANGE_LIDAR_SENSOR
 EVERY_N = 1
 LIDAR_DIST_CLIP = 0.0
 EMPTY_ZONE_VALUE = -0.4
