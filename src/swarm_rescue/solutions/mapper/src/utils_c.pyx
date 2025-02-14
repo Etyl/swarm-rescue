@@ -119,6 +119,34 @@ cdef class Grid:
             # Bound checking and adding value
             if 0 <= x_px < x_max_grid and 0 <= y_px < y_max_grid:
                 grid_view[x_px, y_px] += val
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.cdivision(True)
+    def add_points_obstacle(self, cnp.ndarray[DTYPE_t, ndim=1] points_x, cnp.ndarray[DTYPE_t, ndim=1] points_y, DTYPE_t val):
+        """
+        Add a value to an array of points, input coordinates in meters
+        points_x, points_y: arrays of x and y coordinates in m
+        val: value to add to the cells of the points
+        """
+        cdef int num_points = points_x.shape[0]
+        cdef int i, x_px, y_px
+        # cdef DTYPE_t[:, :] grid_view = self.grid
+        cdef int x_max_grid = self.x_max_grid
+        cdef int y_max_grid = self.y_max_grid
+        cdef float resolution = self.resolution
+        cdef float half_width = self.size_area_world[0] / 2.0
+        cdef float half_height = self.size_area_world[1] / 2.0
+
+        for i in range(num_points):
+            # Convert world coordinates to grid coordinates manually
+            x_px = <int>((points_x[i] + half_width) / resolution)
+            y_px = <int>((-points_y[i] + half_height) / resolution)
+            x_0 = max(x_px-1,0)
+            y_0 = max(y_px-1,0)
+            x_1 = min(x_px+1,self.grid.shape[0]-1)
+            y_1 = min(y_px+1,self.grid.shape[1]-1)
+            self.grid[x_0:x_1+1, y_0:y_1] += val
     
     @cython.boundscheck(False)
     @cython.wraparound(False)

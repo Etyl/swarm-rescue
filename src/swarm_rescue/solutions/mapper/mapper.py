@@ -16,9 +16,9 @@ if TYPE_CHECKING: # type: ignore
 
 LIDAR_MAPPER_RANGE = 0.66*MAX_RANGE_LIDAR_SENSOR
 EVERY_N = 1
-LIDAR_DIST_CLIP = 10.0
-EMPTY_ZONE_VALUE = -0.2
-OBSTACLE_ZONE_VALUE = 3.0
+LIDAR_DIST_CLIP = 0.0
+EMPTY_ZONE_VALUE = -0.4
+OBSTACLE_ZONE_VALUE = 2.0
 FREE_ZONE_VALUE = -8
 THRESHOLD_MIN = -40
 THRESHOLD_MAX = 40
@@ -151,7 +151,7 @@ class Map:
         world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
 
         self.occupancy_grid.set_grid(np.where(boundary_mask, buffer, self.occupancy_grid.get_grid()))
-        self.occupancy_grid.add_points(world_points_hit[:,0].astype(np.float32), world_points_hit[:,1].astype(np.float32), OBSTACLE_ZONE_VALUE)
+        self.occupancy_grid.add_points_obstacle(world_points_hit[:,0].astype(np.float32), world_points_hit[:,1].astype(np.float32), OBSTACLE_ZONE_VALUE)
 
         # Mark the current position of the drone as free
         self.occupancy_grid.add_point(int(pose.position[0]), int(pose.position[1]), FREE_ZONE_VALUE)
@@ -231,10 +231,10 @@ class Map:
         for x in range(self.width//3):
             for y in range(self.height//3):
                 img[x][y] = np.array(color_map[self[Vector2D(3*x, 3*y)]])
-        plt.imsave(f"map_{self.identifier}.png", img)
-        # img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
-        # cv2.imshow(f"Map {drone.identifier==0}", np.transpose(img, (1, 0, 2)))
-        # cv2.waitKey(1)
+        # plt.imsave(f"map_{self.identifier}.png", img)
+        img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
+        cv2.imshow(f"Map {drone.identifier==0}", np.transpose(img, (1, 0, 2)))
+        cv2.waitKey(1)
 
     def world_to_grid(self, pos: Vector2D) -> Vector2D:
         """
