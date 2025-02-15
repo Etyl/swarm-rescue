@@ -49,10 +49,10 @@ class RoamerController(StateMachine):
     _PATH_SAMPLING_RATE : int = 1
 
     # the number of points required in a frontier
-    _FRONTIERS_THRESHOLD : int = 6
+    _FRONTIERS_THRESHOLD : int = 2
 
     # the minimum number of points required in a frontier
-    _MIN_FRONTIERS_THRESHOLD : int = 6
+    _MIN_FRONTIERS_THRESHOLD : int = 2
 
     # the cooldown for computing the frontier
     # TODO rewrite/refactor
@@ -379,7 +379,7 @@ class Roamer:
         # score (the higher the better)
         score = None
         if self.policy is None:
-            score = (2 * obs["distance"] +
+            score = (8 * obs["distance"] +
                      1 * obs["size"] +
                      1 * obs["count"] +
                      4 * obs["repulsion_angle"] -

@@ -14,9 +14,10 @@ from solutions.mapper.utils import display_grid, Grid, MerkleTree # type: ignore
 if TYPE_CHECKING: # type: ignore
     from solutions.frontier_drone import FrontierDrone # type: ignore
 
+LIDAR_MAPPER_RANGE = 0.60*MAX_RANGE_LIDAR_SENSOR
 EVERY_N = 1
-LIDAR_DIST_CLIP = 20.0
-EMPTY_ZONE_VALUE = -0.602
+LIDAR_DIST_CLIP = 0.0
+EMPTY_ZONE_VALUE = -0.4
 OBSTACLE_ZONE_VALUE = 2.0
 FREE_ZONE_VALUE = -8
 THRESHOLD_MIN = -40
@@ -99,7 +100,7 @@ class Map:
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        lidar_dist = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR * 0.8)
+        lidar_dist = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), LIDAR_MAPPER_RANGE)
 
         world_points = np.column_stack((pose.position[0] + np.multiply(lidar_dist, np.cos(lidar_angles + pose.orientation)), pose.position[1] + np.multiply(lidar_dist, np.sin(lidar_angles + pose.orientation))))
 
@@ -125,7 +126,7 @@ class Map:
         lidar_dist = lidar.get_sensor_values()[::EVERY_N].copy()
         lidar_angles = lidar.ray_angles[::EVERY_N].copy()
 
-        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), MAX_RANGE_SEMANTIC_SENSOR * 0.8)
+        lidar_dist_clip = np.minimum(np.maximum(lidar_dist - LIDAR_DIST_CLIP, 0.0), LIDAR_MAPPER_RANGE)
 
         world_points_free = np.column_stack((
             drone_pos.x + np.multiply(lidar_dist_clip, np.cos(lidar_angles + drone_angle)),
@@ -143,14 +144,14 @@ class Map:
             for k in range((i - 3) % 181, (i + 4) % 181):
                 angles_available_arr[k] = False
 
-        mask = np.logical_and(angles_available_arr,lidar_dist < MAX_RANGE_SEMANTIC_SENSOR * 0.8)
+        mask = np.logical_and(angles_available_arr,lidar_dist < LIDAR_MAPPER_RANGE)
         lidar_dist_hit = lidar_dist[mask]
         lidar_angles_hit = lidar_angles[mask]
 
         world_points_hit = np.column_stack((pose.position[0] + np.multiply(lidar_dist_hit, np.cos(lidar_angles_hit + pose.orientation)), pose.position[1] + np.multiply(lidar_dist_hit, np.sin(lidar_angles_hit + pose.orientation))))
 
         self.occupancy_grid.set_grid(np.where(boundary_mask, buffer, self.occupancy_grid.get_grid()))
-        self.occupancy_grid.add_points(world_points_hit[:,0].astype(np.float32), world_points_hit[:,1].astype(np.float32), OBSTACLE_ZONE_VALUE)
+        self.occupancy_grid.add_points_obstacle(world_points_hit[:,0].astype(np.float32), world_points_hit[:,1].astype(np.float32), OBSTACLE_ZONE_VALUE)
 
         # Mark the current position of the drone as free
         self.occupancy_grid.add_point(int(pose.position[0]), int(pose.position[1]), FREE_ZONE_VALUE)
@@ -212,6 +213,8 @@ class Map:
         """
         Display the map
         """
+        if self.identifier != 0:
+            return
         color_map = {
             Zone.OBSTACLE: (50, 100, 200),
             Zone.EMPTY: (255, 255, 255),
@@ -222,13 +225,13 @@ class Map:
             Zone.NO_COM_ZONE: (0, 255, 0)
         }
 
-        img = np.zeros((self.width, self.height, 3), np.uint8)
+        img = np.zeros((self.width//3, self.height//3, 3), np.uint8)
 
         # Assign colors to each point based on the color map
-        for x in range(self.width):
-            for y in range(self.height):
-                img[x][y] = np.array(color_map[self[Vector2D(x, y)]])
-
+        for x in range(self.width//3):
+            for y in range(self.height//3):
+                img[x][y] = np.array(color_map[self[Vector2D(3*x, 3*y)]])
+        # plt.imsave(f"map_{self.identifier}.png", img)
         img = cv2.resize(img, (0, 0), fx=5, fy=5, interpolation=cv2.INTER_NEAREST)
         cv2.imshow(f"Map {drone.identifier==0}", np.transpose(img, (1, 0, 2)))
         cv2.waitKey(1)
