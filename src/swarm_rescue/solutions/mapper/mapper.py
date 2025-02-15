@@ -201,7 +201,7 @@ class Map:
                 if 0 <= x < self.width and 0 <= y < self.height:
                     pos = self.grid_to_world(Vector2D(x, y))
                     self.kill_zone.add_point(pos.x, pos.y, KILL_ZONE_INCREFMENT)
-                    self.kill_zone.set_point(pos.x, pos.y, min(100, self.kill_zone.get_grid()[x, y]))
+                    self.kill_zone.set_point(pos.x, pos.y, min(100, self.kill_zone.get_point(pos.x, pos.y)))
 
     def reset_kill_zone(self):
         """
