@@ -116,16 +116,18 @@ class GraphMap:
 
         return features, A
 
-    def get_drone_features(self, features, drone_data: List[DroneData]):
-        for data in drone_data:
-            drone_pos = data.position
-            def node_distance_func(target):
-                return lambda x: Vector2D(x["barycenter_x"],x["barycenter_y"]).distance(target)
+    def get_drone_features(self, features, drone_positions: List[Vector2D], drone_targets: List[Vector2D]):
+        def node_distance_func(target):
+            return lambda x: Vector2D(x["barycenter_x"], x["barycenter_y"]).distance(target)
+
+        for drone_pos in drone_positions:
+            drone_pos = self.map.world_to_grid(drone_pos)
             node_pos = np.argmin(list(map(node_distance_func(drone_pos),features)))
             features[node_pos]["drone_count"] += 1
 
-            drone_target = data.target
+        for drone_target in drone_targets:
             if drone_target is not None:
+                drone_target = self.map.world_to_grid(drone_target)
                 node_target = np.argmin(list(map(node_distance_func(drone_target),features)))
                 features[node_target]["target_count"] += 1
 
@@ -249,7 +251,9 @@ class GraphMap:
         drone_node = self.labels_map[drone_pos.x, drone_pos.y]
 
         if len(features) > 0:
-            self.get_drone_features(features, drone.drone_list)
+            drone_positions = [data[1] for data in drone.drone_positions.values()]
+            drone_targets = [data.target for data in drone.drone_list]
+            self.get_drone_features(features, drone_positions, drone_targets)
             self.add_drone_distance(A, features, drone_node)
 
         self.features = features

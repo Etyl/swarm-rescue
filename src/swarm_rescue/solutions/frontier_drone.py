@@ -4,7 +4,7 @@ import math
 import numpy as np
 from typing import Optional, List, Tuple, Deque, Dict
 import arcade
-from collections import deque
+from collections import deque, defaultdict
 
 from statemachine import exceptions
 
@@ -70,6 +70,7 @@ class FrontierDrone(DroneAbstract):
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
         self.wounded_target : Optional[Vector2D] = None # The wounded position to go to
         self.drone_list : List[DroneData] = [] # The list of drones
+        self.drone_positions: Dict[int,Tuple[int,Vector2D]] = dict() # drone_id : (timestep, drone_position)
         self.iteration : int = 0 # The number of iterations
 
         ## Debug controls
@@ -83,8 +84,8 @@ class FrontierDrone(DroneAbstract):
         self.debug_lidar = False
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = False
-        self.debug_graph_map = False
+        self.debug_frontiers = True
+        self.debug_graph_map = True
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -194,7 +195,8 @@ class FrontierDrone(DroneAbstract):
             visible_drones = self.visible_drones,
             rescue_center_position=self.rescue_center_position,
             no_comm_zone_mode=self.no_comm_zone_mode,
-            target=target_path
+            target=target_path,
+            drone_positions=self.drone_positions
         )
         return data
 
@@ -241,6 +243,14 @@ class FrontierDrone(DroneAbstract):
         """
         updates the data of the drones
         """
+        # update drone positions
+        self.drone_positions[drone_data.id] = (self.elapsed_timestep,drone_data.position)
+        for drone_id in drone_data.drone_positions:
+            if drone_id not in self.drone_positions:
+                self.drone_positions[drone_id] = drone_data.drone_positions[drone_id]
+            elif drone_data.drone_positions[drone_id][0] > self.drone_positions[drone_id][0]:
+                self.drone_positions[drone_id] = drone_data.drone_positions[drone_id]
+
         if self.rescue_center_position is None and drone_data.rescue_center_position is not None:
             self.rescue_center_position = drone_data.rescue_center_position
         

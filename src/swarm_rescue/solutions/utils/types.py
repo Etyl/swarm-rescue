@@ -114,3 +114,4 @@ class DroneData:
     rescue_center_position: Optional[Vector2D]
     no_comm_zone_mode: bool
     target : Optional[Vector2D]
+    drone_positions: Dict[int,Tuple[int,Vector2D]] # Dict of drone id -> timestep,drone_position
