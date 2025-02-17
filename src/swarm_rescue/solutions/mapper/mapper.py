@@ -184,8 +184,9 @@ class Map:
     def __setitem__(self, pos, zone):
         self.map[pos.x][pos.y] = zone
 
-    def __getitem__(self, pos : Vector2D):
-        return self.map[pos.x][pos.y]
+    def __getitem__(self, x, y):
+        return self.map[x,y]
+
     
     def get_map_matrix(self):
         return self.map

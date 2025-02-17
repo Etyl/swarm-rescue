@@ -267,7 +267,7 @@ class Roamer:
 
         # plt.imsave(f"map_{self.drone.identifier}.png",self.map.get_map_matrix())
         # plt.imsave(f"map_r_{self.drone.identifier}.png",map_matrix)
-        self.drone.graph_map.update()
+        self.drone.graph_map.update(self.drone)
         frontiers_output, frontier_count = get_frontiers(map_matrix, obstacle_matrix, drone_position_grid.array//MAP_SCALE, frontiers_threshold)
         vector_frontiers = []
         for frontier in frontiers_output:

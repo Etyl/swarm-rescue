@@ -105,7 +105,7 @@ class DroneData:
     position: Vector2D
     angle: float
     vel_angle: float
-    wounded_target: Vector2D
+    wounded_target: Optional[Vector2D]
     map : typing.Any
     semantic_values: np.ndarray
     next_waypoint : Vector2D
@@ -113,3 +113,4 @@ class DroneData:
     visible_drones: List[Tuple[int, Vector2D]]
     rescue_center_position: Optional[Vector2D]
     no_comm_zone_mode: bool
+    target : Optional[Vector2D]

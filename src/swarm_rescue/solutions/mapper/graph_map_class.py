@@ -1,32 +1,28 @@
 import heapq
-from typing import Deque, Tuple, List, Set, Dict
+from typing import Deque, Tuple, List, Set, Optional
 import numpy as np
-from collections import deque
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-import cv2
+from collections import deque, defaultdict
 import networkx as nx
 import arcade
 
 from solutions.mapper.mapper import Map, Zone  # type: ignore
-from solutions.utils.types import Vector2D # type: ignore
+from solutions.utils.types import Vector2D, DroneData  # type: ignore
 
 FREE_TILE = 0
 OBSTACLE_TILE = 1
 UNKNOWN_TILE = 2
-MAX_CELL_SIZE = 500
-MAX_CELL_RADIUS = 30
+MAX_CELL_SIZE = 800
+MAX_CELL_RADIUS = 35
 
 
 class GraphMap:
-    def __init__(self, drone, map: Map):
-        self.drone = drone
+    def __init__(self, map: Map):
         self.map = map
-        self.labels_map = np.zeros((map.get_width(), map.get_height()), dtype=int)
-        self.total_cell_tiles = []
-        self.adjacency_matrix = None
-        self.graph = None
-        self.features = None
+        self.labels_map : np.ndarray[int] = np.zeros((map.get_width(), map.get_height()), dtype=int)
+        self.total_cell_tiles : List[List[Tuple[int, int]]] = []
+        self.adjacency_matrix : Optional[np.ndarray]  = None
+        self.graph : Optional[nx.Graph] = None
+        self.features : Optional[np.ndarray] = None
 
     def get_neighbours(self, i0: int, j0: int, include_unknown=False):
         return [
@@ -39,8 +35,8 @@ class GraphMap:
                 and (i != i0 or j != j0)
                 and (include_unknown or self.labels_map[i, j] == 0)
                 and (
-                    self.map[Vector2D(i, j)] == Zone.EMPTY
-                    or (include_unknown and self.map[Vector2D(i, j)] == Zone.UNEXPLORED)
+                    self.map.map[i,j] == Zone.EMPTY
+                    or (include_unknown and self.map.map[i,j] == Zone.UNEXPLORED)
                 )
             )
         ]
@@ -71,7 +67,8 @@ class GraphMap:
             cell_tiles.append((i, j))
             self.labels_map[i, j] = label
             cell_size += 1
-            for neigh in self.get_neighbours(i, j):
+            neighbors = self.get_neighbours(i, j)
+            for neigh in neighbors:
                 wait.append(neigh)
 
         return set(wait), cell_tiles
@@ -87,12 +84,13 @@ class GraphMap:
             for l, (i0, j0) in enumerate(self.total_cell_tiles[k]):
                 barycenter[0] += i0
                 barycenter[1] += j0
-                for i, j in self.get_neighbours(i0, j0, include_unknown=True):
-                    if self.labels_map[i, j] != label and self.map[Vector2D(i, j)] == Zone.EMPTY:
+                neighbors = self.get_neighbours(i0, j0, include_unknown=True)
+                for i, j in neighbors:
+                    if self.labels_map[i, j] != label and self.map.map[i,j] == Zone.EMPTY:
                         A[label - 1, self.labels_map[i, j] - 1] = 1
                         A[self.labels_map[i, j] - 1, label - 1] = 1
                         perimeter += 1
-                    if self.map[Vector2D(i, j)] == Zone.UNEXPLORED:
+                    if self.map.map[i,j] == Zone.UNEXPLORED:
                         frontier.add((i0, j0))
 
             barycenter[0] /= len(self.total_cell_tiles[k])
@@ -102,7 +100,7 @@ class GraphMap:
                 frontier_barycenter[0] = sum([p[0] for p in frontier]) / len(frontier)
                 frontier_barycenter[1] = sum([p[1] for p in frontier]) / len(frontier)
 
-            node_features = dict()
+            node_features = defaultdict(float)
             node_features["area"] = len(self.total_cell_tiles[k])
             node_features["perimeter"] = perimeter
             node_features["barycenter_x"] = barycenter[0]
@@ -110,9 +108,27 @@ class GraphMap:
             node_features["frontier_size"] = len(frontier)
             node_features["frontier_barycenter_x"] = frontier_barycenter[0]
             node_features["frontier_barycenter_y"] = frontier_barycenter[1]
+
+            if perimeter > 0:
+                node_features["frontier_size_ratio"] = node_features["frontier_size"] / node_features["perimeter"]
+
             features.append(node_features)
 
         return features, A
+
+    def get_drone_features(self, features, drone_data: List[DroneData]):
+        for data in drone_data:
+            drone_pos = data.position
+            def node_distance_func(target):
+                return lambda x: Vector2D(x["barycenter_x"],x["barycenter_y"]).distance(target)
+            node_pos = np.argmin(list(map(node_distance_func(drone_pos),features)))
+            features[node_pos]["drone_count"] += 1
+
+            drone_target = data.target
+            if drone_target is not None:
+                node_target = np.argmin(list(map(node_distance_func(drone_target),features)))
+                features[node_target]["target_count"] += 1
+
 
     def add_drone_distance(self, A, features, starting_node):
         num_nodes = len(features)
@@ -131,7 +147,7 @@ class GraphMap:
             visited[current_node] = True
 
             for neighbor in range(num_nodes):
-                if A[current_node, neighbor] > 0:
+                if A[current_node, neighbor] > 0 and not visited[neighbor]:
                     current_node_pos = (
                         features[current_node]["barycenter_x"],
                         features[current_node]["barycenter_y"],
@@ -146,81 +162,74 @@ class GraphMap:
                     )
                     if new_dist < dist[neighbor]:
                         dist[neighbor] = new_dist
+                        features[neighbor]["target_path"] = features[current_node]["target_path"]+features[neighbor]["drone_count"]
                         heapq.heappush(priority_queue, (new_dist, neighbor))
 
         for k in range(num_nodes):
             features[k]["drone_distance"] = dist[k]
 
-    def draw(self):
-        if self.graph is not None:
+    def get_grid_barycenter(self, x, drone, frontier=False):
+        pos_x = x[f"{'frontier_' if frontier else ''}barycenter_x"]
+        pos_y = x[f"{'frontier_' if frontier else ''}barycenter_y"]
+        pos = Vector2D(pos_x, pos_y)
+        pos = self.map.grid_to_world(pos)
+        pos = pos.array + np.array(drone.size_area) / 2
+        return pos
 
-            for i in range(len(self.adjacency_matrix)):
-                for j in range(i + 1, len(self.adjacency_matrix)):
-                    
-                    if self.adjacency_matrix[i][j] == 1:
-          
-                        pos_x_i = self.features[i]["barycenter_x"]
-                        pos_y_i = self.features[i]["barycenter_y"]
-                        pos_i = Vector2D(pos_x_i, pos_y_i)
-                        pos_i = self.map.grid_to_world(pos_i)
-                        pos_i = pos_i.array + np.array(self.drone.size_area) / 2
+    def draw(self, drone):
+        if self.graph is None:
+            return
 
-                        pos_x_j = self.features[j]["barycenter_x"]
-                        pos_y_j = self.features[j]["barycenter_y"]
-                        pos_j = Vector2D(pos_x_j, pos_y_j)
-                        pos_j = self.map.grid_to_world(pos_j)
-                        pos_j = pos_j.array + np.array(self.drone.size_area) / 2
+        selected_feature = "target_path"
+        max_val = np.max(list(map(
+            lambda x: x[selected_feature],
+            self.features
+        )))
 
-                        node_size_i = (self.features[i]["area"] / MAX_CELL_SIZE + 1)*5
-                        node_size_j = (self.features[j]["area"] / MAX_CELL_SIZE + 1)*5
-    
-                        perimeter_i = self.features[i]["perimeter"] / (MAX_CELL_RADIUS * 8) 
-                        perimeter_j = self.features[j]["perimeter"] / (MAX_CELL_RADIUS * 8)
+        for i in range(len(self.adjacency_matrix)):
+            for j in range(i + 1, len(self.adjacency_matrix)):
 
-                        # Gradient of color depending on the frontier size 
-                        color_start = arcade.color.BLACK
-                        color_end = arcade.color.RED
-                        t_i = min(self.features[i]["frontier_size"] / 10, 1)
-                        t_j = min(self.features[j]["frontier_size"] / 10, 1)
-                        node_color_i = (
-                            color_start[0] + t_i * (color_end[0] - color_start[0]),
-                            color_start[1] + t_i * (color_end[1] - color_start[1]),
-                            color_start[2] + t_i * (color_end[2] - color_start[2]),
-                        )
-                        node_color_j = (
-                            color_start[0] + t_j * (color_end[0] - color_start[0]),
-                            color_start[1] + t_j * (color_end[1] - color_start[1]),
-                            color_start[2] + t_j * (color_end[2] - color_start[2]),
-                        )
+                if self.adjacency_matrix[i][j] == 1:
 
-                        arcade.draw_line(pos_i[0], pos_i[1], pos_j[0], pos_j[1], arcade.color.BLACK, 2)
-                        arcade.draw_circle_filled(pos_i[0], pos_i[1], node_size_i, node_color_i)
-                        arcade.draw_circle_filled(pos_j[0], pos_j[1], node_size_j, node_color_j) 
-                        arcade.draw_circle_filled(pos_i[0], pos_i[1], node_size_i * perimeter_i * 0.5, arcade.color.GOLD)
-                        arcade.draw_circle_filled(pos_j[0], pos_j[1], node_size_j * perimeter_j * 0.5, arcade.color.GOLD) 
+                    pos_i = self.get_grid_barycenter(self.features[i], drone)
+                    pos_j = self.get_grid_barycenter(self.features[j], drone)
 
-                        # node for frontier barycenter
-                        pos_x_i = self.features[i]["frontier_barycenter_x"]
-                        pos_y_i = self.features[i]["frontier_barycenter_y"]
-                        pos_i = Vector2D(pos_x_i, pos_y_i)
-                        pos_i = self.map.grid_to_world(pos_i)
-                        pos_i = pos_i.array + np.array(self.drone.size_area) / 2
-                        
-                        pos_x_j = self.features[j]["frontier_barycenter_x"]
-                        pos_y_j = self.features[j]["frontier_barycenter_y"]
-                        pos_j = Vector2D(pos_x_j, pos_y_j)
-                        pos_j = self.map.grid_to_world(pos_j)
-                        pos_j = pos_j.array + np.array(self.drone.size_area) / 2
+                    node_size_i = (self.features[i]["area"] / MAX_CELL_SIZE + 1)*5
+                    node_size_j = (self.features[j]["area"] / MAX_CELL_SIZE + 1)*5
 
-                        node_size_i = (self.features[i]["frontier_size"] / 10)
-                        node_size_j = (self.features[j]["frontier_size"] / 10)
+                    # Gradient of color depending on the frontier size
+                    color_start = arcade.color.BLACK
+                    color_end = arcade.color.RED
+                    t_i = min(self.features[i][selected_feature] / max_val, 1)
+                    t_j = min(self.features[j][selected_feature] / max_val, 1)
+                    node_color_i = (
+                        color_start[0] + t_i * (color_end[0] - color_start[0]),
+                        color_start[1] + t_i * (color_end[1] - color_start[1]),
+                        color_start[2] + t_i * (color_end[2] - color_start[2]),
+                    )
+                    node_color_j = (
+                        color_start[0] + t_j * (color_end[0] - color_start[0]),
+                        color_start[1] + t_j * (color_end[1] - color_start[1]),
+                        color_start[2] + t_j * (color_end[2] - color_start[2]),
+                    )
 
-                        arcade.draw_circle_filled(pos_i[0], pos_i[1], node_size_i, arcade.color.BLUE)
-                        arcade.draw_circle_filled(pos_j[0], pos_j[1], node_size_j, arcade.color.BLUE)
+                    arcade.draw_line(pos_i[0], pos_i[1], pos_j[0], pos_j[1], arcade.color.BLACK, 2)
+                    arcade.draw_circle_filled(pos_i[0], pos_i[1], node_size_i, node_color_i)
+                    arcade.draw_circle_filled(pos_j[0], pos_j[1], node_size_j, node_color_j)
+                    # node for frontier barycenter
+                    pos_i = self.get_grid_barycenter(self.features[i], drone, frontier=True)
+                    pos_j = self.get_grid_barycenter(self.features[i], drone, frontier=True)
 
-        
-    def update(self):
-        drone_pos = self.map.world_to_grid(self.drone.drone_position)
+                    node_size_i = (self.features[i]["frontier_size"] / 10)
+                    node_size_j = (self.features[j]["frontier_size"] / 10)
+
+                    arcade.draw_circle_filled(pos_i[0], pos_i[1], node_size_i, arcade.color.BLUE)
+                    arcade.draw_circle_filled(pos_j[0], pos_j[1], node_size_j, arcade.color.BLUE)
+
+
+
+    def update(self, drone):
+        drone_pos = self.map.world_to_grid(drone.drone_position)
         self.labels_map = np.zeros((self.map.get_width(), self.map.get_height()), dtype=int)    
         wait = {(drone_pos.x, drone_pos.y)}
         current_label = 1
@@ -240,6 +249,7 @@ class GraphMap:
         drone_node = self.labels_map[drone_pos.x, drone_pos.y]
 
         if len(features) > 0:
+            self.get_drone_features(features, drone.drone_list)
             self.add_drone_distance(A, features, drone_node)
 
         self.features = features
