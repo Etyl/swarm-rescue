@@ -201,6 +201,29 @@ cdef class Grid:
         if 0 <= x_px < x_max_grid and 0 <= y_px < y_max_grid:
             grid_view[x_px, y_px] = val
 
+    def get_point(self, float x, float y):
+        """
+        Get the value of a point, input coordinates in meters
+        x, y :  x and y coordinates in m
+        """
+        cdef int x_px, y_px
+        cdef float half_width = self.size_area_world[0] / 2.0
+        cdef float half_height = self.size_area_world[1] / 2.0
+        cdef DTYPE_t[:, :] grid_view = self.grid
+        cdef int x_max_grid = self.x_max_grid
+        cdef int y_max_grid = self.y_max_grid
+        cdef float resolution = self.resolution
+
+        # Convert world coordinates to grid coordinates manually
+        x_px = <int>((x + half_width) / resolution)
+        y_px = <int>((-y + half_height) / resolution)
+
+        # Check bounds and add value to the grid
+        if 0 <= x_px < x_max_grid and 0 <= y_px < y_max_grid:
+            return grid_view[x_px, y_px]
+        else:
+            return 0
+
     def get_grid(self):
         return self.grid
     
