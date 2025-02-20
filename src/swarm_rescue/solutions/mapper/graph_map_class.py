@@ -16,13 +16,17 @@ MAX_CELL_RADIUS = 35
 
 
 class GraphMap:
-    def __init__(self, map: Map):
+    def __init__(self, map: Map, resolution: int):
         self.map = map
-        self.labels_map : np.ndarray[int] = np.zeros((map.get_width(), map.get_height()), dtype=int)
+        self.resolution = resolution
+        self.map_width = map.get_width() // resolution
+        self.map_height = map.get_height() // resolution
+        self.labels_map : np.ndarray[int] = np.zeros((self.map_width, self.map_height), dtype=int)
         self.total_cell_tiles : List[List[Tuple[int, int]]] = []
         self.adjacency_matrix : Optional[np.ndarray]  = None
         self.graph : Optional[nx.Graph] = None
         self.features : Optional[np.ndarray] = None
+        self.selected_node : Optional[int] = None
 
     def get_neighbours(self, i0: int, j0: int, include_unknown=False):
         return [
@@ -30,16 +34,39 @@ class GraphMap:
             for i in range(i0 - 1, i0 + 2)
             for j in range(j0 - 1, j0 + 2)
             if (
-                0 <= i < self.map.get_width()
-                and 0 <= j < self.map.get_height()
+                0 <= i < self.map_width 
+                and 0 <= j < self.map_height
                 and (i != i0 or j != j0)
                 and (include_unknown or self.labels_map[i, j] == 0)
                 and (
-                    self.map.map[i,j] == Zone.EMPTY
-                    or (include_unknown and self.map.map[i,j] == Zone.UNEXPLORED)
+                    self.get_map_tile(i, j) == Zone.EMPTY
+                    or (include_unknown and self.get_map_tile(i, j) == Zone.UNEXPLORED)
                 )
             )
         ]
+    
+    def get_map_tile(self, i: int, j: int) -> Zone:
+        return self.map.map[i * self.resolution, j * self.resolution]
+    
+    def world_to_grid(self, pos: Vector2D) -> Vector2D:
+        """
+        converts world coordinates to grid coordinates
+        """
+        y =  self.map_height - int(pos.y / (self.map.resolution * self.resolution) + self.map_height / 2)
+        x = int(pos.x / (self.map.resolution * self.resolution) + self.map_width / 2)
+        # crop the values to the map size
+        x = max(0, min(x, self.map_width- 1))
+        y = max(0, min(y, self.map_height - 1))
+        return Vector2D(x, y)
+    
+    def grid_to_world(self, pos: Vector2D) -> Vector2D:
+        """
+        converts grid coordinates to world coordinates
+        """
+        y = (self.map_height - pos.y) * (self.map.resolution * self.resolution) - self.map_height * (self.map.resolution * self.resolution) / 2
+        x = (pos.x - self.map_width / 2) * (self.map.resolution * self.resolution)
+        return Vector2D(x, y)
+    
 
     def propagate_cell(
         self, i0: int, j0: int, label
@@ -86,11 +113,11 @@ class GraphMap:
                 barycenter[1] += j0
                 neighbors = self.get_neighbours(i0, j0, include_unknown=True)
                 for i, j in neighbors:
-                    if self.labels_map[i, j] != label and self.map.map[i,j] == Zone.EMPTY:
+                    if self.labels_map[i, j] != label and self.get_map_tile(i, j) == Zone.EMPTY:
                         A[label - 1, self.labels_map[i, j] - 1] = 1
                         A[self.labels_map[i, j] - 1, label - 1] = 1
                         perimeter += 1
-                    if self.map.map[i,j] == Zone.UNEXPLORED:
+                    if self.get_map_tile(i, j) == Zone.UNEXPLORED:
                         frontier.add((i0, j0))
 
             barycenter[0] /= len(self.total_cell_tiles[k])
@@ -121,14 +148,14 @@ class GraphMap:
             return lambda x: Vector2D(x["barycenter_x"], x["barycenter_y"]).distance(target)
 
         for drone_pos in drone_positions:
-            drone_pos = self.map.world_to_grid(drone_pos)
-            node_pos = np.argmin(list(map(node_distance_func(drone_pos),features)))
+            drone_pos = self.world_to_grid(drone_pos)
+            node_pos = np.argmin(list(map(node_distance_func(drone_pos), features)))
             features[node_pos]["drone_count"] += 1
 
         for drone_target in drone_targets:
             if drone_target is not None:
-                drone_target = self.map.world_to_grid(drone_target)
-                node_target = np.argmin(list(map(node_distance_func(drone_target),features)))
+                drone_target = self.world_to_grid(drone_target)
+                node_target = np.argmin(list(map(node_distance_func(drone_target), features)))
                 features[node_target]["target_count"] += 1
 
 
@@ -174,7 +201,7 @@ class GraphMap:
         pos_x = x[f"{'frontier_' if frontier else ''}barycenter_x"]
         pos_y = x[f"{'frontier_' if frontier else ''}barycenter_y"]
         pos = Vector2D(pos_x, pos_y)
-        pos = self.map.grid_to_world(pos)
+        pos = self.grid_to_world(pos)
         pos = pos.array + np.array(drone.size_area) / 2
         return pos
 
@@ -228,11 +255,23 @@ class GraphMap:
                     arcade.draw_circle_filled(pos_i[0], pos_i[1], node_size_i, arcade.color.BLUE)
                     arcade.draw_circle_filled(pos_j[0], pos_j[1], node_size_j, arcade.color.BLUE)
 
+                    if self.selected_node is not None:
+                        pos = self.get_grid_barycenter(self.features[self.selected_node], drone)
+                        arcade.draw_circle_outline(pos[0], pos[1], 10, arcade.color.GREEN, 2)
 
+    def save_data(self, filename):
+        if self.features is None:
+            return
 
-    def update(self, drone):
-        drone_pos = self.map.world_to_grid(drone.drone_position)
-        self.labels_map = np.zeros((self.map.get_width(), self.map.get_height()), dtype=int)    
+        with open(filename, "w") as f:
+            for i, x in enumerate(self.features):
+                f.write(f"{i} {x['barycenter_x']} {x['barycenter_y']} {x['area']} {x['perimeter']} {x['frontier_size']} {x['drone_count']} {x['target_count']} {x['target_path']} {x['drone_distance']}\n") # type: ignore
+                
+
+    def update(self, drone, chosen_frontier_center: Optional[Vector2D] = None):
+
+        drone_pos = self.world_to_grid(drone.drone_position)
+        self.labels_map = np.zeros((self.map_width, self.map_height), dtype=int)
         wait = {(drone_pos.x, drone_pos.y)}
         current_label = 1
         total_cell_tiles = []
@@ -255,6 +294,14 @@ class GraphMap:
             drone_targets = [data.target for data in drone.drone_list]
             self.get_drone_features(features, drone_positions, drone_targets)
             self.add_drone_distance(A, features, drone_node)
+
+        # get the node closest to the chosen frontier center
+        if chosen_frontier_center is not None:
+            frontier_node = np.argmin(list(map(
+                lambda x: Vector2D(x["barycenter_x"], x["barycenter_y"]).distance(chosen_frontier_center),
+                features
+            )))
+            self.selected_node = frontier_node
 
         self.features = features
         self.adjacency_matrix = A

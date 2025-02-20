@@ -72,6 +72,8 @@ class FrontierDrone(DroneAbstract):
         self.drone_list : List[DroneData] = [] # The list of drones
         self.drone_positions: Dict[int,Tuple[int,Vector2D]] = dict() # drone_id : (timestep, drone_position)
         self.iteration : int = 0 # The number of iterations
+        self.current_reward : float = 0 # The current reward used for the reinforcement learning
+        self.old_exploration_score : float = 0 # The old exploration score
 
         ## Debug controls
 
@@ -105,7 +107,7 @@ class FrontierDrone(DroneAbstract):
         }
 
         self.map : Map = Map(area_world=self.size_area, resolution=4, identifier=self.identifier, debug_mode=self.debug_mapper)
-        self.graph_map = GraphMap(map=self.map)
+        self.graph_map = GraphMap(map=self.map, resolution=2)
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
 
         self.localizer : Localizer = Localizer(self)
@@ -631,6 +633,19 @@ class FrontierDrone(DroneAbstract):
         max_timestep = self._misc_data.max_timestep_limit * 0.85
         max_wall_time = self._misc_data.max_walltime_limit * 0.85
         return self.elapsed_timestep >= max_timestep or self.elapsed_walltime >= max_wall_time
+    
+    def update_reward(self):
+        """
+        updates the reward with current exploration - old reward
+        """
+        self.current_reward = self.map.exploration_score - self.old_exploration_score
+        self.old_exploration_score = self.map.exploration_score
+    
+    def get_reward(self):
+        """
+        returns the current reward
+        """
+        return self.current_reward
 
     def control(self):
         # check if drone is dead
@@ -742,6 +757,10 @@ class FrontierDrone(DroneAbstract):
 
         if self.debug_graph_map and self.identifier==0:
             self.graph_map.draw(self)
+
+        # draw reward
+        pos = self.drone_position.array + np.array(self.size_area) / 2
+        arcade.draw_text(f"Reward: {self.get_reward()}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
         # draw frontiers
         if self.debug_frontiers:
