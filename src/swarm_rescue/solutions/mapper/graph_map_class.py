@@ -27,6 +27,7 @@ class GraphMap:
         self.graph : Optional[nx.Graph] = None
         self.features : Optional[np.ndarray] = None
         self.selected_node : Optional[int] = None
+        self.filename = "data.txt"
 
     def get_neighbours(self, i0: int, j0: int, include_unknown=False):
         return [
@@ -259,17 +260,29 @@ class GraphMap:
                         pos = self.get_grid_barycenter(self.features[self.selected_node], drone)
                         arcade.draw_circle_outline(pos[0], pos[1], 10, arcade.color.GREEN, 2)
 
-    def save_data(self, filename):
+    def save_data(self, filename, reward):
         if self.features is None:
             return
 
-        with open(filename, "w") as f:
+        with open(filename, "a") as f:
+            # Write the graph
+            f.write(f"{len(self.features)}\n")
+            edges = self.graph.edges()
+            f.write(f"{len(edges)}\n")
+            for edge in edges:
+                f.write(f"{edge[0]} {edge[1]}\n")
+            # Write the features
             for i, x in enumerate(self.features):
                 f.write(f"{i} {x['barycenter_x']} {x['barycenter_y']} {x['area']} {x['perimeter']} {x['frontier_size']} {x['drone_count']} {x['target_count']} {x['target_path']} {x['drone_distance']}\n") # type: ignore
+            # action
+            f.write(f"{self.selected_node}\n")
+            # rewards
+            f.write(f"{reward}\n")
                 
 
     def update(self, drone, chosen_frontier_center: Optional[Vector2D] = None):
-
+        if self.selected_node is not None:
+            self.save_data(self.filename, drone.get_reward())
         drone_pos = self.world_to_grid(drone.drone_position)
         self.labels_map = np.zeros((self.map_width, self.map_height), dtype=int)
         wait = {(drone_pos.x, drone_pos.y)}
