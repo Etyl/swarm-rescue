@@ -72,7 +72,7 @@ class FrontierDrone(DroneAbstract):
         self.drone_list : List[DroneData] = [] # The list of drones
         self.drone_positions: Dict[int,Tuple[int,Vector2D]] = dict() # drone_id : (timestep, drone_position)
         self.iteration : int = 0 # The number of iterations
-        self.current_reward : float = 0 # The current reward used for the reinforcement learning
+        self.global_reward : float = 0 # The current reward used for the reinforcement learning
         self.old_exploration_score : float = 0 # The old exploration score
 
         ## Debug controls
@@ -87,7 +87,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
         self.debug_frontiers = False
-        self.debug_graph_map = False
+        self.debug_graph_map = True
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -638,14 +638,14 @@ class FrontierDrone(DroneAbstract):
         """
         updates the reward with current exploration - old reward
         """
-        self.current_reward = self.map.exploration_score - self.old_exploration_score
+        self.old_drone_exploration_score = self.map.drone_exploration_score
         self.old_exploration_score = self.map.exploration_score
     
     def get_reward(self):
         """
         returns the current reward
         """
-        return self.current_reward
+        return self.map.exploration_score, self.map.drone_exploration_score
 
     def control(self):
         # check if drone is dead
@@ -761,7 +761,7 @@ class FrontierDrone(DroneAbstract):
 
             # draw reward
             pos = self.drone_position.array + np.array(self.size_area) / 2
-            arcade.draw_text(f"Reward: {round(self.get_reward(),2)}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
+            arcade.draw_text(f"Reward: {round(self.get_reward()[1],2)}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
         # draw frontiers
         if self.debug_frontiers:

@@ -48,6 +48,7 @@ class Map:
 
         self.width : int = int(area_world[0] / self.resolution + 0.5)
         self.height : int = int(area_world[1] / self.resolution + 0.5)
+        self.drone_exploration_score : float = 0
 
         self.occupancy_grid : Grid = Grid(area_world, resolution)
         self.kill_zone : Grid = Grid(area_world, resolution)
@@ -266,7 +267,9 @@ class Map:
         """
         Update the map
         """
+        confidence_mask = self.confidence_grid.get_grid() > 0
         self.update_confidence_grid(pose, lidar, drone)
+        self.drone_exploration_score += np.count_nonzero(self.confidence_grid.get_grid()[~confidence_mask]>0) / (self.height * self.width)
         self.update_occupancy_grid(pose, lidar, drone)
         self.update_merkle(drone)
         self.update_map(drone)
