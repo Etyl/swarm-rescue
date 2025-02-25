@@ -86,8 +86,8 @@ class FrontierDrone(DroneAbstract):
         self.debug_lidar = False
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = True
-        self.debug_graph_map = True
+        self.debug_frontiers = False
+        self.debug_graph_map = False
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -755,12 +755,13 @@ class FrontierDrone(DroneAbstract):
         # check if drone is dead
         if self.odometer_values() is None: return
 
-        if self.debug_graph_map and self.identifier==0:
-            self.graph_map.draw(self)
+        if self.debug_graph_map:
+            if self.identifier==7:
+                self.graph_map.draw(self)
 
-        # draw reward
-        pos = self.drone_position.array + np.array(self.size_area) / 2
-        arcade.draw_text(f"Reward: {self.get_reward()}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
+            # draw reward
+            pos = self.drone_position.array + np.array(self.size_area) / 2
+            arcade.draw_text(f"Reward: {round(self.get_reward(),2)}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
         # draw frontiers
         if self.debug_frontiers:

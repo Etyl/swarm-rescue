@@ -8,7 +8,7 @@ from scipy.constants import point
 
 
 class Vector2D:
-    def __init__(self, x : float = 0, y: float = 0, pointList : Union[List,np.ndarray,None] = None):
+    def __init__(self, x : float = 0, y: float = 0, pointList : Union[Tuple,List,np.ndarray,None] = None):
         self.array: np.ndarray[float]
         if pointList is not None:
             self.array = np.array([pointList[0], pointList[1]])

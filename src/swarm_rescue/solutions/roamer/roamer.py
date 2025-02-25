@@ -255,170 +255,13 @@ class Roamer:
     def find_next_unexplored_target(self, frontiers_threshold: int, last_target: Optional[Vector2D]) -> Optional[Vector2D]:
         """
         Find the closest unexplored target from the drone's current position
-        It comes to finding the closest INEXPLORED point which is next to a explored point in the map
+        It comes to finding the closest UNEXPLORED point which is next to a explored point in the map
         """
-
-        drone_position = self.drone.drone_position
-
-        drone_position_grid = self.map.world_to_grid(drone_position)
-
-        map_matrix = cv2.resize(self.map.get_map_matrix(), (0, 0), fx=1/MAP_SCALE, fy=1/MAP_SCALE, interpolation=cv2.INTER_NEAREST_EXACT)
-        obstacle_matrix = cv2.resize(self.map.get_obstacle_grid(), (0, 0), fx=1/MAP_SCALE, fy=1/MAP_SCALE, interpolation=cv2.INTER_NEAREST_EXACT)
-
-        # plt.imsave(f"map_{self.drone.identifier}.png",self.map.get_map_matrix())
-        # plt.imsave(f"map_r_{self.drone.identifier}.png",map_matrix)
-        
-        frontiers_output, frontier_count = get_frontiers(map_matrix, obstacle_matrix, drone_position_grid.array//MAP_SCALE, frontiers_threshold)
-        vector_frontiers = []
-        for frontier in frontiers_output:
-            vector_frontiers.append([Vector2D(p[0]*MAP_SCALE, p[1]*MAP_SCALE) for p in frontier])
-        self.frontiers = vector_frontiers
-
-        if not self.frontiers:
-            return None  # No frontiers found
-
-        frontier_centers = []
-        for frontier in self.frontiers:
-            frontier_center = Vector2D(
-                sum(point.x for point in frontier) / len(frontier),
-                sum(point.y for point in frontier) / len(frontier)
-            )
-            centroid = min(frontier, key=lambda point: point.distance(frontier_center))
-            frontier_centers.append(centroid)
-
-        selected_frontiers_id = []
-
-        # calculate distance to previous target
-        frontiers_distance_last = np.zeros(len(self.frontiers))
-        if last_target is not None:
-            frontiers_distance_last = np.array([
-                last_target.distance(frontier_center) for frontier_center in frontier_centers
-            ])
-        # TODO chose what normalisation (softmax or divide by max)
-        frontiers_distance_last = frontiers_distance_last / np.linalg.norm(map_matrix.shape)
-
-        # select the 2 closest frontiers to the previous target
-        if last_target is not None:
-            frontiers_distance_last_sorted = sorted(frontiers_distance_last, reverse=True)
-            for i in range(min(2, len(frontiers_distance_last_sorted))):
-                max_val = frontiers_distance_last_sorted[i]
-                idx = np.where(frontiers_distance_last == max_val)
-                selected_frontiers_id.append(idx[0][0])
-
-        # fill the rest of selected frontiers by random
-        possible_frontier_idx = set(range(len(frontier_centers)))
-        possible_frontier_idx = possible_frontier_idx - set(selected_frontiers_id)
-
-        random_size = min(len(possible_frontier_idx),FRONTIER_COUNT-len(selected_frontiers_id))
-        random_size = max(0,random_size)
-        random_idx = np.random.choice(list(possible_frontier_idx), size=random_size, replace=False)
-
-        selected_frontiers_id = selected_frontiers_id + list(random_idx)
-        selected_frontiers_id = np.array(selected_frontiers_id)
-        np.random.shuffle(selected_frontiers_id)
-
-        frontiers = [frontier_centers[idx] for idx in selected_frontiers_id]
-
-        frontiers_distance_last = []
-        if last_target is not None:
-            for frontier_center in frontiers:
-                frontiers_distance_last.append(last_target.distance(frontier_center))
-        frontiers_distance_last_arr = np.array(frontiers_distance_last)
-        frontiers_distance_last_arr = frontiers_distance_last_arr / np.linalg.norm(map_matrix.shape)
-
-        selected_frontiers_distance = []
-        selected_frontiers_repulsion_angle = []
-        selected_frontiers_direction_angle = []
-
-        for frontier in frontiers:
-            distance, repulsion_angle, direction_angle = self.get_path_length(frontier)
-            selected_frontiers_distance.append(distance)
-            selected_frontiers_repulsion_angle.append(repulsion_angle)
-            selected_frontiers_direction_angle.append(direction_angle)
-
-        obs: Dict[str,np.ndarray] = {}
-
-        # parameters
-        frontiers = [self.frontiers[idx] for idx in selected_frontiers_id]
-        frontier_count = np.array([frontier_count[idx] for idx in selected_frontiers_id])
-        selected_frontiers_distance_array = np.array(selected_frontiers_distance)
-        selected_frontiers_repulsion_angle_array = np.array(selected_frontiers_repulsion_angle)
-        selected_frontiers_direction_angle_array = np.array(selected_frontiers_direction_angle)
-        frontiers_size = np.array([len(frontier) for frontier in frontiers])
-
-        # normalize
-        frontier_distance_noInf = [x for x in selected_frontiers_distance_array if x != -np.inf and x != np.inf]
-        if len(frontier_distance_noInf) == 0: return None
-        selected_frontiers_distance_array = selected_frontiers_distance_array / max(frontier_distance_noInf)
-        selected_frontiers_distance_array = np.minimum(selected_frontiers_distance_array,1)
-
-        frontier_size_max = np.max(frontiers_size)
-        frontiers_size = 0 if frontier_size_max == 0 else frontiers_size / frontier_size_max
-
-        frontier_count_max = np.max(frontier_count)
-        frontier_count = 0 if frontier_count_max == 0 else frontier_count / frontier_count_max
-
-        selected_frontiers_distance_array = 1 - selected_frontiers_distance_array
-        selected_frontiers_repulsion_angle_array = 1 - selected_frontiers_repulsion_angle_array
-        selected_frontiers_direction_angle_array = 1 - selected_frontiers_direction_angle_array
-
-        obs['size'] = frontiers_size
-        obs['count'] = frontier_count
-        obs['distance'] = selected_frontiers_distance_array
-        obs['repulsion_angle'] = selected_frontiers_repulsion_angle_array
-        obs['direction_angle'] = selected_frontiers_direction_angle_array
-        obs['distance_last'] = frontiers_distance_last_arr
-        for key in obs:
-            if len(obs[key]) < FRONTIER_COUNT :
-                obs[key] = np.concatenate((obs[key], np.zeros(FRONTIER_COUNT - len(obs[key]))), axis=0)
-
-        if self.debug_mode:
-            selected_frontiers = [self.frontiers[id] for id in selected_frontiers_id]
-            self.display_map_with_path(selected_frontiers, selected_frontiers_distance_array, frontiers_size, frontier_count, selected_frontiers_repulsion_angle_array)
-
-        # score (the higher the better)
-        score = None
-        if self.policy is None:
-            score = (8 * obs["distance"] +
-                     1 * obs["size"] +
-                     1 * obs["count"] +
-                     4 * obs["repulsion_angle"] -
-                     0.5 * obs["distance_last"] +
-                     1 * obs['direction_angle']
-            )
-
-        else:
-            total_obs = np.concatenate(list(obs.values()), axis=0)
-            policy_input = np.concatenate((np.array([self.drone.map.exploration_score]),total_obs), axis=0)
-            if self.save_run is not None and len(self.previous_input)>0:
-                combined = np.concatenate((self.previous_input, self.previous_score, policy_input, np.array([self.drone.elapsed_timestep])), axis=0)
-                self.save_run.append(combined)
-
-            score = self.policy(policy_input)
-            self.previous_input = policy_input
-            self.previous_score = score
-
-
-        #softmax = np.exp(score) / np.sum(np.exp(score), axis=0)
-        # select the best frontier
-        best_frontier_idx = int(np.argmax(score[:len(frontiers)]))
-        #best_frontier_idx = np.random.choice(np.arange(len(frontiers)), p=softmax)
-
-        # Return the center and the points of the chosen frontier
-        chosen_frontier = frontiers[best_frontier_idx]
-        chosen_frontier_center = Vector2D(
-            int(sum(point.x for point in chosen_frontier) / len(chosen_frontier)),
-            int(sum(point.y for point in chosen_frontier) / len(chosen_frontier))
-        )
-
-        if self.drone.debug_frontiers:
-            self.drone.set_selected_frontier_id(best_frontier_idx)
-            self.drone.frontiers = frontiers
-
         self.drone.update_reward()
-        self.drone.graph_map.update(self.drone, chosen_frontier_center)
+        self.drone.graph_map.update(self.drone)
+        frontier_center = self.drone.graph_map.get_naive_node(self.drone)
 
-        return chosen_frontier_center
+        return frontier_center
 
 
     def map_to_image(self, drone_map: Map):
@@ -557,7 +400,7 @@ class Roamer:
         if self.drone.drone_position.distance(self.drone.map.grid_to_world(target)) < 50:
             return [], None
 
-        path = self.map.shortest_path(self.drone.drone_position, self.map.grid_to_world(target))[0]
+        path = self.map.shortest_path(self.drone.drone_position, target)[0]
 
         if path is None:
             return [], None

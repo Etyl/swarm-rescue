@@ -58,7 +58,7 @@ class Map:
         self.merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.occupancy_grid)
         self.kill_zone_merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.kill_zone)
 
-        self.map : np.ndarray = np.full((self.width, self.height), Zone.UNEXPLORED)
+        self.map : np.ndarray[int] = np.full((self.width, self.height), Zone.UNEXPLORED)
 
         self.rescue_center : Optional[Vector2D] = None
         self.kill_zones : List[Vector2D] = {}
