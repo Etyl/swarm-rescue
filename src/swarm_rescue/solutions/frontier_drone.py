@@ -19,9 +19,10 @@ from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SEN
 from solutions.utils.types import DroneData, WoundedData, Vector2D
 from solutions.localizer.localizer import Localizer
 from solutions.mapper.mapper import Map, DRONE_SIZE_RADIUS
-from solutions.mapper.graph_map_class import GraphMap
+from solutions.mapper.graph_map_class import GraphMap, MAX_CELL_SIZE, MAX_CELL_RADIUS
 from solutions.drone_controller import DroneController
 from solutions.roamer.roamer import RoamerController
+
 
 class FrontierDrone(DroneAbstract):
 
@@ -117,6 +118,7 @@ class FrontierDrone(DroneAbstract):
         self.point_of_interest = (0,0)
         self.frontiers : List[List[Vector2D]] = []
         self.selected_frontier_id : int = 0
+        self.last_frontier_target : Optional[Vector2D] = None
 
         self.stuck_iteration : int = 0
         self.time_in_no_gps : int = 0
@@ -646,6 +648,17 @@ class FrontierDrone(DroneAbstract):
         returns the current reward
         """
         return self.map.exploration_score, self.map.drone_exploration_score, self.old_exploration_score, self.old_drone_exploration_score
+
+    def get_path_info(self) -> List[float]:
+        info = [
+            self.elapsed_timestep,
+            self.drone_position.distance(self.last_frontier_target) if self.last_frontier_target else -1,
+            self.graph_map.map_width,
+            self.graph_map.map_height,
+            MAX_CELL_SIZE,
+            MAX_CELL_RADIUS
+        ]
+        return info
 
     def control(self):
         # check if drone is dead

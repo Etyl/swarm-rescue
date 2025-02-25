@@ -279,7 +279,7 @@ class GraphMap:
                         pos = self.get_grid_barycenter(self.features[self.selected_node], drone)
                         arcade.draw_circle_outline(pos[0], pos[1], 10, arcade.color.GREEN, 2)
 
-    def save_data(self, filename, reward):
+    def save_data(self, filename, reward, info):
         if self.features is None:
             return
 
@@ -297,6 +297,8 @@ class GraphMap:
             f.write(f"{self.selected_node}\n")
             # rewards
             f.write(f"{' '.join(list(map(str,reward)))}\n")
+            # general info
+            f.write(f"{' '.join(list(map(str,info)))}\n")
                 
 
     def update(self, drone):
@@ -343,7 +345,9 @@ class GraphMap:
         self.selected_node = selected_node_id
 
         if self.filename is not None:
-            self.save_data(self.filename, drone.get_reward())
+            self.save_data(self.filename, drone.get_reward(), drone.get_path_info())
+
+        drone.last_frontier_target = frontier_center
 
         return frontier_center
 
