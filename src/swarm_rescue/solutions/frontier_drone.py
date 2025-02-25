@@ -72,8 +72,8 @@ class FrontierDrone(DroneAbstract):
         self.drone_list : List[DroneData] = [] # The list of drones
         self.drone_positions: Dict[int,Tuple[int,Vector2D]] = dict() # drone_id : (timestep, drone_position)
         self.iteration : int = 0 # The number of iterations
-        self.global_reward : float = 0 # The current reward used for the reinforcement learning
         self.old_exploration_score : float = 0 # The old exploration score
+        self.old_drone_exploration_score : float = 0 # The old drone exploration score
 
         ## Debug controls
 
@@ -107,7 +107,7 @@ class FrontierDrone(DroneAbstract):
         }
 
         self.map : Map = Map(area_world=self.size_area, resolution=4, identifier=self.identifier, debug_mode=self.debug_mapper)
-        self.graph_map = GraphMap(map=self.map, resolution=2)
+        self.graph_map = GraphMap(map=self.map, resolution=2, filename=f"data_{self.identifier}.txt")
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
 
         self.localizer : Localizer = Localizer(self)
@@ -645,7 +645,7 @@ class FrontierDrone(DroneAbstract):
         """
         returns the current reward
         """
-        return self.map.exploration_score, self.map.drone_exploration_score
+        return self.map.exploration_score, self.map.drone_exploration_score, self.old_exploration_score, self.old_drone_exploration_score
 
     def control(self):
         # check if drone is dead

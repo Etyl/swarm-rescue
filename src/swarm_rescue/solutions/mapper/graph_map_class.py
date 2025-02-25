@@ -33,7 +33,7 @@ class FeatureEnum:
 
 
 class GraphMap:
-    def __init__(self, map: Map, resolution: int):
+    def __init__(self, map: Map, resolution: int, filename:str=None):
         self.map = map
         self.resolution = resolution
         self.map_width = map.get_width() // resolution
@@ -44,7 +44,7 @@ class GraphMap:
         self.graph : Optional[nx.Graph] = None
         self.features : Optional[np.ndarray[float]] = None
         self.selected_node : Optional[int] = None
-        self.filename = None
+        self.filename = filename
 
     def get_neighbours(self, i0: int, j0: int, include_unknown=False):
         return [
@@ -296,7 +296,7 @@ class GraphMap:
             # action
             f.write(f"{self.selected_node}\n")
             # rewards
-            f.write(f"{reward}\n")
+            f.write(f"{' '.join(list(map(str,reward)))}\n")
                 
 
     def update(self, drone):
