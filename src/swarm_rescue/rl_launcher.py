@@ -30,8 +30,6 @@ def run_simulation(task):
             python_path,  # Replace with your actual script name
             "--map",
             map_name,
-            "--epsilon",
-            epsilon,
             "--output",
             file_path,
         ]
@@ -52,25 +50,16 @@ if __name__ == "__main__":
     main_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"rl-run_{date}")
     os.makedirs(main_dir, exist_ok=True)
 
-    test_rounds = 15
-    epsilon_rounds = 35
+    round = 20
     tasks = []
     for map_class in maps:
-        epsilon = lambda t: 0.4 * (epsilon_rounds - 1 - t) / (epsilon_rounds - 1)
-        
-        for k in range(test_rounds):
+        for k in range(round):
             file_path = os.path.join(
                 main_dir,
-                f"{map_class.__name__}_0_{uuid.uuid4()}"
+                f"{map_class.__name__}_{uuid.uuid4()}"
             )
-            tasks.append((map_class.__name__, "0.0", file_path))
-        
-        for k in range(epsilon_rounds):
-            file_path = os.path.join(
-                main_dir,
-                f"{map_class.__name__}_{round(epsilon(k),3)}_{uuid.uuid4()}"
-            )
-            tasks.append((map_class.__name__, str(round(epsilon(k),3)), file_path))
+            tasks.append((map_class.__name__, file_path))
+
 
     num_workers = min(len(tasks), 20)
     time_start = time.time()

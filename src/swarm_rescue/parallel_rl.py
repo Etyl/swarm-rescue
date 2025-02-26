@@ -8,13 +8,12 @@ from maps.map_final_2023_24_02 import MyMapFinal_2023_24_02
 from maps.map_final_2023_24_03 import MyMapFinal_2023_24_03
 from maps.map_medium_01 import MyMapMedium01
 from maps.map_medium_02 import MyMapMedium02
-
+from rl_env.rl_env import get_run
 
 if __name__ == "__main__":
     gc.disable()
     parser = argparse.ArgumentParser(description="RL launcher")
     parser.add_argument("--map", "-m", required=True, help="Map to run")
-    parser.add_argument("--epsilon", "-n", required=True, help="Epsilon greedy parameter")
     parser.add_argument("--output", "-rp", required=True, help="Path to save the results")
     args = parser.parse_args()
 
@@ -33,4 +32,4 @@ if __name__ == "__main__":
 
     output_path = args.output
 
-    get_run(policy, output_path, map_type)
+    get_run(output_path, map_type)
