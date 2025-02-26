@@ -9,7 +9,6 @@ import argparse
 import gc
 
 from maps.map_final_2022_23 import MyMapFinal2022_23 # type: ignore
-from rl_env.policies import deterministic_policy, epsilon_greedy_wrapper  # type: ignore
 from solutions.frontier_drone import FrontierDrone # type: ignore
 from solutions.utils.constants import OBSERVATION_SPACE, ACTION_SPACE # type: ignore
 from spg_overlay.gui_map.gui_sr import GuiSR # type: ignore

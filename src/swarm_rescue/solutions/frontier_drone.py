@@ -89,7 +89,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
         self.debug_frontiers = False
-        self.debug_graph_map = True
+        self.debug_graph_map = False
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -129,6 +129,7 @@ class FrontierDrone(DroneAbstract):
         self.stuck_iteration : int = 0
         self.time_in_no_gps : int = 0
         self.previous_drone_health: int = self.drone_health
+        
 
     @property
     def near_center(self) -> bool:
@@ -775,7 +776,7 @@ class FrontierDrone(DroneAbstract):
         if self.odometer_values() is None: return
 
         if self.debug_graph_map:
-            if self.identifier==7:
+            if self.identifier==0:
                 self.graph_map.draw(self)
 
             # draw reward

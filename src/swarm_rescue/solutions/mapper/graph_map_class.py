@@ -46,6 +46,9 @@ class GraphMap:
         self.selected_node : Optional[int] = None
         self.filename = filename
 
+        self.best_nodes_ids = []
+        self.best_nodes_probabilities = []
+
     def get_neighbours(self, i0: int, j0: int, include_unknown=False):
         return [
             (i, j)
@@ -272,12 +275,24 @@ class GraphMap:
                     node_size_i = (self.features[i][FeatureEnum.FRONTIER_SIZE] / 10)
                     node_size_j = (self.features[j][FeatureEnum.FRONTIER_SIZE] / 10)
 
-                    arcade.draw_circle_filled(pos_i[0], pos_i[1], node_size_i, arcade.color.BLUE)
-                    arcade.draw_circle_filled(pos_j[0], pos_j[1], node_size_j, arcade.color.BLUE)
+                    #arcade.draw_circle_filled(pos_i[0], pos_i[1], node_size_i, arcade.color.BLUE)
+                    #arcade.draw_circle_filled(pos_j[0], pos_j[1], node_size_j, arcade.color.BLUE)
 
                     if self.selected_node is not None:
                         pos = self.get_grid_barycenter(self.features[self.selected_node], drone)
                         arcade.draw_circle_outline(pos[0], pos[1], 10, arcade.color.GREEN, 2)
+
+        for id, prob in zip(self.best_nodes_ids, self.best_nodes_probabilities):
+            pos = self.get_grid_barycenter(self.features[id], drone)
+            color_start = arcade.color.WHITE
+            color_end = arcade.color.GREEN
+            t = min(prob, 1)
+            node_color = (
+                color_start[0] + t * (color_end[0] - color_start[0]),
+                color_start[1] + t * (color_end[1] - color_start[1]),
+                color_start[2] + t * (color_end[2] - color_start[2]),
+            )
+            arcade.draw_circle_filled(pos[0], pos[1], 10, node_color)
 
     def save_data(self, filename, reward, info):
         if self.features is None:
@@ -330,15 +345,55 @@ class GraphMap:
         self.features = features
         self.adjacency_matrix = A
 
+    # def get_naive_node(self, drone) -> Optional[Vector2D]:
+    #     if len(self.features)==0:
+    #         return None
+
+    #     selection_fc = lambda k: self.features[k][FeatureEnum.DRONE_DISTANCE] if self.features[k][FeatureEnum.FRONTIER_SIZE] > 0 else np.inf
+    #     selected_node_id = min(range(len(self.features)),key=selection_fc)
+    #     frontier_center = (
+    #         self.features[selected_node_id,FeatureEnum.FRONTIER_BARYCENTER_X],
+    #         self.features[selected_node_id,FeatureEnum.FRONTIER_BARYCENTER_Y]
+    #     )
+    #     frontier_center = self.grid_to_world(frontier_center)
+    #     frontier_center = Vector2D(pointList=frontier_center)
+    #     self.selected_node = selected_node_id
+
+    #     if self.filename is not None:
+    #         self.save_data(self.filename, drone.get_reward(), drone.get_path_info())
+
+    #     drone.last_frontier_target = frontier_center
+
+    #     return frontier_center
+    
     def get_naive_node(self, drone) -> Optional[Vector2D]:
-        if len(self.features)==0:
+        if len(self.features) == 0:
             return None
 
-        selection_fc = lambda k: self.features[k][FeatureEnum.DRONE_DISTANCE] if self.features[k][FeatureEnum.FRONTIER_SIZE] > 0 else np.inf
-        selected_node_id = min(range(len(self.features)),key=selection_fc)
+        distances = np.array([
+            self.features[k][FeatureEnum.DRONE_DISTANCE] / np.sqrt((self.map_width**2 + self.map_height**2)) if self.features[k][FeatureEnum.FRONTIER_SIZE] > 1 else np.inf
+            for k in range(len(self.features))
+        ])
+        
+        temperature = 0.1
+        valid_mask = distances != np.inf
+        valid_distances = distances[valid_mask]
+        
+        if len(valid_distances) == 0:
+            return None
+        
+        exp_values = np.exp(-valid_distances / temperature)
+        probabilities = exp_values / np.sum(exp_values)
+        
+        valid_indices = np.where(valid_mask)[0]
+        selected_node_id = np.random.choice(valid_indices, p=probabilities)
+
+        self.best_nodes_ids = valid_indices
+        self.best_nodes_probabilities = probabilities
+
         frontier_center = (
-            self.features[selected_node_id,FeatureEnum.FRONTIER_BARYCENTER_X],
-            self.features[selected_node_id,FeatureEnum.FRONTIER_BARYCENTER_Y]
+            self.features[selected_node_id][FeatureEnum.FRONTIER_BARYCENTER_X],
+            self.features[selected_node_id][FeatureEnum.FRONTIER_BARYCENTER_Y]
         )
         frontier_center = self.grid_to_world(frontier_center)
         frontier_center = Vector2D(pointList=frontier_center)

@@ -20,7 +20,7 @@ def convert_seconds(seconds):
 
 def run_simulation(task):
     """Run a single simulation task as a subprocess."""
-    map_name, epsilon, file_path = task
+    map_name, file_path = task
     os.makedirs(file_path, exist_ok=True)
     python_path = os.path.dirname(os.path.abspath(__file__))
     python_path = os.path.join(python_path, "parallel_rl.py")
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     main_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"rl-run_{date}")
     os.makedirs(main_dir, exist_ok=True)
 
-    round = 20
+    round = 40
     tasks = []
     for map_class in maps:
         for k in range(round):
