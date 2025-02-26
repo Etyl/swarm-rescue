@@ -76,7 +76,7 @@ class RoamerController(StateMachine):
         going_to_target.to(going_to_target)
     )
 
-    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False, policy=None, save_run=None) -> None:
+    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False) -> None:
         self.drone : FrontierDrone = drone
         self.map : Map = drone_map
         self.command = {"forward": 0.0,
@@ -84,7 +84,7 @@ class RoamerController(StateMachine):
                         "rotation": 0.0,
                         "grasper": 0}
         self.debug_mode: bool = debug_mode
-        self.roamer: Roamer = Roamer(drone, drone_map, debug_mode, policy=policy, save_run=save_run)
+        self.roamer: Roamer = Roamer(drone, drone_map, debug_mode)
 
         self.loop_count_going_to_target: int = 0
 
@@ -226,14 +226,12 @@ class Roamer:
     Roamer class
     defines the roaming behavior of the drone
     """
-    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False, policy=None, save_run=None):
+    def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False):
         self.frontiers : List[List[Vector2D]] = []
         self.drone : FrontierDrone = drone
         self.map : Map = drone_map
         self.debug_mode : bool = debug_mode
 
-        self.policy = policy
-        self.save_run = save_run
         self.previous_input = np.array([])
         self.previous_score = np.array([])
 

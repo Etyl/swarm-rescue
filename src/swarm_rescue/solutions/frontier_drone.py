@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import math
+import os.path
+
 import numpy as np
 from typing import Optional, List, Tuple, Deque, Dict
 import arcade
@@ -36,8 +38,7 @@ class FrontierDrone(DroneAbstract):
         self,
         identifier: Optional[int] = None,
         misc_data: Optional[MiscData] = None,
-        policy = None,
-        save_run = None,
+        save_dir = None,
         **kwargs):
 
         super().__init__(
@@ -108,8 +109,13 @@ class FrontierDrone(DroneAbstract):
         }
 
         self.map : Map = Map(area_world=self.size_area, resolution=4, identifier=self.identifier, debug_mode=self.debug_mapper)
-        self.graph_map = GraphMap(map=self.map, resolution=2, filename=f"data_{self.identifier}.txt")
-        self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
+
+        if save_dir:
+            save_file = os.path.join(save_dir, f"data_{self.identifier}.txt")
+        else:
+            save_file = None
+        self.graph_map = GraphMap(map=self.map, resolution=2, filename=save_file)
+        self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer : Localizer = Localizer(self)
 
