@@ -28,7 +28,7 @@ def get_run(
 
     my_map = eval_config.map_type(eval_config.zones_config)
 
-    my_playground = my_map.construct_playground(drone_type=partial(FrontierDrone, save_run=save_dir))
+    my_playground = my_map.construct_playground(drone_type=partial(FrontierDrone, save_dir=save_dir))
 
     my_gui = GuiSR(playground=my_playground,
                    the_map=my_map,
