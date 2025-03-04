@@ -9,6 +9,7 @@ from torch_geometric.data import Data
 
 from solutions.mapper.mapper import Map, Zone  # type: ignore
 from solutions.utils.types import Vector2D, DroneData  # type: ignore
+from solutions.mapper.gqn import GQN
 
 FREE_TILE = 0
 OBSTACLE_TILE = 1
@@ -57,10 +58,10 @@ class GraphMap:
 
         self.gqn = None
         self.device = "cpu"
-        # if gqn_file:
-        #     self.gqn = GQN(12, 1, 16).to(self.device)
-        #     gqn_dict = torch.load(gqn_file, weights_only=False, map_location=torch.device(self.device))
-        #     self.gqn.load_state_dict(gqn_dict)
+        if gqn_file:
+            self.gqn = GQN(12, 1, 16).to(self.device)
+            gqn_dict = torch.load(gqn_file, weights_only=False, map_location=torch.device(self.device))
+            self.gqn.load_state_dict(gqn_dict)
 
         self.best_nodes_ids = []
         self.best_nodes_probabilities = []
@@ -406,11 +407,11 @@ class GraphMap:
         exploration = torch.tensor(exploration)
         q_values = self.gqn.forward_single(graph, exploration).detach().cpu().numpy()
 
-        frontier_mask = self.features[:,FeatureEnum.FRONTIER_SIZE] > 1
-        q_values[frontier_mask] = -np.inf
+        frontier_mask = self.features[:,FeatureEnum.FRONTIER_SIZE] <= 1
+        q_values[frontier_mask] = 0
         selected_node_id = np.argmax(q_values)
 
-        self.best_nodes_ids = np.arange(0,len(self.features))[frontier_mask]
+        self.best_nodes_ids = np.arange(0,len(self.features))[~frontier_mask]
         probs = q_values[~frontier_mask]
         probs = probs - np.min(probs) + 0.0001
         probs = probs / np.max(probs)

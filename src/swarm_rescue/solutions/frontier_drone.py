@@ -88,8 +88,8 @@ class FrontierDrone(DroneAbstract):
         self.debug_lidar = False
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = False
-        self.debug_graph_map = False
+        self.debug_frontiers = True
+        self.debug_graph_map = True
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -114,7 +114,8 @@ class FrontierDrone(DroneAbstract):
             save_file = os.path.join(save_dir, f"data_{self.identifier}.txt")
         else:
             save_file = None
-        self.graph_map = GraphMap(map=self.map, resolution=2, filename=save_file)
+        current_dir = os.path.dirname(__file__)
+        self.graph_map = GraphMap(map=self.map, resolution=2, filename=save_file,gqn_file=os.path.join(current_dir,"data/best_gqn_0188.pth"))
         self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer : Localizer = Localizer(self)
@@ -679,7 +680,7 @@ class FrontierDrone(DroneAbstract):
         self.stuck_iteration += 1
         if self.gps_disabled:
             self.time_in_no_gps += 1
-        
+
 
         self.localizer.localize()
         self.process_semantic_sensor()
@@ -776,8 +777,12 @@ class FrontierDrone(DroneAbstract):
         if self.odometer_values() is None: return
 
         if self.debug_graph_map:
-            if self.identifier==0:
+            if self.identifier==4:
                 self.graph_map.draw(self)
+
+            if self.last_frontier_target is not None:
+                pt = self.last_frontier_target.array + np.array(self.size_area) / 2
+                arcade.draw_circle_filled(pt[0], pt[1], 10, [255, 0, 255])
 
             # draw reward
             pos = self.drone_position.array + np.array(self.size_area) / 2
