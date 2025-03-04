@@ -393,6 +393,8 @@ class GraphMap:
 
         drone.last_frontier_target = frontier_center
 
+        return frontier_center
+
     def get_best_node(self, drone) -> Optional[Vector2D]:
         if self.gqn is None:
             return self.get_naive_node(drone)

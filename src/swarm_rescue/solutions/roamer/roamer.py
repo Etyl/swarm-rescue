@@ -68,7 +68,7 @@ class RoamerController(StateMachine):
     cycle = (
         start_roaming.to(searching_for_target, cond="drone_position_valid") |
 
-        searching_for_target.to(going_to_target, cond="target_discorvered") |
+        searching_for_target.to(going_to_target, cond="target_discovered") |
         searching_for_target.to(searching_for_target) |
 
         going_to_target.to(searching_for_target, cond="no_path_to_target") |
@@ -145,7 +145,7 @@ class RoamerController(StateMachine):
     def drone_position_valid(self):
         return self.drone.elapsed_timestep > self.drone.START_IDLE_TIME
 
-    def target_discorvered(self):
+    def target_discovered(self):
         if self.debug_mode: print(f"Target discovered: {self.target}")
         return self.target is not None
 

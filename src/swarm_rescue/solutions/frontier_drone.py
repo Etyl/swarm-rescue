@@ -88,8 +88,8 @@ class FrontierDrone(DroneAbstract):
         self.debug_lidar = False
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
-        self.debug_frontiers = True
-        self.debug_graph_map = True
+        self.debug_frontiers = False
+        self.debug_graph_map = False
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
