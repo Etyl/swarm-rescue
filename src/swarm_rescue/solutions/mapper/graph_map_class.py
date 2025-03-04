@@ -333,7 +333,7 @@ class GraphMap:
             f.write(f"{' '.join(list(map(str,info)))}\n")
 
 
-    def update(self, drone):
+    def update(self, drone) -> None:
         drone_pos = self.world_to_grid(drone.drone_position.array)
         self.labels_map = np.zeros((self.map_width, self.map_height), dtype=int)
         wait = {(drone_pos[0], drone_pos[1])}
@@ -362,7 +362,7 @@ class GraphMap:
         self.features = features
         self.adjacency_matrix = A
 
-    def get_normalized_features(self, drone):
+    def get_normalized_features(self, drone) -> torch.Tensor:
         info = drone.get_path_info()
         features = torch.tensor(self.features)
         features[:, FeatureEnum.AREA] = features[:, FeatureEnum.AREA] / info[InfoEnum.MAX_CELL_SIZE]
@@ -379,7 +379,7 @@ class GraphMap:
             2 * info[InfoEnum.MAX_CELL_RADIUS])
         return features
 
-    def get_node_center(self, selected_node_id, drone):
+    def get_node_center(self, selected_node_id:int, drone) -> Vector2D:
         frontier_center = (
             self.features[selected_node_id][FeatureEnum.FRONTIER_BARYCENTER_X],
             self.features[selected_node_id][FeatureEnum.FRONTIER_BARYCENTER_Y]
