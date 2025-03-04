@@ -4,6 +4,8 @@ import numpy as np
 from collections import deque
 import networkx as nx
 import arcade
+import torch
+from torch_geometric.data import Data
 
 from solutions.mapper.mapper import Map, Zone  # type: ignore
 from solutions.utils.types import Vector2D, DroneData  # type: ignore
@@ -30,10 +32,17 @@ class FeatureEnum:
     TARGET_PATH=10
     DRONE_DISTANCE=11
 
+class InfoEnum:
+    TIMESTEP = 0
+    TARGET_DISTANCE = 1
+    MAP_WIDTH = 2
+    MAP_HEIGHT = 3
+    MAX_CELL_SIZE = 4
+    MAX_CELL_RADIUS = 5
 
 
 class GraphMap:
-    def __init__(self, map: Map, resolution: int, filename:str=None):
+    def __init__(self, map: Map, resolution: int, filename:str=None, gqn_file=None):
         self.map = map
         self.resolution = resolution
         self.map_width = map.get_width() // resolution
@@ -45,6 +54,13 @@ class GraphMap:
         self.features : Optional[np.ndarray[float]] = None
         self.selected_node : Optional[int] = None
         self.filename = filename
+
+        self.gqn = None
+        self.device = "cpu"
+        # if gqn_file:
+        #     self.gqn = GQN(12, 1, 16).to(self.device)
+        #     gqn_dict = torch.load(gqn_file, weights_only=False, map_location=torch.device(self.device))
+        #     self.gqn.load_state_dict(gqn_dict)
 
         self.best_nodes_ids = []
         self.best_nodes_probabilities = []
@@ -163,7 +179,7 @@ class GraphMap:
 
             features.append(node_features)
 
-        features = np.array(features)
+        features = np.array(features, dtype=np.float32)
         return features, A
 
     def get_drone_features(self, features, drone_positions: List[Vector2D], drone_targets: List[Vector2D]):
@@ -314,7 +330,7 @@ class GraphMap:
             f.write(f"{' '.join(list(map(str,reward)))}\n")
             # general info
             f.write(f"{' '.join(list(map(str,info)))}\n")
-                
+
 
     def update(self, drone):
         drone_pos = self.world_to_grid(drone.drone_position.array)
@@ -345,26 +361,62 @@ class GraphMap:
         self.features = features
         self.adjacency_matrix = A
 
-    # def get_naive_node(self, drone) -> Optional[Vector2D]:
-    #     if len(self.features)==0:
-    #         return None
+    def get_normalized_features(self, drone):
+        info = drone.get_path_info()
+        features = torch.tensor(self.features)
+        features[:, FeatureEnum.AREA] = features[:, FeatureEnum.AREA] / info[InfoEnum.MAX_CELL_SIZE]
+        features[:, FeatureEnum.PERIMETER] = features[:, FeatureEnum.AREA] / (4 * info[InfoEnum.MAX_CELL_RADIUS])
+        features[:, FeatureEnum.BARYCENTER_X] = features[:, FeatureEnum.BARYCENTER_X] / info[InfoEnum.MAP_HEIGHT]
+        features[:, FeatureEnum.BARYCENTER_Y] = features[:, FeatureEnum.BARYCENTER_Y] / info[InfoEnum.MAP_WIDTH]
+        features[:, FeatureEnum.FRONTIER_BARYCENTER_X] = features[:, FeatureEnum.FRONTIER_BARYCENTER_X] / info[
+            InfoEnum.MAP_HEIGHT]
+        features[:, FeatureEnum.FRONTIER_BARYCENTER_Y] = features[:, FeatureEnum.FRONTIER_BARYCENTER_Y] / info[
+            InfoEnum.MAP_WIDTH]
+        features[:, FeatureEnum.DRONE_DISTANCE] = torch.clip(
+            features[:, FeatureEnum.DRONE_DISTANCE] / (info[InfoEnum.MAP_WIDTH] + info[InfoEnum.MAP_HEIGHT]), 0, 1)
+        features[:, FeatureEnum.FRONTIER_SIZE] = features[:, FeatureEnum.FRONTIER_SIZE] / (
+            2 * info[InfoEnum.MAX_CELL_RADIUS])
+        return features
 
-    #     selection_fc = lambda k: self.features[k][FeatureEnum.DRONE_DISTANCE] if self.features[k][FeatureEnum.FRONTIER_SIZE] > 0 else np.inf
-    #     selected_node_id = min(range(len(self.features)),key=selection_fc)
-    #     frontier_center = (
-    #         self.features[selected_node_id,FeatureEnum.FRONTIER_BARYCENTER_X],
-    #         self.features[selected_node_id,FeatureEnum.FRONTIER_BARYCENTER_Y]
-    #     )
-    #     frontier_center = self.grid_to_world(frontier_center)
-    #     frontier_center = Vector2D(pointList=frontier_center)
-    #     self.selected_node = selected_node_id
+    def get_node_center(self, selected_node_id, drone):
+        frontier_center = (
+            self.features[selected_node_id][FeatureEnum.FRONTIER_BARYCENTER_X],
+            self.features[selected_node_id][FeatureEnum.FRONTIER_BARYCENTER_Y]
+        )
+        frontier_center = self.grid_to_world(frontier_center)
+        frontier_center = Vector2D(pointList=frontier_center)
+        self.selected_node = selected_node_id
 
-    #     if self.filename is not None:
-    #         self.save_data(self.filename, drone.get_reward(), drone.get_path_info())
+        if self.filename is not None:
+            self.save_data(self.filename, drone.get_reward(), drone.get_path_info())
 
-    #     drone.last_frontier_target = frontier_center
+        drone.last_frontier_target = frontier_center
 
-    #     return frontier_center
+    def get_best_node(self, drone) -> Optional[Vector2D]:
+        if self.gqn is None:
+            return self.get_naive_node(drone)
+
+        if len(self.features) == 0 or self.graph is None:
+            return None
+
+        features = self.get_normalized_features(drone)
+        graph = Data(x=features, edge_index=torch.tensor(list(self.graph.edges())).t())
+        info = drone.get_path_info()
+        exploration = drone.get_reward()[1] * info[InfoEnum.MAP_HEIGHT] * info[InfoEnum.MAP_WIDTH] / 1000
+        exploration = torch.tensor(exploration)
+        q_values = self.gqn.forward_single(graph, exploration).detach().cpu().numpy()
+
+        frontier_mask = self.features[:,FeatureEnum.FRONTIER_SIZE] > 1
+        q_values[frontier_mask] = -np.inf
+        selected_node_id = np.argmax(q_values)
+
+        self.best_nodes_ids = np.arange(0,len(self.features))[frontier_mask]
+        probs = q_values[~frontier_mask]
+        probs = probs - np.min(probs) + 0.0001
+        probs = probs / np.max(probs)
+        self.best_nodes_probabilities = probs
+
+        return self.get_node_center(selected_node_id, drone)
     
     def get_naive_node(self, drone) -> Optional[Vector2D]:
         if len(self.features) == 0:

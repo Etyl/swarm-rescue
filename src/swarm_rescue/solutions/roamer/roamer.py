@@ -257,7 +257,7 @@ class Roamer:
         """
         self.drone.update_reward()
         self.drone.graph_map.update(self.drone)
-        frontier_center = self.drone.graph_map.get_naive_node(self.drone)
+        frontier_center = self.drone.graph_map.get_best_node(self.drone)
 
         return frontier_center
 
