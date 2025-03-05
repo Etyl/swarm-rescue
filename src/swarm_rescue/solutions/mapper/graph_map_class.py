@@ -403,7 +403,7 @@ class GraphMap:
             return None
 
         features = self.get_normalized_features(drone)
-        graph = Data(x=features, edge_index=torch.tensor(list(self.graph.edges())).t())
+        graph = Data(x=features, edge_index=torch.tensor(list(self.graph.edges())).t().long())
         info = drone.get_path_info()
         exploration = drone.get_reward()[1] * info[InfoEnum.MAP_HEIGHT] * info[InfoEnum.MAP_WIDTH] / 1000
         exploration = torch.tensor(exploration)
