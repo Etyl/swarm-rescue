@@ -216,11 +216,9 @@ class FrontierDrone(DroneAbstract):
         for k in range(len(self.wounded_found_list)):
             wounded = self.wounded_found_list[k]
             if wounded_pos.distance(wounded.position) < FrontierDrone.WOUNDED_DISTANCE:
-                wounded.count += 1
-                n = wounded.count
-                wounded.position = wounded.position*((n-1)/n) + wounded_pos/n
-                wounded.last_seen = 0
-                wounded.provider = self.identifier
+                self.wounded_found_list[k].position = wounded.position*(4/5) + wounded_pos/5
+                self.wounded_found_list[k].last_seen = 0
+                self.wounded_found_list[k].provider = self.identifier
                 return
 
         wounded_data = WoundedData(
@@ -235,6 +233,8 @@ class FrontierDrone(DroneAbstract):
         self.wounded_found_list.append(wounded_data)
 
     def remove_wounded_target(self):
+        if self.wounded_target is None:
+            return
         for k in range(len(self.wounded_found_list)):
             if self.wounded_target.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE/2:
                 self.wounded_found_list.pop(k)
@@ -246,7 +246,7 @@ class FrontierDrone(DroneAbstract):
         for k in range(len(self.wounded_found_list)-1,-1,-1):
             self.wounded_found_list[k].last_seen += 1
             if (self.drone_position.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE and
-                self.wounded_found_list[k].last_seen > 5 and
+                self.wounded_found_list[k].last_seen > 8 and
                 self.map.is_reachable(self.drone_position,self.wounded_found_list[k].position)
             ):
                 if self.wounded_target is not None and self.wounded_target.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE:
@@ -278,24 +278,20 @@ class FrontierDrone(DroneAbstract):
                     self.wounded_found_list[wounded_idx].drone_taker is not None and
                     wounded_data.drone_taker > self.wounded_found_list[wounded_idx].drone_taker
                 ):
-                    if self.wounded_found_list[wounded_idx].drone_taker == self.identifier:
-                        self.wounded_target = None
-                    self.wounded_found_list[wounded_idx].drone_taker = wounded_data.drone_taker
+                    self.wounded_found_list[wounded_idx] = wounded_data
                 elif wounded_data.drone_taker is not None and self.wounded_found_list[wounded_idx].drone_taker is None:
-                    self.wounded_found_list[wounded_idx].drone_taker = wounded_data.drone_taker
+                    self.wounded_found_list[wounded_idx] = wounded_data
                 elif (wounded_data.drone_taker is None and
                     self.wounded_found_list[wounded_idx].drone_taker == drone_data.id
                 ):
                     self.wounded_found_list[wounded_idx].drone_taker = None
+                    self.wounded_found_list[wounded_idx].taker_timestep = None
             elif wounded_data.provider == drone_data.id:
                 self.wounded_found_list.append(wounded_data)
 
         if drone_data.wounded_taken is not None:
             for k in range(len(self.wounded_found_list)):
                 if self.wounded_found_list[k].position.distance(drone_data.wounded_taken) < FrontierDrone.WOUNDED_DISTANCE:
-                    if (self.wounded_target is not None and
-                        self.wounded_target.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE):
-                        self.wounded_target = None
                     self.wounded_found_list.pop(k)
                     break
 
@@ -316,6 +312,13 @@ class FrontierDrone(DroneAbstract):
         for (drone_communicator,drone_data) in data_list:
             self.update_drones(drone_data)
 
+
+    def set_wounded_target(self, wounded_id:int):
+        self.wounded_target = self.wounded_found_list[wounded_id].position
+        self.wounded_found_list[wounded_id].drone_taker = self.identifier
+        self.wounded_found_list[wounded_id].taker_timestep = self.elapsed_timestep
+
+
     def check_wounded_available(self) -> None:
         if not (self.controller.current_state == self.controller.going_to_wounded
             or self.controller.current_state == self.controller.approaching_wounded
@@ -325,33 +328,30 @@ class FrontierDrone(DroneAbstract):
         self.found_wounded = False
         best_distance, best_idx = 0,-1
         for k,wounded_data in enumerate(self.wounded_found_list):
-            if self.wounded_target is not None and self.wounded_target.distance(wounded_data.position) < FrontierDrone.WOUNDED_DISTANCE/2:
-                if wounded_data.drone_taker != self.identifier:
-                    self.wounded_target = None
-                    break
-                else:
-                    self.wounded_target = wounded_data.position
-                    self.wounded_found_list[k].taker_timestep = self.elapsed_timestep
-                    self.wounded_found_list[k].drone_taker = self.identifier
+            if (self.wounded_target is not None and
+                self.wounded_target.distance(wounded_data.position) < FrontierDrone.WOUNDED_DISTANCE/2
+            ):
+                if self.wounded_found_list[k].drone_taker is None or self.wounded_found_list[k].drone_taker==self.identifier:
+                    self.set_wounded_target(k)
                     self.found_wounded = True
                     return
+
 
             if wounded_data.drone_taker == self.identifier:
                 wounded_data.drone_taker = None
 
-            if ((wounded_data.drone_taker is None or wounded_data.drone_taker < self.identifier or (wounded_data.taker_timestep is not None and self.elapsed_timestep-wounded_data.taker_timestep > 200)) and
+            if ((wounded_data.drone_taker is None or (wounded_data.taker_timestep is not None and self.elapsed_timestep-wounded_data.taker_timestep > 200)) and
                 (best_idx==-1 or self.wounded_found_list[best_idx].position.distance(self.drone_position)<best_distance)
             ):
                 best_idx = k
                 best_distance = self.wounded_found_list[best_idx].position.distance(self.drone_position)
 
+        self.wounded_target = None
         if best_idx==-1:
             return
 
-        self.wounded_found_list[best_idx].drone_taker = self.identifier
-        self.wounded_found_list[best_idx].taker_timestep = self.elapsed_timestep
+        self.set_wounded_target(best_idx)
         self.found_wounded = True
-        self.wounded_target = self.wounded_found_list[best_idx].position
 
 
     def process_semantic_sensor(self):

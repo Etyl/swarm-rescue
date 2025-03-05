@@ -87,7 +87,7 @@ if __name__ == "__main__":
             video_capture_enabled,
         ))
 
-    num_workers = min(len(tasks), 10)
+    num_workers = min(len(tasks), 20)
 
     time_start = time.time()
 
