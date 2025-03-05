@@ -415,8 +415,9 @@ class GraphMap:
 
         self.best_nodes_ids = np.arange(0,len(self.features))[~frontier_mask]
         probs = q_values[~frontier_mask]
-        probs = probs - np.min(probs) + 0.0001
-        probs = probs / np.max(probs)
+        if len(probs)>0:
+            probs = probs - np.min(probs) + 0.0001
+            probs = probs / np.max(probs)
         self.best_nodes_probabilities = probs
 
         return self.get_node_center(selected_node_id, drone)
