@@ -38,7 +38,7 @@ class DroneController(StateMachine):
         approaching_wounded.to(approaching_wounded) |
 
         going_to_center.to(approaching_center, cond="found_center", on='before_approaching_center') |
-        going_to_center.to(roaming, cond="lost_wounded", ) |
+        going_to_center.to(roaming, cond="lost_wounded", on='stop_diffusion') |
         going_to_center.to(going_to_center) |
 
         approaching_center.to(going_to_center, cond="lost_center") |
@@ -115,6 +115,9 @@ class DroneController(StateMachine):
     
     ## actions
 
+    def stop_diffusion(self):
+        self.drone.wounded_taken = None
+
     def before_cycle(self, event: str, source: State, target: State, message: str = "") -> None:
         if not self.debug_mode: return
         message = ". " + message if message else ""
@@ -151,6 +154,7 @@ class DroneController(StateMachine):
             self.command["grasper"] = 0
 
     def before_going_to_center(self) -> None:
+        self.drone.remove_wounded_target()
         self.drone.drone_angle_offset = np.pi
         path = self.drone.get_path(self.drone.rescue_center_position)
         self.drone.set_path(path)
@@ -169,6 +173,7 @@ class DroneController(StateMachine):
         self.drone.drone_angle_offset = 0
 
     def before_approaching_center(self) -> None:
+        self.drone.wounded_taken = None
         self.drone.reset_path()
         self.drone.localizer.time_approaching_center = 0
     

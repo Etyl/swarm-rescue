@@ -48,9 +48,7 @@ class FrontierDrone(DroneAbstract):
 
         self.path : List[Vector2D] = []
         self.drone_angle_offset : float = 0 # The angle offset of the drone that can be changed by the states
-        self.found_wounded : bool = False # True if the drone has found a wounded person
         self.last_positions : Deque[Vector2D] = deque()
-        self.last_wounded_seen : int = 10000 # time (frames) since the wounded was last seen
         self.repulsion_drone : Vector2D = Vector2D() # The repulsion vector from the other drones
         self.drone_direction_group = Vector2D() # Normalised repulsion vector to group of drones
         self.repulsion_wall : Vector2D = Vector2D() # The repulsion vector from the walls
@@ -66,15 +64,19 @@ class FrontierDrone(DroneAbstract):
         self.no_comm_zone_mode : bool = False # True if the drone is in the no communication zone
 
         self.rescue_center_position: Optional[Vector2D] = None
-        self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
-        self.wounded_target : Optional[Vector2D] = None # The wounded position to go to
         self.drone_list : List[DroneData] = [] # The list of drones
         self.iteration : int = 0 # The number of iterations
+
+        self.found_wounded : bool = False # True if the drone has found a wounded person
+        self.last_wounded_seen : int = 10000 # time (frames) since the wounded was last seen
+        self.wounded_found_list: List[WoundedData] = []  # the list of wounded persons found
+        self.wounded_target: Optional[Vector2D] = None  # The wounded position to go to
+        self.wounded_taken: Optional[Vector2D] = None # position announced for taken wounded
 
         ## Debug controls
 
         self.debug_path = False # True if the path must be displayed
-        self.debug_wounded = False
+        self.debug_wounded = True
         self.debug_positions = False
         self.debug_roamer = False
         self.debug_controller = False
@@ -179,7 +181,8 @@ class FrontierDrone(DroneAbstract):
             position = self.drone_position,
             angle = self.drone_angle,
             vel_angle = self.localizer.drone_velocity_angle,
-            wounded_target = self.wounded_target,
+            wounded_list = self.wounded_found_list,
+            wounded_taken=self.wounded_taken,
             map = self.map,
             semantic_values = self.semantic_values(),
             next_waypoint= self.next_waypoint,
@@ -217,16 +220,37 @@ class FrontierDrone(DroneAbstract):
                 n = wounded.count
                 wounded.position = wounded.position*((n-1)/n) + wounded_pos/n
                 wounded.last_seen = 0
+                wounded.provider = self.identifier
                 return
 
-        self.wounded_found_list.append(WoundedData(wounded_pos, 1, 0, None))
+        wounded_data = WoundedData(
+            position=wounded_pos,
+            count=1,
+            last_seen=0,
+            drone_taker=None,
+            taker_timestep=None,
+            provider=self.identifier
+        )
 
+        self.wounded_found_list.append(wounded_data)
+
+    def remove_wounded_target(self):
+        for k in range(len(self.wounded_found_list)):
+            if self.wounded_target.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE/2:
+                self.wounded_found_list.pop(k)
+                break
+        self.wounded_taken = self.wounded_target
+        self.wounded_target = None
 
     def clear_wounded_found(self):
-
         for k in range(len(self.wounded_found_list)-1,-1,-1):
             self.wounded_found_list[k].last_seen += 1
-            if self.drone_position.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE and self.wounded_found_list[k].last_seen > 5:
+            if (self.drone_position.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE and
+                self.wounded_found_list[k].last_seen > 5 and
+                self.map.is_reachable(self.drone_position,self.wounded_found_list[k].position)
+            ):
+                if self.wounded_target is not None and self.wounded_target.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE:
+                    self.wounded_target = None
                 self.wounded_found_list.pop(k)
 
     def update_drones(self, drone_data : DroneData):
@@ -241,12 +265,38 @@ class FrontierDrone(DroneAbstract):
             self.map.reset_kill_zone()
             self.no_comm_zone_mode = True
 
+
         # update the wounded list
-        if drone_data.wounded_target is not None:
+        for wounded_data in drone_data.wounded_list:
+            wounded_idx = None
             for k in range(len(self.wounded_found_list)):
-                if self.wounded_found_list[k].position.distance(drone_data.wounded_target) < FrontierDrone.WOUNDED_DISTANCE:
-                    #self.wounded_found_list[k].taken = True
-                    self.wounded_found_list[k].drone_taker = drone_data.id
+                if self.wounded_found_list[k].position.distance(wounded_data.position) < FrontierDrone.WOUNDED_DISTANCE:
+                    wounded_idx = k
+                    break
+            if wounded_idx is not None:
+                if (wounded_data.drone_taker is not None and
+                    self.wounded_found_list[wounded_idx].drone_taker is not None and
+                    wounded_data.drone_taker > self.wounded_found_list[wounded_idx].drone_taker
+                ):
+                    if self.wounded_found_list[wounded_idx].drone_taker == self.identifier:
+                        self.wounded_target = None
+                    self.wounded_found_list[wounded_idx].drone_taker = wounded_data.drone_taker
+                elif wounded_data.drone_taker is not None and self.wounded_found_list[wounded_idx].drone_taker is None:
+                    self.wounded_found_list[wounded_idx].drone_taker = wounded_data.drone_taker
+                elif (wounded_data.drone_taker is None and
+                    self.wounded_found_list[wounded_idx].drone_taker == drone_data.id
+                ):
+                    self.wounded_found_list[wounded_idx].drone_taker = None
+            elif wounded_data.provider == drone_data.id:
+                self.wounded_found_list.append(wounded_data)
+
+        if drone_data.wounded_taken is not None:
+            for k in range(len(self.wounded_found_list)):
+                if self.wounded_found_list[k].position.distance(drone_data.wounded_taken) < FrontierDrone.WOUNDED_DISTANCE:
+                    if (self.wounded_target is not None and
+                        self.wounded_target.distance(self.wounded_found_list[k].position) < FrontierDrone.WOUNDED_DISTANCE):
+                        self.wounded_target = None
+                    self.wounded_found_list.pop(k)
                     break
 
         # update the drone information
@@ -266,53 +316,42 @@ class FrontierDrone(DroneAbstract):
         for (drone_communicator,drone_data) in data_list:
             self.update_drones(drone_data)
 
-    def check_wounded_available(self):
-
-        self.found_wounded = False
-
-        if self.wounded_found_list is None or len(self.wounded_found_list) == 0:
-            return
-
-        min_distance = np.inf
-        best_position = None
-        if (self.controller.current_state == self.controller.going_to_wounded
+    def check_wounded_available(self) -> None:
+        if not (self.controller.current_state == self.controller.going_to_wounded
             or self.controller.current_state == self.controller.approaching_wounded
             or self.controller.current_state == self.controller.roaming):
-
-            # Select the best one among wounded persons detected
-            for i,wounded in enumerate(self.wounded_found_list):
-                distance = self.drone_position.distance(wounded.position)
-
-                # check if the wounded is taken by another drone
-                if self.wounded_visible and wounded.drone_taker is not None and wounded.drone_taker > self.identifier:
-                    continue
-
-                # check if the wounded is the target
-                if wounded.drone_taker is not None and wounded.drone_taker == self.identifier:
-                    if (self.controller.current_state == self.controller.approaching_wounded or
-                        self.controller.current_state == self.controller.going_to_wounded):
-                        self.found_wounded = True
-                        self.wounded_target = wounded.position
-                        return
-                    else:
-                        wounded.drone_taker = None
-                elif self.wounded_target is not None and self.wounded_target.distance(wounded.position) < 0.8*FrontierDrone.WOUNDED_DISTANCE:
-                    self.found_wounded = True
-                    self.wounded_target = wounded.position
-                    return
-
-                if distance < min_distance:
-                    min_distance = distance
-                    best_position = i
-
-        if best_position is None:
             return
 
-        if self.controller.current_state == self.controller.approaching_wounded:
-            self.wounded_found_list[best_position].drone_taker = self.identifier
+        self.found_wounded = False
+        best_distance, best_idx = 0,-1
+        for k,wounded_data in enumerate(self.wounded_found_list):
+            if self.wounded_target is not None and self.wounded_target.distance(wounded_data.position) < FrontierDrone.WOUNDED_DISTANCE/2:
+                if wounded_data.drone_taker != self.identifier:
+                    self.wounded_target = None
+                    break
+                else:
+                    self.wounded_target = wounded_data.position
+                    self.wounded_found_list[k].taker_timestep = self.elapsed_timestep
+                    self.wounded_found_list[k].drone_taker = self.identifier
+                    self.found_wounded = True
+                    return
 
+            if wounded_data.drone_taker == self.identifier:
+                wounded_data.drone_taker = None
+
+            if ((wounded_data.drone_taker is None or wounded_data.drone_taker < self.identifier or (wounded_data.taker_timestep is not None and self.elapsed_timestep-wounded_data.taker_timestep > 200)) and
+                (best_idx==-1 or self.wounded_found_list[best_idx].position.distance(self.drone_position)<best_distance)
+            ):
+                best_idx = k
+                best_distance = self.wounded_found_list[best_idx].position.distance(self.drone_position)
+
+        if best_idx==-1:
+            return
+
+        self.wounded_found_list[best_idx].drone_taker = self.identifier
+        self.wounded_found_list[best_idx].taker_timestep = self.elapsed_timestep
         self.found_wounded = True
-        self.wounded_target = self.wounded_found_list[best_position].position
+        self.wounded_target = self.wounded_found_list[best_idx].position
 
 
     def process_semantic_sensor(self):
@@ -760,11 +799,14 @@ class FrontierDrone(DroneAbstract):
                 arcade.draw_circle_filled(pos[0], pos[1],2, arcade.color.PURPLE)
 
         if self.debug_wounded:
+            pos = self.drone_position.array + np.array(self.size_area) / 2
+            arcade.draw_text(str(self.identifier), pos[0], pos[1], map_id_to_color[self.identifier], 20)
             for wounded in self.wounded_found_list:
                 pos = wounded.position.array + np.array(self.size_area) / 2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.GREEN_YELLOW)
                 arcade.draw_circle_outline(pos[0], pos[1],FrontierDrone.WOUNDED_DISTANCE, arcade.color.GREEN_YELLOW)
-            if self.wounded_target is not None and (self.controller.current_state == self.controller.going_to_wounded or self.controller.current_state == self.controller.approaching_wounded):
+                arcade.draw_text(str(wounded.drone_taker), pos[0], pos[1], arcade.color.BLACK, 20)
+            if self.wounded_target is not None:
                 pos = self.wounded_target.array + np.array(self.size_area) / 2
                 arcade.draw_circle_filled(pos[0], pos[1],10, arcade.color.RED)
                 arcade.draw_circle_outline(pos[0], pos[1],FrontierDrone.WOUNDED_DISTANCE, arcade.color.RED)

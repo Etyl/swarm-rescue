@@ -96,7 +96,9 @@ class WoundedData:
     position: Vector2D
     count : int
     last_seen : int
-    drone_taker: Optional[int]
+    drone_taker: Optional[int] # the id of the drone who is getting the wounded
+    taker_timestep: Optional[int] # last timestep where drone communicated taking the wounded
+    provider : int # id of the drone which provided the information
 
 
 @dataclass
@@ -105,7 +107,8 @@ class DroneData:
     position: Vector2D
     angle: float
     vel_angle: float
-    wounded_target: Vector2D
+    wounded_list: List[WoundedData]
+    wounded_taken: Optional[Vector2D]
     map : typing.Any
     semantic_values: np.ndarray
     next_waypoint : Vector2D
