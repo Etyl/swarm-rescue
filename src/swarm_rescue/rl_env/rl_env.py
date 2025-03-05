@@ -86,3 +86,6 @@ def get_run(
         with open(save_file_crash,"w") as f:
             f.write(error_msg)
 
+    with open(os.path.join(save_dir, "score.json"), "w") as f:
+        json.dump(saved_info, f)
+
