@@ -399,7 +399,7 @@ class GraphMap:
         if self.gqn is None:
             return self.get_naive_node(drone)
 
-        if len(self.features) == 0 or self.graph is None:
+        if len(self.features) <= 1 or self.graph is None:
             return None
 
         features = self.get_normalized_features(drone)
