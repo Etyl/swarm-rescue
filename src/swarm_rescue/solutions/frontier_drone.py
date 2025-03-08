@@ -469,7 +469,7 @@ class FrontierDrone(DroneAbstract):
             else:
                 self.repulsion_drone = 0.3 * repulsion
         elif self.controller.current_state == self.controller.stay_in_return_zone:
-            self.repulsion_drone = 0.05 * repulsion
+            self.repulsion_drone = 0 * repulsion
         else:
             if min_dist < 70:
                 repulsion_norm: Vector2D = -Vector2D(1,0).rotate(min_angle)
