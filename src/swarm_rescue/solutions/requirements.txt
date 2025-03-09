@@ -2,6 +2,11 @@ pyastar2d==1.0.6
 Cython==3.0.11
 xxhash==3.5.0
 numpy==1.24.4
+torch~=2.4.1
+torch-geometric~=2.6.1
+networkx~=3.1
+arcade~=2.6.17
+scipy~=1.10.1
 
 -e git+https://github.com/emmanuel-battesti/simple-playgrounds.git@swarm-rescue-v3#egg=spg
 #-e /home/battesti/projetCompetDronesDGA/simple-playgrounds
