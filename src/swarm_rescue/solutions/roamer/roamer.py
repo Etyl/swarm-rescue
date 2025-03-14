@@ -79,10 +79,12 @@ class RoamerController(StateMachine):
     def __init__(self, drone: FrontierDrone, drone_map: Map, debug_mode: bool = False) -> None:
         self.drone : FrontierDrone = drone
         self.map : Map = drone_map
-        self.command = {"forward": 0.0,
-                        "lateral": 0.0,
-                        "rotation": 0.0,
-                        "grasper": 0}
+        self.command = {
+            "forward": 0.0,
+            "lateral": 0.0,
+            "rotation": 0.0,
+            "grasper": 0
+        }
         self.debug_mode: bool = debug_mode
         self.roamer: Roamer = Roamer(drone, drone_map, debug_mode)
 
@@ -164,9 +166,6 @@ class RoamerController(StateMachine):
         pass
 
     def search_for_target(self):
-        # OTHER IMPL - ASYNC        
-        # await asyncio.sleep(1)
-        # END OTHER IMPL - ASYNC
         self.drone.add_searching_time()
         if self.last_time_updates >= self._COMPUTE_FRONTIER_COOLDOWN:
             path, self.target = self.roamer.find_path(frontiers_threshold=self.frontiers_threshold, last_target=self.target)
@@ -205,7 +204,14 @@ class RoamerController(StateMachine):
         self.command = self.drone.localizer.get_control_from_path()
 
     def on_enter_searching_for_target(self):
+        self.command = {
+            "forward": 0.0,
+            "lateral": 0.0,
+            "rotation": 0.0,
+            "grasper": 0
+        }
         self.search_for_target()
+
 
     def on_enter_start_roaming(self):
         pass
