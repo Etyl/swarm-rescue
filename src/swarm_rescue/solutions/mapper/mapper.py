@@ -48,6 +48,7 @@ class Map:
 
         self.width : int = int(area_world[0] / self.resolution + 0.5)
         self.height : int = int(area_world[1] / self.resolution + 0.5)
+        self.drone_exploration_score : float = 0
 
         self.occupancy_grid : Grid = Grid(area_world, resolution)
         self.kill_zone : Grid = Grid(area_world, resolution)
@@ -58,7 +59,7 @@ class Map:
         self.merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.occupancy_grid)
         self.kill_zone_merkle_tree: MerkleTree = MerkleTree(self.confidence_grid, self.kill_zone)
 
-        self.map : np.ndarray = np.full((self.width, self.height), Zone.UNEXPLORED)
+        self.map : np.ndarray[int] = np.full((self.width, self.height), Zone.UNEXPLORED)
 
         self.rescue_center : Optional[Vector2D] = None
         self.kill_zones : List[Vector2D] = {}
@@ -184,8 +185,9 @@ class Map:
     def __setitem__(self, pos, zone):
         self.map[pos.x][pos.y] = zone
 
-    def __getitem__(self, pos : Vector2D):
-        return self.map[pos.x][pos.y]
+    def __getitem__(self, x, y):
+        return self.map[x,y]
+
     
     def get_map_matrix(self):
         return self.map
@@ -265,7 +267,9 @@ class Map:
         """
         Update the map
         """
+        confidence_mask = self.confidence_grid.get_grid() > 0
         self.update_confidence_grid(pose, lidar, drone)
+        self.drone_exploration_score += np.count_nonzero(self.confidence_grid.get_grid()[~confidence_mask]>0) / (self.height * self.width)
         self.update_occupancy_grid(pose, lidar, drone)
         self.update_merkle(drone)
         self.update_map(drone)

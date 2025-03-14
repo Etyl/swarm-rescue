@@ -8,7 +8,7 @@ from scipy.constants import point
 
 
 class Vector2D:
-    def __init__(self, x : float = 0, y: float = 0, pointList : Union[List,np.ndarray,None] = None):
+    def __init__(self, x : float = 0, y: float = 0, pointList : Union[Tuple,List,np.ndarray,None] = None):
         self.array: np.ndarray[float]
         if pointList is not None:
             self.array = np.array([pointList[0], pointList[1]])
@@ -105,7 +105,7 @@ class DroneData:
     position: Vector2D
     angle: float
     vel_angle: float
-    wounded_target: Vector2D
+    wounded_target: Optional[Vector2D]
     map : typing.Any
     semantic_values: np.ndarray
     next_waypoint : Vector2D
@@ -113,3 +113,5 @@ class DroneData:
     visible_drones: List[Tuple[int, Vector2D]]
     rescue_center_position: Optional[Vector2D]
     no_comm_zone_mode: bool
+    target : Optional[Vector2D]
+    drone_positions: Dict[int,Tuple[int,Vector2D]] # Dict of drone id -> timestep,drone_position

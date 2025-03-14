@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import math
+import os.path
+
 import numpy as np
 from typing import Optional, List, Tuple, Deque, Dict
 import arcade
-from collections import deque
+from collections import deque, defaultdict
 
 from statemachine import exceptions
 
@@ -19,8 +21,10 @@ from spg_overlay.utils.constants import RANGE_COMMUNICATION, MAX_RANGE_LIDAR_SEN
 from solutions.utils.types import DroneData, WoundedData, Vector2D
 from solutions.localizer.localizer import Localizer
 from solutions.mapper.mapper import Map, DRONE_SIZE_RADIUS
+from solutions.mapper.graph_map_class import GraphMap, MAX_CELL_SIZE, MAX_CELL_RADIUS
 from solutions.drone_controller import DroneController
 from solutions.roamer.roamer import RoamerController
+
 
 class FrontierDrone(DroneAbstract):
 
@@ -34,8 +38,7 @@ class FrontierDrone(DroneAbstract):
         self,
         identifier: Optional[int] = None,
         misc_data: Optional[MiscData] = None,
-        policy = None,
-        save_run = None,
+        save_dir = None,
         **kwargs):
 
         super().__init__(
@@ -69,7 +72,10 @@ class FrontierDrone(DroneAbstract):
         self.wounded_found_list : List[WoundedData] = [] # the list of wounded persons found
         self.wounded_target : Optional[Vector2D] = None # The wounded position to go to
         self.drone_list : List[DroneData] = [] # The list of drones
+        self.drone_positions: Dict[int,Tuple[int,Vector2D]] = dict() # drone_id : (timestep, drone_position)
         self.iteration : int = 0 # The number of iterations
+        self.old_exploration_score : float = 0 # The old exploration score
+        self.old_drone_exploration_score : float = 0 # The old drone exploration score
 
         ## Debug controls
 
@@ -83,6 +89,7 @@ class FrontierDrone(DroneAbstract):
         self.debug_repulsion = False
         self.debug_wall_repulsion = False
         self.debug_frontiers = False
+        self.debug_graph_map = False
 
         # to display the graph of the state machine (make sure to install graphviz, e.g. with "sudo apt install graphviz")
         # self.controller._graph().write_png("./graph.png")
@@ -102,7 +109,14 @@ class FrontierDrone(DroneAbstract):
         }
 
         self.map : Map = Map(area_world=self.size_area, resolution=4, identifier=self.identifier, debug_mode=self.debug_mapper)
-        self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer, policy=policy, save_run=save_run)
+
+        if save_dir:
+            save_file = os.path.join(save_dir, f"data_{self.identifier}.txt")
+        else:
+            save_file = None
+        current_dir = os.path.dirname(__file__)
+        self.graph_map = GraphMap(map=self.map, resolution=2, filename=save_file,gqn_file=os.path.join(current_dir,"data/best_gqn_0188.pth"))
+        self.roamer_controller : RoamerController = RoamerController(self, self.map, debug_mode=self.debug_roamer)
 
         self.localizer : Localizer = Localizer(self)
 
@@ -111,10 +125,12 @@ class FrontierDrone(DroneAbstract):
         self.point_of_interest = (0,0)
         self.frontiers : List[List[Vector2D]] = []
         self.selected_frontier_id : int = 0
+        self.last_frontier_target : Optional[Vector2D] = None
 
         self.stuck_iteration : int = 0
         self.time_in_no_gps : int = 0
         self.previous_drone_health: int = self.drone_health
+        
 
     @property
     def near_center(self) -> bool:
@@ -174,6 +190,10 @@ class FrontierDrone(DroneAbstract):
 
 
     def define_message_for_all(self):
+        if len(self.localizer.path)>0:
+            target_path = self.localizer.path[-1]
+        else:
+            target_path = None
         data = DroneData(
             id = self.identifier,
             position = self.drone_position,
@@ -186,7 +206,9 @@ class FrontierDrone(DroneAbstract):
             confidence_position = self.localizer.confidence_position,
             visible_drones = self.visible_drones,
             rescue_center_position=self.rescue_center_position,
-            no_comm_zone_mode=self.no_comm_zone_mode
+            no_comm_zone_mode=self.no_comm_zone_mode,
+            target=target_path,
+            drone_positions=self.drone_positions
         )
         return data
 
@@ -233,6 +255,14 @@ class FrontierDrone(DroneAbstract):
         """
         updates the data of the drones
         """
+        # update drone positions
+        self.drone_positions[drone_data.id] = (self.elapsed_timestep,drone_data.position)
+        for drone_id in drone_data.drone_positions:
+            if drone_id not in self.drone_positions:
+                self.drone_positions[drone_id] = drone_data.drone_positions[drone_id]
+            elif drone_data.drone_positions[drone_id][0] > self.drone_positions[drone_id][0]:
+                self.drone_positions[drone_id] = drone_data.drone_positions[drone_id]
+
         if self.rescue_center_position is None and drone_data.rescue_center_position is not None:
             self.rescue_center_position = drone_data.rescue_center_position
         
@@ -439,7 +469,7 @@ class FrontierDrone(DroneAbstract):
             else:
                 self.repulsion_drone = 0.3 * repulsion
         elif self.controller.current_state == self.controller.stay_in_return_zone:
-            self.repulsion_drone = 0.05 * repulsion
+            self.repulsion_drone = 0 * repulsion
         else:
             if min_dist < 70:
                 repulsion_norm: Vector2D = -Vector2D(1,0).rotate(min_angle)
@@ -613,6 +643,30 @@ class FrontierDrone(DroneAbstract):
         max_timestep = self._misc_data.max_timestep_limit * 0.85
         max_wall_time = self._misc_data.max_walltime_limit * 0.85
         return self.elapsed_timestep >= max_timestep or self.elapsed_walltime >= max_wall_time
+    
+    def update_reward(self):
+        """
+        updates the reward with current exploration - old reward
+        """
+        self.old_drone_exploration_score = self.map.drone_exploration_score
+        self.old_exploration_score = self.map.exploration_score
+    
+    def get_reward(self):
+        """
+        returns the current reward
+        """
+        return self.map.exploration_score, self.map.drone_exploration_score, self.old_exploration_score, self.old_drone_exploration_score
+
+    def get_path_info(self) -> List[float]:
+        info = [
+            self.elapsed_timestep,
+            self.drone_position.distance(self.last_frontier_target) if self.last_frontier_target else -1,
+            self.graph_map.map_width,
+            self.graph_map.map_height,
+            MAX_CELL_SIZE,
+            MAX_CELL_RADIUS
+        ]
+        return info
 
     def control(self):
         # check if drone is dead
@@ -626,7 +680,7 @@ class FrontierDrone(DroneAbstract):
         self.stuck_iteration += 1
         if self.gps_disabled:
             self.time_in_no_gps += 1
-        
+
 
         self.localizer.localize()
         self.process_semantic_sensor()
@@ -721,6 +775,18 @@ class FrontierDrone(DroneAbstract):
     def draw_top_layer(self):
         # check if drone is dead
         if self.odometer_values() is None: return
+
+        if self.debug_graph_map:
+            if self.identifier==4:
+                self.graph_map.draw(self)
+
+            if self.last_frontier_target is not None:
+                pt = self.last_frontier_target.array + np.array(self.size_area) / 2
+                arcade.draw_circle_filled(pt[0], pt[1], 10, [255, 0, 255])
+
+            # draw reward
+            pos = self.drone_position.array + np.array(self.size_area) / 2
+            arcade.draw_text(f"Reward: {round(self.get_reward()[1],2)}", pos[0], pos[1], arcade.color.BLACK, font_size=15)
 
         # draw frontiers
         if self.debug_frontiers:
